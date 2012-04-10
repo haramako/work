@@ -1,0 +1,10 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+#include "ranked_store.h"
+
+int main( int argc, char **argv )
+{
+}
