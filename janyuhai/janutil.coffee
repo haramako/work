@@ -1,8 +1,8 @@
 class Enum
-    constructor: ()->
+    constructor: (names)->
         cur = 0
         @_numberToName = []
-        for name in arguments
+        for name in names
             pos = name.indexOf('=')
             if pos >= 0
                 cur = parseInt(name.substring(pos+1))
@@ -11,6 +11,7 @@ class Enum
             @_numberToName[cur] = name
             cur++
         @MAX = cur
+
     toString: (num)->
         if typeof num == 'number'
             @_numberToName[num]
@@ -18,6 +19,7 @@ class Enum
             num.map (i)=>this.toString( i )
         else
             num
+
     exportTo: (module, prefix )->
         prefix ?= ''
         for i in [0...@_numberToName.length]
