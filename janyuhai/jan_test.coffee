@@ -102,18 +102,22 @@ vows
             check = (pks, furo, opt, expect )->
                 yaku = jan.calcYaku( PaiKind.fromReadable(pks), Mentsu.fromArray( PaiKind.fromReadable(furo),true), opt )
                 puts '-'
-                puts pks
-                yaku.yaku.sort() if yaku.yaku?
-                yaku.yaku = Yaku.toString(yaku.yaku) if yaku.yaku?
+                puts pks, furo
+                yaku.yaku.sort()
+                yaku.yaku = Yaku.toString(yaku.yaku)
+                yaku.yakuman.sort()
+                yaku.yakuman = Yaku.toString(yaku.yakuman)
                 expect.yaku.sort() if expect.yaku?
                 expect.yaku = Yaku.toString(expect.yaku) if expect.yaku?
+                expect.yakuman.sort() if expect.yakuman?
+                expect.yakuman = Yaku.toString(expect.yakuman) if expect.yakuman?
                 puts yaku, expect
                 for x of expect
-                    if x == 'yaku'
+                    if x == 'yaku' or x == 'yakuman'
                         assert.deepEqual yaku[x], expect[x]
                     else
                         assert.equal yaku[x], expect[x]
-            check '１２３４５６７８９一二三四四', [], {pkLast: PaiKind.SOU1}, { yaku:[Yaku.PINFU], han:0, fu:20 }
+            check '１２３４５６７８９一二三四四', [], {pkLast: PaiKind.SOU1}, { yaku:[Yaku.PINFU], han:1, fu:20 }
             check '１２３４５６７８９一二三四四', [], {pkLast: PaiKind.SOU2}, { yaku:[], machi:'kanchan', han:0, fu:30 }
             check '１１１２３４５６７８９９９９' , [], {pkLast: PaiKind.SOU8}, {}
             check '２３４３４５５６７⑦⑦⑧⑧⑧' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.TANYAO]}
@@ -124,14 +128,18 @@ vows
             check '１２３９９９①②③東東東発発' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.CHANTA] }
             check '１２３９９９①②③九九七八九' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.JUNCHAN] }
             check '１１１９９９発発' , ['九九九','一一一'], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.HONROUTOU, Yaku.TOITOI] }
-            check '１１１９９９⑨⑨' , ['一一一','九九九'], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.CHINROUTOU, Yaku.TOITOI] }
-            check '東東東南南南発発' , ['西西西','白白白'], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.TSUIISOU, Yaku.YAKUHAI, Yaku.TOITOI] }
+            check '１１１９９９⑨⑨' , ['一一一','九九九'], {pkLast: PaiKind.SOU7}, { yakuman:[Yaku.CHINROUTOU] }
+            check '東東東南南南発発' , ['西西西','白白白'], {pkLast: PaiKind.SOU7}, { yakuman:[Yaku.TSUIISOU] }
             check '２３４二三四②③④９９９一一' , [], {}, { yaku:[Yaku.SANSHOKU] }
             check '２２２二二二②②②７８９一一' , [], {}, { yaku:[Yaku.SANSHOKU_DOUKOU, Yaku.SANANKO] }
-            check '１１１２２２４４４九九九白白' , [], {}, { yaku:[Yaku.TOITOI, Yaku.SUUANKOU] }
+            check '１１１２２２４４４九九九白白' , [], {}, { yakuman:[Yaku.SUUANKOU] }
             check '１１１２２２白白' , ['九九九','４４４'], {}, { yaku:[Yaku.TOITOI] }
             check '５６７白白' , ['九九九九','４４４４','１１１１'], {}, { yaku:[Yaku.SANKANTSU] }
-            check '白白' , ['九九九九','４４４４','１１１１','２２２２'], {}, { yaku:[Yaku.SUUKANTSU,Yaku.TOITOI] }
+            check '白白' , ['九九九九','４４４４','１１１１','２２２２'], {}, { yakuman:[Yaku.SUUKANTSU] }
+            check '⑨⑨' , ['発発発','白白白','中中中','２３４'], {}, { yakuman:[Yaku.DAISANGEN] }
+            check '白白' , ['発発発','白白白','⑨⑨⑨','２３４'], {}, { yaku:[Yaku.SHOUSANGEN] }
+            check '２２' , '東東東 南南南 西西西 北北北', {}, { yakuman:[Yaku.DAISUUSHII] }
+            check '２３４北北' , '東東東 南南南 西西西', {}, { yakuman:[Yaku.SHOUSUUSHII] }
 
     .export module
 
