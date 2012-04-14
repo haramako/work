@@ -57,23 +57,25 @@ vows
     .describe('Mentsu')
     .addBatch
         'constructor should make Mentsu': ->
-            mentsu = new Mentsu('shuntsu', jan.MAN1,true)
+            mentsu = new Mentsu('shuntsu', jan.MAN1,0)
             assert.equal mentsu.type, 'shuntsu'
-            assert.equal mentsu.pkFrom, jan.MAN1
-            assert.equal mentsu.furo, true
-            mentsu = new Mentsu('koutsu', jan.MAN2 )
-            assert.equal mentsu.type, 'koutsu'
-            assert.equal mentsu.pkFrom, jan.MAN2
+            assert.equal mentsu.pk, jan.MAN1
             assert.equal mentsu.furo, false
+            assert.equal mentsu.dir, 0
+            mentsu = new Mentsu('koutsu', jan.MAN2,1 )
+            assert.equal mentsu.type, 'koutsu'
+            assert.equal mentsu.pk, jan.MAN2
+            assert.equal mentsu.dir, 1
+            assert.equal mentsu.furo, true
 
         'fromArray() はPaiKindの配列からMentsuを作成する': ->
-            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN2, jan.MAN3], false ), new Mentsu( 'shuntsu', jan.MAN1, false )
-            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN1, jan.MAN1], true ), new Mentsu( 'koutsu', jan.MAN1, true )
-            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN1, jan.MAN1, jan.MAN1] ), new Mentsu( 'kantsu', jan.MAN1 )
-            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN1] ), new Mentsu( 'toitsu', jan.MAN1 )
+            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN2, jan.MAN3], 0 ), new Mentsu( 'shuntsu', jan.MAN1, 0 )
+            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN1, jan.MAN1], 1 ), new Mentsu( 'koutsu', jan.MAN1, 1 )
+            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN1, jan.MAN1, jan.MAN1] ), new Mentsu( 'kantsu', jan.MAN1, 0 )
+            assert.deepEqual Mentsu.fromArray( [jan.MAN1, jan.MAN1] ), new Mentsu( 'toitsu', jan.MAN1, 0 )
 
         'fromArray() はPaiKindの配列の配列からMentsuの配列を作成する': ->
-            assert.deepEqual Mentsu.fromArray( jan.PaiKind.fromReadable('１２３ ５５５') ), [new Mentsu( 'shuntsu', jan.SOU1 ), new Mentsu( 'koutsu', jan.SOU5 ) ]
+            assert.deepEqual Mentsu.fromArray( jan.PaiKind.fromReadable('１２３ ５５５') ), [new Mentsu( 'shuntsu', jan.SOU1, 0 ), new Mentsu( 'koutsu', jan.SOU5, 0 ) ]
     .export module
 
 vows
@@ -99,10 +101,10 @@ vows
             check '東東東南南南白白白発発', ['東東東 南南南 白白白 発発']
     .addBatch
         'calcYaku()は、役の計算をする': ->
-            check = (pks, furo, opt, expect )->
-                yaku = jan.calcYaku( PaiKind.fromReadable(pks), Mentsu.fromArray( PaiKind.fromReadable(furo),true), opt )
-                puts '-'
-                puts pks, furo
+            check = (pkStr, furo, opt, expect )->
+                yaku = jan.calcYaku( PaiKind.fromReadable(pkStr), Mentsu.fromArray( PaiKind.fromReadable(furo),1), opt )
+                #puts '-'
+                #puts pkStr, furo
                 yaku.yaku.sort()
                 yaku.yaku = Yaku.toString(yaku.yaku)
                 yaku.yakuman.sort()
@@ -111,20 +113,20 @@ vows
                 expect.yaku = Yaku.toString(expect.yaku) if expect.yaku?
                 expect.yakuman.sort() if expect.yakuman?
                 expect.yakuman = Yaku.toString(expect.yakuman) if expect.yakuman?
-                puts yaku, expect
+                #puts yaku, expect
                 for x of expect
                     if x == 'yaku' or x == 'yakuman'
                         assert.deepEqual yaku[x], expect[x]
                     else
                         assert.equal yaku[x], expect[x]
-            check '１２３４５６７８９一二三四四', [], {pkLast: PaiKind.SOU1}, { yaku:[Yaku.PINFU], han:1, fu:20 }
-            check '１２３４５６７８９一二三四四', [], {pkLast: PaiKind.SOU2}, { yaku:[], machi:'kanchan', han:0, fu:30 }
+            check '１２３４５６６７８一二三四四', [], {pkLast: PaiKind.SOU1 }, { yaku:[Yaku.PINFU], fu:30 }
+            check '１２３４５６６７８一二三四四', [], {pkLast: PaiKind.SOU2}, { yaku:[], machi:'kanchan', fu:40 }
             check '１１１２３４５６７８９９９９' , [], {pkLast: PaiKind.SOU8}, {}
             check '２３４３４５５６７⑦⑦⑧⑧⑧' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.TANYAO]}
             check '１１２２３３７７７⑦⑦⑧⑧⑧' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.IIPEIKOU]}
             check '１１２２３３②②③③④④⑧⑧' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.RYANPEIKOU]}
             check '１２３３４５５６７⑦⑦発発発' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.YAKUHAI]}
-            check '１２３３４５東東東⑦⑦発発発' , [], {pkLast: PaiKind.SOU7, bakaze:jan.TON}, { yaku:[Yaku.YAKUHAI,Yaku.YAKUHAI] }
+            check '１２３３４５東東東⑦⑦発発発' , [], {pkLast: PaiKind.SOU7, pkBakaze:jan.TON}, { yaku:[Yaku.YAKUHAI,Yaku.YAKUHAI] }
             check '１２３９９９①②③東東東発発' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.CHANTA] }
             check '１２３９９９①②③九九七八九' , [], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.JUNCHAN] }
             check '１１１９９９発発' , ['九九九','一一一'], {pkLast: PaiKind.SOU7}, { yaku:[Yaku.HONROUTOU, Yaku.TOITOI] }

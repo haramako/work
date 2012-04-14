@@ -134,7 +134,14 @@ PaiId.toKind = (pi)->
         pi.map (n)-> PaiId.toKind(n)
     else
         throw "argument error in PaiId.toKind(), pi=#{pi}"
-PaiId.toIndex = (pi)-> pk % 4
+PaiId.fromKind = (pk,index=0)->
+    if typeof pk == 'number'
+        pk * 4 + index
+    else if pk.map
+        pk.map (n)-> PaiId.fromKind(n,index)
+    else
+        throw "argument error in PaiId.fromKind(), pi=#{pk}"
+PaiId.index = (pi)-> pk % 4
 
 ###
 # メンツに分ける.
@@ -209,14 +216,52 @@ splitMentsu = (pks,opt)->
 # 面子をひとつ表すオブジェクト.
 #
 # type: 'toitsu', 'koutsu', 'kantsu', 'shuntsu'のいずれかの文字列
-# from: 構成する牌のうち、一番数がすくないPaiKind（１２３の場合１となる）
+# pk  : 構成する牌のうち、一番数がすくないPaiKind（１２３の場合１となる）
 # furo: 副露されているうかどうか（暗槓は連外的にfuro=falseとなる）
+# dir : 鳴いた方向(0:門前, 1:上家, 2:対面, 3:下家)
 ###
 class Mentsu
-    constructor: (type,pkFrom,furo=false)->
-        @type = type
-        @pkFrom = pkFrom
-        @furo = furo
+    ###
+    # コンストラクタ.
+    # 下記の２つの呼び方がある
+    # new Mentsu( 'mentsu', jan.PaiKind.MAN1, 0 )
+    # new Mentsu( [jan.PaiId.MAN1_0, jan.PaiId.MAN2_0, jan.PaiId.MAN3_0], 0 )
+    ###
+    constructor: ()->
+        if arguments.length == 3
+            @type = arguments[0]
+            @pk = arguments[1]
+            @dir = arguments[2]
+            @furo = ( @dir != 0 )
+            throw "invalid dir, dir=#{@dir}" unless @dir == 0 or @dir == 1 or @dir == 2 or @dir == 3
+            switch @type
+                when 'shuntsu'
+                    @pis = PaiId.fromKind( [@pk,@pk+1,@pk+2] )
+                when 'toitsu'
+                    @pis = PaiId.fromKind( [@pk,@pk] )
+                when 'koutsu'
+                    @pis = PaiId.fromKind( [@pk,@pk,@pk] )
+                when 'kantsu'
+                    @pis = PaiId.fromKind( [@pk,@pk,@pk,@pk] )
+                else
+                    throw "invalid type, type=#{@type}"
+        else
+            @pis = arguments[0]
+            pkSorted = PaiId.toKind( @pis )
+            pkSorted.sort (a,b)->a-b
+            @dir = arguments[1]
+            @furo = ( @dir != 0 )
+            @pk = pkSorted[0]
+            if pkSorted.length == 2 and @pk == pkSorted[1]
+                @type = 'toitsu'
+            else if pkSorted.length == 3 and @pk == pkSorted[1] and @pk == pkSorted[2]
+                @type = 'koutsu'
+            else if pkSorted.length == 4 and @pk == pkSorted[1] and @pk == pkSorted[2] and @pk == pkSorted[3]
+                @type = 'kantsu'
+            else if pkSorted.length == 3 and PaiKind.isShuntsuStarter(@pk) and @pk+1 == pkSorted[1] and @pk+2 == pkSorted[2]
+                @type = 'shuntsu'
+            else
+                throw "argument error in new Mentsu(), arguments=#{[].slice.apply(arguments)}"
 
     ###
     # PaiKindの配列からMentsuを生成する.
@@ -228,32 +273,23 @@ class Mentsu
     # @param furo 副露状態かどうか
     # @return Mentsuオブジェクトの配列（もしくは配列の配列、配列の配列の...）
     ###
-    @fromArray: (src,furo=false)->
+    @fromArray: (src,dir=0)->
         if typeof src[0] == 'number'
-            if src.length == 2 and src[0] == src[1]
-                return new Mentsu( 'toitsu', src[0],furo )
-            else if src.length == 3 and src[0] == src[1] and src[0] == src[2]
-                return new Mentsu( 'koutsu', src[0],furo )
-            else if src.length == 4 and src[0] == src[1] and src[0] == src[2] and src[0] == src[3]
-                return new Mentsu( 'kantsu', src[0],furo )
-            else if src.length == 3 and PaiKind.isShuntsuStarter(src[0]) and src[0] == src[1]-1 and src[0] == src[2]-2
-                return new Mentsu( 'shuntsu', src[0],furo)
-            else
-                throw "argument error in Mentsu.fromArray(), src=#{src}"
+            new Mentsu( PaiId.fromKind(src), dir)
         else
-            return src.map (x)->Mentsu.fromArray(x,furo)
+            src.map (x)->Mentsu.fromArray(x,dir)
 
     # 特定のハイを何枚含むかを返す
     countPai: (pk)->
         switch @type
             when 'toitsu'
-                if @pkFrom == pk then 2 else 0
+                if @pk == pk then 2 else 0
             when 'koutsu'
-                if @pkFrom == pk then 3 else 0
+                if @pk == pk then 3 else 0
             when 'kantsu'
-                if @pkFrom == pk then 4 else 0
+                if @pk == pk then 4 else 0
             when 'shuntsu'
-                if @pkFrom == pk or @pkFrom+1 == pk or @pkFrom+2 == pk then 1 else 0
+                if @pk == pk or @pk+1 == pk or @pk+2 == pk then 1 else 0
 
     ###
     # 文字列に変換する
@@ -261,13 +297,13 @@ class Mentsu
     toString: ->
         str = switch @type
             when 'toitsu'
-                PaiKind.toReadable( [@pkFrom, @pkFrom] )
+                PaiKind.toReadable( [@pk, @pk] )
             when 'koutsu'
-                PaiKind.toReadable( [@pkFrom, @pkFrom, @pkFrom] )
+                PaiKind.toReadable( [@pk, @pk, @pk] )
             when 'kantsu'
-                PaiKind.toReadable( [@pkFrom, @pkFrom, @pkFrom, @pkFrom] )
+                PaiKind.toReadable( [@pk, @pk, @pk, @pk] )
             when 'shuntsu'
-                PaiKind.toReadable( [@pkFrom, @pkFrom+1, @pkFrom+2] )
+                PaiKind.toReadable( [@pk, @pk+1, @pk+2] )
             else
                 throw 'invalid type'
         if @furo
@@ -363,7 +399,7 @@ calcYaku = (pkTehai,furo,opt={})->
     #  両面、単騎などの判定
     #  符の計算
     # 手牌を分解
-    tehaiMentsuList = Mentsu.fromArray( splitMentsu( pkTehai ), false )
+    tehaiMentsuList = Mentsu.fromArray( splitMentsu( pkTehai ), 0 )
     if tehaiMentsuList.length == 0
         throw "invalid arguments in calcYaku(), pkTehai=#{pkTehai}"
     result = []
@@ -379,38 +415,42 @@ calcYaku = (pkTehai,furo,opt={})->
         koutsuNum = 0
         shuntsuMenzenNum = 0
         koutsuMenzenNum = 0
+        koutsuAbsolutelyMenzenNum = 0
         mentsuAll = mentsu.concat( furo )
         for m in mentsuAll
             switch m.type
                 when 'toitsu'
-                    tanki = true if m.pkFrom == opt.pkLast
-                    fu += 2 if [PaiKind.HAKU,PaiKind.HATSU,PaiKind.CHUN].indexOf( m.pkFrom ) >= 0
-                    fu += 2 if opt.pkBakaze == m.pkFrom or opt.pkJikaze == m.pkFrom
+                    tanki = true if m.pk == opt.pkLast
+                    fu += 2 if [PaiKind.HAKU,PaiKind.HATSU,PaiKind.CHUN].indexOf( m.pk ) >= 0
+                    fu += 2 if opt.pkBakaze == m.pk or opt.pkJikaze == m.pk
                 when 'shuntsu'
                     shuntsuNum++
                     shuntsuMenzenNum++ if not m.furo
-                    kanchan = true if m.pkFrom+1 == opt.pkLast
-                    if not m.furo and ( m.pkFrom == opt.pkLast or m.pkFrom+2 == opt.pkLast )
-                        if (PaiKind.isYaochu(m.pkFrom) or PaiKind.isYaochu(m.pkFrom+2)) and not PaiKind.isYaochu(opt.pkLast)
+                    kanchan = true if m.pk+1 == opt.pkLast
+                    if not m.furo and ( m.pk == opt.pkLast or m.pk+2 == opt.pkLast )
+                        if (PaiKind.isYaochu(m.pk) or PaiKind.isYaochu(m.pk+2)) and not PaiKind.isYaochu(opt.pkLast)
                             penchan = true
                         else
                             ryanmen = true
 
                 when 'koutsu', 'kantsu'
                     koutsuNum++
-                    koutsuMenzenNum++ if not m.furo
+                    isFuro = m.furo
+                    isFuro = true if not opt.tsumo and m.pk == opt.pkLast # ロン和了りの場合、副露牌と判定する
+                    m.furo = isFuro # TODO:とりあえず
+                    m.dir = 1 if m.furo and not m.type=='kantsu'# TODO:とりあえず
                     if m.type == 'koutsu'
-                        isFuro = m.furo
-                        isFuro = true if not opt.tsumo and m.pkFrom == opt.pkLast # ロン和了りの場合、副露牌と判定する
-                        if PaiKind.isYaochu(m.pkFrom)
+                        if PaiKind.isYaochu(m.pk)
                             fu += if isFuro then 4 else 8
                         else
                             fu += if isFuro then 2 else 4
                     else
-                        if PaiKind.isYaochu(m.pkFrom)
+                        if PaiKind.isYaochu(m.pk)
                             fu += if isFuro then 16 else 32
                         else
                             fu += if isFuro then 8 else 16
+                    koutsuMenzenNum++ if not m.furo or m.dir == 0
+                    koutsuAbsolutelyMenzenNum++ if not m.furo
 
         # puts "ryanme=#{ryanmen}, kanchan=#{kanchan}, penchan=#{penchan}, tanki=#{tanki}"
         # puts "shuntsuNum=#{shuntsuNum}, shuntsuMenzenNum=#{shuntsuMenzenNum}, koutsuNum=#{koutsuNum}, koutsuMenzenNum=#{koutsuMenzenNum}"
@@ -420,7 +460,7 @@ calcYaku = (pkTehai,furo,opt={})->
 
 
         # 門前自摸
-        if opt.tsumo and furo.length == 0
+        if opt.tsumo and (shuntsuMenzenNum + koutsuMenzenNum == 4)
             yaku.push Yaku.TSUMO
 
         # 平和
@@ -429,7 +469,7 @@ calcYaku = (pkTehai,furo,opt={})->
             yaku.push Yaku.PINFU
             isPinfu = true
 
-        fu += 10 if furo.length == 0 and not opt.tsumo # 門前ロンの10符
+        fu += 10 if ((shuntsuMenzenNum + koutsuMenzenNum) == 4) and not opt.tsumo # 門前ロンの10符
         fu += 2 if opt.tsumo # 自摸の2符
 
         # 平和判定が終わったので、待ち形の決定
@@ -452,7 +492,7 @@ calcYaku = (pkTehai,furo,opt={})->
         # 断幺九
         tanyaoNum = 0 # 断幺対象の面子の数
         for m in mentsuAll
-            tanyaoNum++ if not PaiKind.isYaochu(m.pkFrom) and not ( m.type == 'shuntsu' and PaiKind.isYaochu(m.pkFrom+2) )
+            tanyaoNum++ if not PaiKind.isYaochu(m.pk) and not ( m.type == 'shuntsu' and PaiKind.isYaochu(m.pk+2) )
         if tanyaoNum == 5
             yaku.push Yaku.TANYAO
 
@@ -461,8 +501,8 @@ calcYaku = (pkTehai,furo,opt={})->
             jihaiNum = 0 # 字牌の面子の数
             yaochuNum = 0 # 幺九牌だけの面子の数
             for m in mentsuAll
-                jihaiNum++ if PaiKind.toSuit( m.pkFrom ) == PaiSuit.JIHAI
-                yaochuNum++ if PaiKind.isYaochu(m.pkFrom) and m.type != 'shuntsu'
+                jihaiNum++ if PaiKind.toSuit( m.pk ) == PaiSuit.JIHAI
+                yaochuNum++ if PaiKind.isYaochu(m.pk) and m.type != 'shuntsu'
             if jihaiNum == 0
                 if yaochuNum == 5
                     yakuman.push Yaku.CHINROUTOU
@@ -482,16 +522,16 @@ calcYaku = (pkTehai,furo,opt={})->
             for m1 in mentsu
                 for m2 in mentsu
                     if m1 != m2 and m1.type == 'shuntsu' and m2.type == 'shuntsu'
-                        peikou++ if m1.pkFrom == m2.pkFrom
+                        peikou++ if m1.pk == m2.pk
             if peikou >= 4
                 yaku.push Yaku.RYANPEIKOU
             else if peikou == 2
                 yaku.push Yaku.IIPEIKOU
 
         # 対々
-        if koutsuMenzenNum == 4
+        if koutsuAbsolutelyMenzenNum == 4
             yakuman.push Yaku.SUUANKOU
-        else if koutsuMenzenNum == 3
+        else if koutsuAbsolutelyMenzenNum == 3
             yaku.push Yaku.SANANKO
         if koutsuNum == 4
             yaku.push Yaku.TOITOI
@@ -501,9 +541,9 @@ calcYaku = (pkTehai,furo,opt={})->
         koutsuHead = []
         for m in mentsuAll
             if m.type == 'shuntsu'
-                shuntsuHead[m.pkFrom] = true
+                shuntsuHead[m.pk] = true
             else if m.type == 'koutsu' or m.type == 'koutsu'
-                koutsuHead[m.pkFrom] = true
+                koutsuHead[m.pk] = true
         # 三色同順
         for i in [PaiKind.MAN1..PaiKind.MAN9]
             if shuntsuHead[i] and shuntsuHead[i+9] and shuntsuHead[i+18]
@@ -523,7 +563,7 @@ calcYaku = (pkTehai,furo,opt={})->
         # 混一色/清一色
         suitNum = [0,0,0,0]
         for m in mentsuAll
-            suitNum[ PaiKind.toSuit( m.pkFrom )]++
+            suitNum[ PaiKind.toSuit( m.pk )]++
         for suit in [PaiSuit.MANZU,PaiSuit.PINZU,PaiSuit.SOUZU]
             if suitNum[suit] == 5
                 yaku.push Yaku.CHINITSU
@@ -544,7 +584,7 @@ calcYaku = (pkTehai,furo,opt={})->
         sangenNum = 0
         for m in mentsuAll
             if m.type == 'koutsu' or m.type == 'kantsu'
-                if [PaiKind.HAKU, PaiKind.HATSU, PaiKind.CHUN ].indexOf( m.pkFrom ) >= 0
+                if [PaiKind.HAKU, PaiKind.HATSU, PaiKind.CHUN ].indexOf( m.pk ) >= 0
                     sangenNum++
                     yakuhaiNum++
         if sangenNum == 3
@@ -552,46 +592,58 @@ calcYaku = (pkTehai,furo,opt={})->
             yakuhaiNum -= 3
         else if sangenNum == 2
             for m in mentsu
-                if m.type == 'toitsu' and [PaiKind.HAKU, PaiKind.HATSU, PaiKind.CHUN ].indexOf( m.pkFrom ) >= 0
+                if m.type == 'toitsu' and [PaiKind.HAKU, PaiKind.HATSU, PaiKind.CHUN ].indexOf( m.pk ) >= 0
                     yaku.push Yaku.SHOUSANGEN
                     yakuhaiNum -= 2
         for i in [0...yakuhaiNum]
             yaku.push Yaku.YAKUHAI
 
-        # 大四喜/小四喜
+        # 大四喜/小四喜/風牌
         yakuhaiNum = 0
         kazeNum = 0
         for m in mentsuAll
             if m.type == 'koutsu' or m.type == 'kantsu'
-                kazeNum++ if [PaiKind.TON, PaiKind.NAN, PaiKind.SHA, PaiKind.PEI ].indexOf( m.pkFrom ) >= 0
-                yakuhaiNum++ if m.pkFrom == opt.pkBakaze
-                yakuhaiNum++ if m.pkFrom == opt.pkJikaze
-
+                kazeNum++ if [PaiKind.TON, PaiKind.NAN, PaiKind.SHA, PaiKind.PEI ].indexOf( m.pk ) >= 0
+                yakuhaiNum++ if m.pk == opt.pkBakaze
+                yakuhaiNum++ if m.pk == opt.pkJikaze
         if kazeNum == 4
             yakuman.push Yaku.DAISUUSHII
         else if kazeNum == 3
             for m in mentsu
                 if m.type == 'toitsu'
-                    if [PaiKind.TON, PaiKind.NAN, PaiKind.SHA, PaiKind.PEI ].indexOf( m.pkFrom ) >= 0
+                    if [PaiKind.TON, PaiKind.NAN, PaiKind.SHA, PaiKind.PEI ].indexOf( m.pk ) >= 0
                         yakuman.push Yaku.SHOUSUUSHII
-        else
-            for i in [0...yakuhaiNum]
-                yaku.push Yaku.YAKUHAI
+        for i in [0...yakuhaiNum]
+            yaku.push Yaku.YAKUHAI
 
-        # ドラ
+        # ドラ/裏ドラ/赤ドラ
         for m in mentsuAll
-            for pkDora in opt.pkDora
-                for n in [0...m.countPai( pkDora )]
-                    yaku.push Yaku.DORA
-            for pkUradora in opt.pkUradora
-                for n in [0...m.countPai( pkUradora )]
-                    yaku.push Yaku.URADORA
+            if opt.pkDora
+                for pkDora in opt.pkDora
+                    for n in [0...m.countPai( pkDora )]
+                        yaku.push Yaku.DORA
+            if opt.pkUradora
+                for pkUradora in opt.pkUradora
+                    for n in [0...m.countPai( pkUradora )]
+                        yaku.push Yaku.URADORA
         for n in [0...opt.akadora]
             yaku.push Yaku.AKADORA
+        for m in furo
+            for pi in m.pis
+                if pi == PaiId.MAN5_0 or pi == PaiId.PIN5_0 or pi == PaiId.SOU5_0
+                    yaku.push Yaku.AKADORA
 
-        # リーチ/一発
-        yaku.push Yaku.REACH if opt.reach
+        # リーチ/ダブルリーチ/一発
+        if opt.doubleReach
+            yaku.push Yaku.DOUBLE_REACH
+        else if opt.reach
+            yaku.push Yaku.REACH
         yaku.push Yaku.IPPATSU if opt.ippatsu
+
+        # 河底/海底/嶺上開花
+        yaku.push Yaku.RINSHAN if opt.rinshan
+        yaku.push Yaku.HAITEI if opt.haitei
+        yaku.push Yaku.HOUTEI if opt.houtei
 
         # 符ハネ
         originalFu = fu
@@ -605,8 +657,9 @@ calcYaku = (pkTehai,furo,opt={})->
         han = 0
         for y in yaku
             han += Yaku.info(y).han
-            if furo.length != 0 and [Yaku.SANSHOKU, Yaku.SANSHOKU_DOUKOU, Yaku.HONITSU, Yaku.CHINITSU ].indexOf(y) >= 0
-                han -= 1 # 門前でないとき-1飜
+            # 門前でないとき-1飜になる役の処理
+            if furo.length != 0 and [Yaku.SANSHOKU, Yaku.ITTSU, Yaku.SANSHOKU_DOUKOU, Yaku.HONITSU, Yaku.CHINITSU, Yaku.CHANTA ].indexOf(y) >= 0
+                han -= 1
 
         score = scoreFromFuHan( fu, han, opt.oya, opt.tsumo )
         result.push { yaku:yaku, han:han, fu:fu, originalFu:originalFu, machi:machi, yakuman:yakuman, score: score }
@@ -646,16 +699,6 @@ scoreFromFuHan = (fu,han,oya)->
     else
         [type, Math.ceil( score*4/100 )*100, Math.ceil( score*2/100 )*100, Math.ceil( score  /100 )*100]
 
-###
-# 得点を計算する.
-#
-#
-###
-calcScore = (d)->
-    yakuData = calcYaku( d.pks, d.mentsu, {pkLast: d.pkMachi, pkDora: d.pkDora, pkUradora: d.pkUradora } )
-    puts yakuData.fu
-    score = scoreFromFuHan( yakuData.fu, yakuData.han, d.oya, d.tsumo )
-
 #for fu in [20,30,40,50,60] # ,70,80,90,100]
 #    for han in [1..8]
 #        puts "#{fu}符 #{han}飜 親ツモ "+scoreFromFuHan( fu,han, true, true ).slice(1)+
@@ -671,5 +714,4 @@ exports.Mentsu = Mentsu
 exports.Yaku = Yaku
 exports.splitMentsu = splitMentsu
 exports.calcYaku = calcYaku
-exports.calcScore = calcScore
 exports.scoreFromFuHan = scoreFromFuHan
