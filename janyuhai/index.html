@@ -1,0 +1,51 @@
+<html>
+<head>
+  <title>雀友牌のテストページ</title>
+  <script src="http://documentcloud.github.com/underscore/underscore-min.js"></script>
+  <script type="text/javascript">
+    window.underscore = _;
+    function require(module){ return window[module.replace(/[.¥/]+/g,'')]; }
+  </script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="./janutil.js"></script>
+  <script src="./jan.js"></script>
+  <script src="./game.js"></script>
+  <script src="./browser_game.js"></script>
+</head>
+<body>
+<style>
+.hai { border: solid 1 #fff; }  
+.hai:hover { border: solid 1 #f00; }
+.choise:hover { background-color: #fbb; }
+.active { background-color: #bff; }
+.active_dahai { background-color: #bbf; }
+#haifu {
+  float: right;
+  background-color: #ddd;
+  font-size: 8pt;
+  width: 40%;
+  height: 500px;
+  overflow: scroll;
+}
+
+</style>
+<h1>テスト</h1>
+<div id="taku">
+  taku
+  <pre id="haifu">牌譜
+</pre>
+  <div id="state">state</div>
+  <div id="tehai0">tehai0</div>
+  <div id="kawa0">kawa0</div>
+  <div id="tehai1">tehai1</div>
+  <div id="kawa1">kawa1</div>
+  <div id="tehai2">tehai2</div>
+  <div id="kawa2">kawa2</div>
+  <div id="tehai3">tehai3</div>
+  <div id="kawa3">kawa3</div>
+  <div id="choise">choise</div>
+  <div style="float:clear;"></div>
+</div>
+</body>  
+</html>
+   

@@ -1,3 +1,7 @@
+# nodeとブラウザの両対応用, nodeの場合はそのままで,ブラウザの場合はwindowをexportsとする
+if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
+    eval('var exports, global; exports = {}; window.jan = exports; global = window;')
+
 janutil = require './janutil'
 
 ###

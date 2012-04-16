@@ -1,3 +1,9 @@
+# nodeとブラウザの両対応用, nodeの場合はそのままで,ブラウザの場合はwindowをexportsとする
+if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
+    eval('var exports, global; exports = {}; window.janutil = exports; global = window;')
+    console.log exports
+    console.log window.janutil
+
 class Enum
     constructor: (names)->
         cur = 0
@@ -28,6 +34,18 @@ class Enum
 
 puts = -> console.log.apply console, arguments
 
+combinate = (a,i=0)->
+    if i == a.length-1
+        a[i]
+    else
+        result = []
+        for rest in combinate(a,i+1)
+            for head in a[i]
+                result.push [head].concat(rest)
+        result
+
+
 exports.Enum = Enum
 exports.puts = puts
+exports.combinate = combinate
 global.puts = puts
