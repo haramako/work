@@ -98,8 +98,9 @@ class Game
             return if st == @state
         throw "invalid state, expects #{[].slice.apply(arguments)} but #{@state}"
 
+    # 各牌譜コマンドに対応する関数群
     commandFunc:
-        # 場決めのサイコロを振る
+        # 場決めの牌を選択する
         BAGIME_SELECT: (com)->
             @_validateState 'INITIALIZED'
             for i in [0...com.pub.length]
@@ -157,10 +158,12 @@ class Game
         DAHAI: (com)->
             @_validateState 'DAHAI'
             player = @p[com.pl]
+            pi = com.pub.pi
             if @isOwner(com.pl)
-                player.s.piTehai = _.without( player.s.piTehai, com.pub.pi )
+                player.s.piTehai = _.without( player.s.piTehai, pi )
             player.tehaiNum -= 1
-            @lastStehai = com.pub.pi
+            player.piKawahai.push pi
+            @lastStehai = pi
             @state = 'NAKI'
             if @isMaster
                 pl = @nextPlayer(@curPlayer,1)
@@ -197,8 +200,16 @@ class Game
             if @isMaster
                 @chooseDahai(@p[@curPlayer])
         # ポン
-        PON: (com)->
-            @commandFunc['CHI'].apply( this, [com] )
+        PON: (com)-> @commandFunc['CHI'].apply( this, [com] ) # TODO: とりあえずチーとおなじ
+        # ツモ和了り
+        AGARI_TSUMO: (com)->
+            @_validateState 'DAHAI'
+            player = @p[com.pl]
+            if @isMaster
+                score = jan.calcYaku( PaiId.toKind(player.s.piTehai), player.furo, {tsumo:true} )
+                puts score
+                [{type:'NONE'},{type:'NONE'}]
+
 
     nextPlayer: (pl,n=1)->cycle(pl+n,4)
 
@@ -214,8 +225,11 @@ class Game
     # ツモったあとの自摸/打牌/リーチ/暗槓などの選択を行う
     chooseDahai: (player)->
         #[{type:'DAHAI', pl:player.idx }]
-        player.s.piTehai.map (pi,i)->
+        result = player.s.piTehai.map (pi,i)->
             {type:'DAHAI', pl:player.idx, pub:{pi:pi} }
+        if jan.splitMentsu( PaiId.toKind( player.s.piTehai ) ).length > 0
+            result.unshift {type:'AGARI_TSUMO', pl:player.idx }
+        result
 
     # 鳴きの選択を行う
     # @return 牌譜コマンドの配列
@@ -260,24 +274,44 @@ class Game
         piCombi = pks.map (pk)-> _.filter( piFrom, (pi)->PaiId.toKind(pi) == pk )
         janutil.combinate( piCombi )
 
-###
-game = new Game( [], {} )
+    # チート山牌を作成する
+    @makeCheatYama: (piTehai, dice=[1,1])->
+        piYama = new Array(PaiId.MAX)
+        pos = 0
+        # 牌を山に置く
+        put = (pi)->
+            piYama[pos] = pi
+            pos = cycle( pos+1, PaiId.MAX )
 
-# puts game.chooseNaki( 0, [0,1,4,9,10,11,12], 8, true )
+        for i in [0...3] # 3回
+            for pl in [0...piTehai.length]
+                for j in [0...4] # ４枚ずつ
+                    put piTehai[pl].shift()
+        restNum = _.reduce( piTehai, ((i,a)->i+a.length), 0 )
+        for i in [0...restNum]
+            for pl in [0...piTehai.length]
+                put piTehai[pl].shift()
 
-game.progress {type:'BAGIME_SELECT', pub:[0,1,2,3]}
-game.progress {type:'INIT_KYOKU', sec:{ piYama: [0...136] }}
-#game.progress {type:'INIT_KYOKU', sec:{ }}
-h = game.progress {type:'WAREME_DICE', pub:[1,1] }
-for i in [0..80]
-    com = h[0]
-    if h[1] and (h[1].type == 'CHI' or h[1].type == 'PON' )
-        com = h[1]
-    if com.type == 'DAHAI'
-        com = _.clone( com )
-        com.pub = {pi:game.p[game.curPlayer].s.piTehai[0]}
-    h = game.progress( com )
+        # 使ってない牌を調べる
+        usedTable = [0...PaiId.MAX]
+        for pi in piYama
+            usedTable[pi] = false if pi
+        usedTable = _.without( usedTable, false )
 
-###
+        # 空きを使っていない牌で埋める
+        for pi,i in piYama
+            piYama[i] = usedTable.shift() unless pi
+
+        piYama
+
+    # チート牌譜ファイルを作成する
+    # Game.makeCheatHaifu( [PaiId.uniq(PaiId.fromKind(PaiKind.fromReadable('東東東南南南西西西北北北白'))),[],[],[]] )
+    @makeCheatHaifu: (piTehai, dice=[1,1,])->
+        piYama = Game.makeCheatYama( piTehai, dice )
+        [
+            {"type":"BAGIME_SELECT","pub":[0,1,2,3]},
+            {"type":"INIT_KYOKU","sec":{"piYama":piYama}},
+            {"type":"WAREME_DICE","pub":dice},
+        ]
 
 exports.Game = Game

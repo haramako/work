@@ -146,6 +146,19 @@ PaiId.fromKind = (pk,index=0)->
     else
         throw "argument error in PaiId.fromKind(), pi=#{pk}"
 PaiId.index = (pi)-> pk % 4
+PaiId.uniq = (pis)->
+    if typeof pis[0] == 'number'
+        usedTable = new Array(PaiId.MAX)
+        for pi,i in pis
+            while usedTable[pi]
+                pi = (pi+1)%PaiId.MAX
+                pis[i] = pi
+            usedTable[pi] = true
+        pis
+    else if pis.map
+        pis.map (a)->PaiId.uniq(a)
+    else
+        throw "argument error in PaiId.uniq(), pis=#{pis}"
 
 ###
 # メンツに分ける.
@@ -323,8 +336,8 @@ class Mentsu
 YAKU_TABLE = [
     ['PINFU'     , '平和'      , 1 ],
     ['DORA'      , 'ドラ'      , 1 ],
-    ['URADORA'   , '裏ドラ'      , 1 ],
-    ['AKADORA'   , '赤ドラ'      , 1 ],
+    ['URADORA'   , '裏ドラ'    , 1 ],
+    ['AKADORA'   , '赤ドラ'    , 1 ],
     ['TANYAO'    , 'タンヤオ'  , 1 ],
     ['IIPEIKOU'  , '一盃口'    , 1 ],
     ['REACH'     , 'リーチ'    , 1 ],
@@ -399,14 +412,14 @@ Yaku.info = (yaku)->
 # @return 役や飜数を表すオブジェクト
 ###
 calcYaku = (pkTehai,furo,opt={})->
-    # チェック項目
-    #  両面、単騎などの判定
-    #  符の計算
+
     # 手牌を分解
     tehaiMentsuList = Mentsu.fromArray( splitMentsu( pkTehai ), 0 )
     if tehaiMentsuList.length == 0
         throw "invalid arguments in calcYaku(), pkTehai=#{pkTehai}"
     result = []
+
+    # 符/待ち形の計算
     for mentsu in tehaiMentsuList
         # 各順子などの数をカウント
         fu = 20

@@ -40,8 +40,7 @@ class Game
         '''
         # {"type":"DAHAI","pl":0,"pub":{"pi":0}}
         for com in haifu
-            @game.progress com
-        @showGame()
+            @send com, false
 
     showGame: ()->
         @stateDiv.text( "state=#{@game.state} curPlayer=#{@game.curPlayer}" )
@@ -66,10 +65,10 @@ class Game
             div = $('<div class="choise">').html( ''+i+':'+JSON.stringify(c) ).data({choise:i})
             @choiseDiv.append( div )
 
-    send: (com)->
-        @haifuDiv.append( JSON.stringify(com)+"\n" )
+    send: (com,skip=true)->
+        @haifuDiv.append( JSON.stringify(com)+",\n" )
         @game.progress com
-        if @game.choises.length == 1
+        if skip and @game.choises.length == 1
             @send @game.choises[0]
         else
             @showGame()
