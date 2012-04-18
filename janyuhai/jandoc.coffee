@@ -1,3 +1,8 @@
+#!/bin/env coffee
+#
+# 雀友牌のプログラムで使う定数群をHTMLで書きだす.
+#
+
 jan = require './jan'
 
 template = '''
@@ -6,7 +11,7 @@ template = '''
     <title>雀友牌 番号表</title>
 <body>
 <style>
-table { border-collapse: collapse; margin: 20px; }
+table { border-collapse: collapse; margin: 20px; font-size: 8pt; }
 th { background-color: #bbb; }
 td, th { border: solid 1px #888; }
 </style>

@@ -1,12 +1,9 @@
 <html>
 <head>
   <title>雀友牌のテストページ</title>
-  <script src="http://documentcloud.github.com/underscore/underscore-min.js"></script>
-  <script type="text/javascript">
-    window.underscore = _;
-    function require(module){ return window[module.replace(/[.¥/]+/g,'')]; }
-  </script>
   <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="./underscore-min.js"></script>
+  <script src="./simple_require.js"></script>
   <script src="./janutil.js"></script>
   <script src="./jan.js"></script>
   <script src="./game.js"></script>
@@ -14,38 +11,80 @@
 </head>
 <body>
 <style>
-.hai { border: solid 1px #fff; }  
+#taku {
+  border: solid 1px #000;
+  position: relative;
+  width: 800px;
+  height: 800px;
+  background-color: #484;
+}
+
+.tehai {
+  position: absolute;
+  left:-400px;
+  top: -30px;
+  width: 730px;
+  height: 60px;
+  padding-left: 70px;
+}
+
+.active { background-color: #6a6; }
+.active_dahai { background-color: #aa6; }
+
+.kawa { left:-200px; top: -90px; position: absolute; width: 400px; height: 180px; }
+
+.hai { border: solid 1px transparent; }
+
 .hai:hover { border: solid 1px #f00; }
+
+#state {
+  position: absolute;
+  left: 300px;
+  top: 300px;
+}
+
+#choises {
+  position: absolute;
+  left: 820px;
+  top: 400px;
+  width: 400px;
+  height: 400px;
+  border: solid 1px;
+}
+
 .choise:hover { background-color: #fbb; }
-.active { background-color: #bff; }
-.active_dahai { background-color: #bbf; }
 #haifu {
-  float: right;
+  position: absolute;
+  left: 820px;
+  top: 10px;
   background-color: #ddd;
   font-size: 8pt;
-  width: 40%;
-  height: 500px;
+  width: 400px;
+  height: 320px;
   overflow: scroll;
 }
 
 </style>
-<h1>テスト</h1>
-<div id="taku">
-  taku
-  <pre id="haifu">牌譜
+<pre id="haifu">牌譜
 </pre>
+
+<div id="choises">choise</div>
+
+<div id="taku">
   <div id="state">state</div>
-  <div id="tehai0">tehai0</div>
-  <div id="kawa0">kawa0</div>
-  <div id="tehai1">tehai1</div>
-  <div id="kawa1">kawa1</div>
-  <div id="tehai2">tehai2</div>
-  <div id="kawa2">kawa2</div>
-  <div id="tehai3">tehai3</div>
-  <div id="kawa3">kawa3</div>
-  <div id="choise">choise</div>
-  <div style="float:clear;"></div>
+  
+  <div id="tehai0" class="tehai" style="-webkit-transform: translate(400px,770px) rotate(  0deg);">tehai0</div>
+  <div id="tehai1" class="tehai" style="-webkit-transform: translate(770px,400px) rotate(-90deg);">tehai1</div>
+  <div id="tehai2" class="tehai" style="-webkit-transform: translate(400px, 30px) rotate(180deg);">tehai2</div>
+  <div id="tehai3" class="tehai" style="-webkit-transform: translate( 30px,400px) rotate( 90deg);">tehai3</div>
+  
+  <div id="kawa0"  class="kawa"  style="-webkit-transform: translate(400px,620px) rotate(  0deg);">kawa0</div>
+  <div id="kawa1"  class="kawa"  style="-webkit-transform: translate(620px,420px) rotate(-90deg);">kawa1</div>
+  <div id="kawa2"  class="kawa"  style="-webkit-transform: translate(420px,190px) rotate(180deg);">kawa2</div>
+  <div id="kawa3"  class="kawa"  style="-webkit-transform: translate(190px,400px) rotate( 90deg);">kawa3</div>
 </div>
+<div style="float:clear;"></div>
+
 </body>  
 </html>
    

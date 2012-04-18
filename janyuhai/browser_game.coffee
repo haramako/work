@@ -14,7 +14,7 @@ class Game
         @stateDiv = $('#state')
         @tehaiDiv = ($("#tehai#{i}") for i in [0..3])
         @kawaDiv = ($("#kawa#{i}") for i in [0..3] )
-        @choiseDiv = $("#choise")
+        @choiseDiv = $("#choises")
         @haifuDiv = $('#haifu')
 
         # イベントハンドラの設定
@@ -22,41 +22,37 @@ class Game
             cls = $(ev.target).attr('class')
             if cls == 'hai'
                 @onHaiClick( $(ev.target).data('pi') )
-            else if cls == 'choise'
+
+        @choiseDiv.on 'click', (ev)=>
+            cls = $(ev.target).attr('class')
+            if cls == 'choise'
                 @onChoiseClick( parseInt( $(ev.target).data('choise'),10) )
 
-        # ゲームの開始
         @game = new game.Game([],{})
-        haifu = JSON.parse '''
-        [
-        {"type":"BAGIME_SELECT","pub":[0,1,2,3]} ,
-        {"type":"INIT_KYOKU","sec":{"piYama":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135]}} ,
-        {"type":"WAREME_DICE","pub":[1,1]} ,
-        {"type":"HAIPAI","pl":0,"sec":[0,1,2,3,16,17,18,19,32,33,34,35,48,52],"pub":14} ,
-        {"type":"HAIPAI","pl":1,"sec":[4,5,6,7,20,21,22,23,36,37,38,39,49],"pub":13} ,
-        {"type":"HAIPAI","pl":2,"sec":[8,9,10,11,24,25,26,27,40,41,42,43,50],"pub":13} ,
-        {"type":"HAIPAI","pl":3,"sec":[12,13,14,15,28,29,30,31,44,45,46,47,51],"pub":13}
-        ]
-        '''
-        # {"type":"DAHAI","pl":0,"pub":{"pi":0}}
-        for com in haifu
-            @send com, false
 
     showGame: ()->
         @stateDiv.text( "state=#{@game.state} curPlayer=#{@game.curPlayer}" )
         for player,i in @game.p
-            html = "#{i}: "
-            @tehaiDiv[i].attr('class','')
+            @tehaiDiv[i].removeClass('active_dahai')
+            @tehaiDiv[i].removeClass('active')
             if @game.curPlayer == i
                 if @game.state == 'DAHAI'
                     @tehaiDiv[i].addClass 'active_dahai'
                 else
                     @tehaiDiv[i].addClass 'active'
 
-            html += @haiToHtml( player.s.piTehai )
+            html = @haiToHtml( player.s.piTehai )
             html += ' '+@mentsuToHtml( mentsu ) for mentsu in player.furo
             @tehaiDiv[i].html(html)
-            html = @haiToHtml( player.piKawahai )
+
+            # 6枚ごとに分けて川牌を表示
+            html = ''
+            piFeeded = []
+            piKawahai = player.piKawahai.slice(0)
+            while piKawahai.length > 0
+                piFeeded.push piKawahai[0..5]
+                piKawahai = piKawahai[6..-1]
+            html += @haiToHtml( pis )+"<br/>" for pis in piFeeded
 
             @kawaDiv[i].html(html)
 
@@ -66,8 +62,15 @@ class Game
             @choiseDiv.append( div )
 
     send: (com,skip=true)->
-        @haifuDiv.append( JSON.stringify(com)+",\n" )
         @game.progress com
+        @haifuDiv.append( JSON.stringify(com)+",\n" )
+
+        # 理牌する
+        if com.type == 'DAHAI' or com.type == 'HAIPAI'
+            player = @game.p[com.pl]
+            player.s.piTehai = _.sortBy(player.s.piTehai, (a,b)->a-b)
+
+        # skipが真で選択肢がないなら勝手にすすめる
         if skip and @game.choises.length == 1
             @send @game.choises[0]
         else
@@ -84,8 +87,9 @@ class Game
 
     # 牌をHTMLに変換する.
     # @param pi PaiId(もしくはPaiIdの配列)
+    # @param feed 折り返し枚数
     # @return html文字列
-    haiToHtml: (pi)->
+    haiToHtml: (pi,feed)->
         if typeof pi == 'number'
             pk = jan.PaiId.toKind(pi)
             img= if pk >= 10 then ''+pk else ('0'+pk)
@@ -100,5 +104,16 @@ class Game
         @haiToHtml( mentsu.pis )
 
 $(document).ready ->
-    window.game = game = new Game()
+    param = {}
+    for s in document.location.search.substring(1).split('&')
+        kv = s.split('=')
+        param[kv[0]] = kv[1]
+    if param.haifu
+        $.get param.haifu, (data)->
+            window.game = game = new Game()
+            for com in data
+                game.send com, false
+    else
+        window.game = game = new Game()
+
     puts 'ready'

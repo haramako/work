@@ -14,15 +14,17 @@ cycle = (n,max)-> (n+max)%max
 
 class Player
     constructor: (idx,src)->
-        @idx = idx
-        @initIdx = idx
-        @name = src
-        @piKawahai =[]
-        @reachIndex = null
-        @tehaiNum = 0
+        @idx = undefined # 現在の座っている場所、場決めまで分からないので初期値はnull(0:東家,1:南家, 2:西家, 3:北家)
+        @initIdx = idx # ゲーム開始時の位置(0-3のいずれか)
+        @name = src # 名前
+        @piKawahai =[] # 川牌（鳴かれた牌も含む）
+        @reachIndex = undefined # リーチした牌のpiKawahaiのインデックス
+        @reachDisplayIndex = undefined # リーチ表示牌のpiKawahaiのインデックス（鳴かれるとreadhIndexとずれる)
+        @tehaiNum = 0 # 手牌の数
         @furo = [] # 副露牌(Mentsuの配列)
-        @s =
-            piTehai: []
+        @score = 0 # 点数
+        @s = # 秘密('s'ecret)情報、ゲームマスターもしくは自分の時だけ保持する
+            piTehai: [] # 手牌
 
 ###
 # 麻雀のゲーム進行を司るクラス.
@@ -42,15 +44,19 @@ class Game
         @rule = _.clone(rule)
         @rule.playerNum ?= 4
 
-        @initialPlayers = [ new Player(0), new Player(1), new Player(2), new Player(3) ]
+        @initialPlayers = for i in [0...4]
+            p = new Player(i)
+            p.score = 25000
+            p
         @p = @initialPlayers.slice()
         @s = {}
         @state = 'INITIALIZED'
         @tsumoPos = 0
         @isMaster = true
-        @curPlayer = null
+        @curPlayer = undefined
         @haifu = []
-        @lastStehai = null # 最後の捨牌
+        @honba = 0 # 本場（積み棒の数)
+        @lastStehai = undefined # 最後の捨牌
 
     makePos: (yama,pos,top)->
 
@@ -71,10 +77,17 @@ class Game
     # TODO: ロン>ポン>チーの優先順位はリアルタイムでクライアントの選択がキャンセルされる例外
     # TODO: 場決めの牌選択はリアルタイム例外
     #
-    # BAGIME_SELECT:
-    # OYAGIME_DICE: 親決めのダイス
-    # INIT_KYOKU: 牌を配る
-    #   piYama: 山牌(PaiIdの配列、要素数は136)
+    # BAGIME       : 場決め
+    # OYAGIME_DICE : 親決めのダイス
+    # INIT_KYOKU   : 局の初期化
+    # WAREME_DICE  : 割れ目を決めるサイコロを振る
+    # HAIPAI       : 配牌を一人分配る
+    # DAHAI        : 打牌
+    # TSUMO        : 自摸
+    # CHI          : チー
+    # PON          : ポン
+    # TSUMO_AGERI  : ツモ和了り
+    # RON          : ロン和了り
     #
     # @return 選択肢を返す(コマンドの配列の配列,最初の添字はユーザー番号(0..3)
     #
@@ -101,7 +114,7 @@ class Game
     # 各牌譜コマンドに対応する関数群
     commandFunc:
         # 場決めの牌を選択する
-        BAGIME_SELECT: (com)->
+        BAGIME: (com)->
             @_validateState 'INITIALIZED'
             for i in [0...com.pub.length]
                 @p[i] = @initialPlayers[com.pub[i]]
@@ -111,20 +124,26 @@ class Game
                 [{type:'INIT_KYOKU'}]
         # 局の初期化
         INIT_KYOKU: (com)->
-            @_validateState 'INIT_KYOKU'
+            @_validateState 'INIT_KYOKU', 'AGARI', 'NAKI'
+            # プレイヤー情報の初期化
+            for player in @p
+                player.s.piTehai = []
+                player.piKawahai = []
+                player.furo = []
             @state = 'WAREME_DICE'
             if @isMaster
-                if com.sec.piYama
+                if com.sec and com.sec.piYama
                     @s.piYama = com.sec.piYama
                 else
                     @s.piYama = _.shuffle([0...PaiId.MAX])
+                    com.sec = { piYama: @s.piYama }
                 [{type:'WAREME_DICE'}]
         # 山決めのサイコロを振る
         WAREME_DICE: (com)->
             @_validateState 'WAREME_DICE'
             # サイコロの情報がなかったら、ここで振る
             if @isMaster and not com.pub
-                @dice = [Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1]
+                com.pub = [Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1]
             @dice = com.pub.slice()
             dice = @dice[0]+@dice[1]
             @state = 'HAIPAI'
@@ -173,6 +192,9 @@ class Game
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, false ) )
                 pl = @nextPlayer(@curPlayer,3)
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, false ) )
+                # 流局処理
+                if @tsumoPos >= 130
+                    result.unshift {type:'INIT_KYOKU'}
                 result
         # 自摸
         TSUMO: (com)->
@@ -201,14 +223,21 @@ class Game
                 @chooseDahai(@p[@curPlayer])
         # ポン
         PON: (com)-> @commandFunc['CHI'].apply( this, [com] ) # TODO: とりあえずチーとおなじ
+        # カン
+        KAN: (com)->
+            com.pub.shift()
+            @commandFunc['CHI'].apply( this, [com] ) # TODO: とりあえずチーとおなじ
         # ツモ和了り
-        AGARI_TSUMO: (com)->
-            @_validateState 'DAHAI'
-            player = @p[com.pl]
+        TSUMO_AGARI: (com)->
+            @_validateState 'DAHAI','NAKI' # DAHAIはTUSMOAGARI, NAKIはRONのときのみ
+            if com.type == 'RON'
+                from = @curPlayer
+            @agari(com.pl,com.pub.score,from)
+            @state = 'AGARI'
             if @isMaster
-                score = jan.calcYaku( PaiId.toKind(player.s.piTehai), player.furo, {tsumo:true} )
-                puts score
-                [{type:'NONE'},{type:'NONE'}]
+                [{type:'INIT_KYOKU'}]
+        # ロン
+        RON: (com)-> @commandFunc['TSUMO_AGARI'].apply( this, [com] ) # TODO: とりあえずツモと一緒
 
 
     nextPlayer: (pl,n=1)->cycle(pl+n,4)
@@ -222,13 +251,44 @@ class Game
     # ここから下は、ゲームマスターの時しか使わない関数
     #========================================================
 
+    # 和了りの処理
+    # @param from 振り込んだ人のプレイヤー番号、ツモの場合はundefined
+    # @param score 点数情報(jan.calcYakuの返り値のscoreとおなじ)
+    agari: (pl,score,from)->
+        if from
+            # ロン和了り
+            @p[from].score -= score[1] + @honba * 300
+            @p[pl].score += score[1] + @honba * 300
+        else
+            # ツモ和了り
+            total = 0
+            for pl2 in [0...4]
+                continue if pl2 == pl # 自分は飛ばす
+                if pl == 0
+                    # 親の支払い
+                    total += score[2] + @honba * 100
+                    @p[pl2].score -= score[2] + @honba * 100
+                else
+                    # 子の支払い
+                    total += score[3] + @honba * 100
+                    @p[pl2].score -= score[3] + @honba * 100
+            @p[pl].score += total
+
+
     # ツモったあとの自摸/打牌/リーチ/暗槓などの選択を行う
     chooseDahai: (player)->
         #[{type:'DAHAI', pl:player.idx }]
         result = player.s.piTehai.map (pi,i)->
             {type:'DAHAI', pl:player.idx, pub:{pi:pi} }
         if jan.splitMentsu( PaiId.toKind( player.s.piTehai ) ).length > 0
-            result.unshift {type:'AGARI_TSUMO', pl:player.idx }
+            agari = jan.calcYaku( PaiId.toKind(player.s.piTehai), player.furo, @calcYakuOption({tsumo:true}) )
+            result.unshift
+                type: 'TSUMO_AGARI'
+                pl: player.idx
+                pub:
+                    piTehai: player.s.piTehai
+                    yaku: agari.yaku
+                    score: agari.score
         result
 
     # 鳴きの選択を行う
@@ -240,20 +300,28 @@ class Game
         # チー
         if enableChi
             pkNakiList = []
+            # 鳴けるパターンを探す
             if PaiKind.isShuntsuStarter(pkKawa) and paiTable[pkKawa+1]>0 and paiTable[pkKawa+2]
                 pkNakiList.push [pkKawa+1, pkKawa+2]
             if PaiKind.isShuntsuStarter(pkKawa-1) and  paiTable[pkKawa-1]>0 and paiTable[pkKawa+1]
                 pkNakiList.push [pkKawa-1, pkKawa+1]
             if PaiKind.isShuntsuStarter(pkKawa-2) and  paiTable[pkKawa-2]>0 and paiTable[pkKawa-1]
                 pkNakiList.push [pkKawa-2, pkKawa-1]
-            chiList = _.flatten( pkNakiList.map( (pkNaki)=>Game.getCombination(piTehai,pkNaki) ), true )
-            for chi in chiList
+            # pkNakiListの組み合わせを満たす,組み合わせを調べあげる
+            piChiList = pkNakiList.map (pkNaki)=>
+                piCombi = pkNaki.map (pk)-> _.filter( piTehai, (pi)->PaiId.toKind(pi) == pk )
+                janutil.combinate( piCombi )
+            for chi in _.flatten(piChiList,true)
                 result.push {type:'CHI', pl:pl, pub:chi}
 
         # ポン
         if paiTable[pkKawa]>=2
-            ponList = Game.getCombination(piTehai,[pkKawa,pkKawa])
-            for pon in ponList
+            piCombi =  _.filter( piTehai, (pi)->PaiId.toKind(pi) == pkKawa )
+            if piCombi.length == 2
+                piPonList = [piCombi]
+            else
+                piPonList = [ [piCombi[0],piCombi[1]], [piCombi[0],piCombi[2]], [piCombi[1], piCombi[2]] ]
+            for pon in piPonList
                 result.push {type:'PON', pl:pl, pub:pon}
 
         # 大明カン
@@ -261,7 +329,24 @@ class Game
             kan = piTehai.filter (pi)->PaiId.toKind(pi) == pkKawa
             result.push {type:'KAN', pl:pl, pub:kan}
 
+        # ロン
+        pkTehaiAll = PaiId.toKind( piTehai.concat( [piKawa] ) )
+        if jan.splitMentsu( pkTehaiAll ).length > 0
+            player = @p[pl]
+            agari = jan.calcYaku( pkTehaiAll, player.furo, @calcYakuOption({tsumo:true} ))
+            result.unshift
+                type: 'RON'
+                pl: pl
+                pub:
+                    piTehai: player.s.piTehai
+                    yaku: agari.yaku
+                    score: agari.score
+
         result
+
+    calcYakuOption: (opt)->
+        _.extend opt,
+            hoge: false
 
     ###
     # PaiIDの配列の中から、指定されたPaiKindを選ぶ組み合わせを返す.
@@ -270,9 +355,7 @@ class Game
     # Game.getCombination( [PaiId.MAN1_0, PaiID.MAN1_1, PaiId.MAN2_0, PaiID.MAN2_1], PaiKind.MAN1, PaiKind.MAN2 )
     #  # => [[MAN1_0,MAN2_0], [MAN1_1,MAN2_0], [MAN1_0,MAN2_1], [MAN1_1,MAN2_1]]
     ###
-    @getCombination: (piFrom, pks)->
-        piCombi = pks.map (pk)-> _.filter( piFrom, (pi)->PaiId.toKind(pi) == pk )
-        janutil.combinate( piCombi )
+    @getChiCombination: (piFrom, pks)->
 
     # チート山牌を作成する
     @makeCheatYama: (piTehai, dice=[1,1])->
@@ -309,7 +392,7 @@ class Game
     @makeCheatHaifu: (piTehai, dice=[1,1,])->
         piYama = Game.makeCheatYama( piTehai, dice )
         [
-            {"type":"BAGIME_SELECT","pub":[0,1,2,3]},
+            {"type":"BAGIME","pub":[0,1,2,3]},
             {"type":"INIT_KYOKU","sec":{"piYama":piYama}},
             {"type":"WAREME_DICE","pub":dice},
         ]

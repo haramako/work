@@ -1,8 +1,6 @@
 # nodeとブラウザの両対応用, nodeの場合はそのままで,ブラウザの場合はwindowをexportsとする
 if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
     eval('var exports, global; exports = {}; window.janutil = exports; global = window;')
-    console.log exports
-    console.log window.janutil
 
 class Enum
     constructor: (names)->
