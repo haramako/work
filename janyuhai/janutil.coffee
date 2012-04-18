@@ -42,8 +42,23 @@ combinate = (a,i=0)->
                 result.push [head].concat(rest)
         result
 
+prettyPrintJson = (val,indent='  ')->
+    str = JSON.stringify(val)
+    if str.length < 500
+        str
+    else
+        if val.length and val.map
+            '[\n'+val.map( (x)->indent+ prettyPrintJson(x,indent+'  ') ).join(',\n')+'\n'+indent[0...-2]+']'
+        else if typeof val == 'object'
+            result = []
+            for k,v of val
+                result.push indent+'"'+k+'":'+ prettyPrintJson(v,indent+'  ')
+            '{\n'+result.join(',\n')+'\n'+indent[0...-2]+'}'
+        else
+            str
 
 exports.Enum = Enum
 exports.puts = puts
 exports.combinate = combinate
+exports.prettyPrintJson = prettyPrintJson
 global.puts = puts

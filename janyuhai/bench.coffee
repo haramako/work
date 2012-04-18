@@ -4,15 +4,14 @@ game = require './game'
 jan = require './jan'
 
 game = new game.Game( [], {playerNum:4} )
-game.progress {type:'BAGIME', pub:[0,1,2,3]}
-game.progress {type:'INIT_KYOKU', sec:{ piYama: [0...136] }}
-choises = game.progress {type:'WAREME_DICE', pub:[1,1] }
+choises = game.progress {type:'BAGIME', pub:[0,1,2,3]}
 
 kyoku = 0
 agari = 0
 cn = (0 for i in [0..30])
 try
-    for i in [0...100*8*30000/60/15]
+    count = 100*8*30000/60/15*100
+    for i in [0...count]
         com = _.find( choises, (c)->c.type == 'RON' or c.type == 'TSUMO_AGARI' )
         if com
             agari++
@@ -24,10 +23,14 @@ try
             kyoku++
             game.haifu = []
 catch e
-    puts game.p
-    puts game.haifu.slice(game.haifu.length-3)
+    haifu = game.haifu
+    game.haifu = []
+    game.record = undefined
+    puts game
+    puts haifu.slice(haifu.length-3)
     throw e
 
 puts kyoku
+puts count/kyoku
 puts cn
 puts agari

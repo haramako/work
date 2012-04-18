@@ -31,7 +31,12 @@ class Game
         @game = new game.Game([],{})
 
     showGame: ()->
-        @stateDiv.text( "state=#{@game.state} curPlayer=#{@game.curPlayer}" )
+        # 状態の表示
+        pos = @game.splitPos(@game.tsumoPos)
+        @stateDiv.html "state=#{@game.state} curPlayer=#{@game.curPlayer} tsumoPos=#{@game.tsumoPos}\n"+
+            "残り#{@game.restPai()}枚 ツモ位置[#{'東南西北'[pos.yama]},#{pos.ton},#{if pos.top then '上' else '下'}]\n"+
+            "ドラ表示牌: #{@haiToHtml(@game.piDoraIndicator)}"
+
         for player,i in @game.p
             @tehaiDiv[i].removeClass('active_dahai')
             @tehaiDiv[i].removeClass('active')
@@ -63,7 +68,7 @@ class Game
 
     send: (com,skip=true)->
         @game.progress com
-        @haifuDiv.append( JSON.stringify(com)+",\n" )
+        @haifuDiv.text( janutil.prettyPrintJson(@game.record) )
 
         # 理牌する
         if com.type == 'DAHAI' or com.type == 'HAIPAI'
@@ -111,9 +116,10 @@ $(document).ready ->
     if param.haifu
         $.get param.haifu, (data)->
             window.game = game = new Game()
-            for com in data
+            for com in data.haifu
                 game.send com, false
     else
         window.game = game = new Game()
+        game.send {type:'BAGIME'}
 
     puts 'ready'

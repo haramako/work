@@ -10,7 +10,8 @@ PaiId = jan.PaiId
 PaiKind = jan.PaiKind
 Mentsu = jan.Mentsu
 Yaku = jan.Yaku
-cycle = (n,max)-> (n+max)%max
+
+cycle = (n,max)-> (n%max+max)%max
 
 class Player
     constructor: (idx,src)->
@@ -25,6 +26,9 @@ class Player
         @score = 0 # 点数
         @s = # 秘密('s'ecret)情報、ゲームマスターもしくは自分の時だけ保持する
             piTehai: [] # 手牌
+
+# 山牌の状態
+YamaState = new janutil.Enum(['CLOSED','USED','OPENED'])
 
 ###
 # 麻雀のゲーム進行を司るクラス.
@@ -49,27 +53,56 @@ class Game
             p.score = 25000
             p
         @p = @initialPlayers.slice()
-        @s = {}
+        @s =
+            piYama: undefined # 山牌(PaiIdの配列)
         @state = 'INITIALIZED'
-        @tsumoPos = 0
-        @isMaster = true
-        @curPlayer = undefined
+        @tsumoPos = undefined # 次の自摸の位置
+        @wanpaiPos = undefined # 王牌の一番右上牌の位置
+        @nextDoraPos = undefined # 次のドラの位置
+        @yamaState = undefined # 山の状態(YamaStateの配列)
+        @pkDora = [] # ドラの配列(PaiKind)
+        @piDoraIndicator = [] # ドラ表示牌の配列(PaiId)
+        @isMaster = true # ゲームマスターかどうか
+        @curPlayer = undefined # 現在のプレイヤー番号
         @haifu = []
         @honba = 0 # 本場（積み棒の数)
         @lastStehai = undefined # 最後の捨牌
+        @record = # 記録された牌譜ファイルの内容とほぼ同一のもの
+            version: 1000 # バージョン番号*1000
+            rule: @rule
+            kyoku: []
+            haifu: @haifu
 
-    makePos: (yama,pos,top)->
 
-    splitPos: (idx)->
-        idx = cycle(idx,PaiId.MAX)
-        { yama: Math.floor(idx/36), pos: Math.floor(idx%4/2), pos: (idx%2==0) }
+
+    # 山廃の位置位置情報をインデックスに変換する.
+    # @param yama プレイヤー番号
+    # @param ton 右端からのトン数(0始まり)
+    # @param top 上牌ならtrue
+    # @return 山牌の位置(0-135)
+    makePos: (yama,ton,top)-> cycle((-yama*34) + ton*2 + (if top then 0 else 1),PaiId.MAX)
+
+    # 山牌の位置をわかりやすい情報に変換する.
+    # @param pos 山廃の位置(0-135)
+    # @return 位置情報( {yama: プレイヤー番号, ton: 右端からのトン数(0始まり), top: 上牌ならtrue} )
+    splitPos: (pos)->
+        pos = cycle(pos,PaiId.MAX)
+        { yama: cycle(-(Math.floor(pos/34)),4), ton: Math.floor(pos%34/2), top: (pos%2==0) }
 
     tsumoFromYama: ->
         pi = @s.piYama[@tsumoPos]
-        @tsumoPos = cycle(@tsumoPos+1,136)
+        throw "tsumo must be closed! tsumoPos=#{@tsumoPos}" if @yamaState[@tsumoPos] != YamaState.CLOSED
+        @yamaState[@tsumoPos] = YamaState.USED
+        @tsumoPos = cycle(@tsumoPos+1,PaiId.MAX)
         pi
 
     isOwner: (pl)-> @isMaster or @owner.idx == pl
+
+    # ドラ表示牌からドラに変換する
+    indicateDora: (pi)->PaiKind.next(PaiId.toKind(pi))
+
+    # 残り枚数
+    restPai: ->cycle(@wanpaiPos-@tsumoPos,PaiId.MAX)
 
     ###
     # 牌譜コマンド１つ分すすめる.
@@ -114,15 +147,27 @@ class Game
     # 各牌譜コマンドに対応する関数群
     commandFunc:
         # 場決めの牌を選択する
+        # pl: なし
+        # pub: 場決めの順番( 初期化プレイヤー番号の要素数4の配列 )
+        # sec: なし
         BAGIME: (com)->
+            if @isMaster and not com.pub
+                com.pub = [0,1,2,3]
             @_validateState 'INITIALIZED'
             for i in [0...com.pub.length]
                 @p[i] = @initialPlayers[com.pub[i]]
                 @p[i].idx = i
             @state = 'INIT_KYOKU'
             if @isMaster
-                [{type:'INIT_KYOKU'}]
+                [{type:'INIT_KYOKU', pub:{bakaze:PaiKind.TON, kyoku:0, honba:0 }}]
         # 局の初期化
+        # pl: なし
+        # pub:
+        #   bakaze: <MASTER>場風(PaiKind.TON,NAN,SHA,PAIのいずれか)
+        #   kyoku: <MASTER>局番号(0はじまり)
+        #   honba: <MASTER>本場
+        # sec:
+        #   piYama: <MASTER>山牌(PaiIdの配列)
         INIT_KYOKU: (com)->
             @_validateState 'INIT_KYOKU', 'AGARI', 'NAKI'
             # プレイヤー情報の初期化
@@ -130,6 +175,10 @@ class Game
                 player.s.piTehai = []
                 player.piKawahai = []
                 player.furo = []
+            @yamaState = (YamaState.CLOSED for i in [0...PaiId.MAX])
+            @bakaze = com.pub.bakaze
+            @kyooku = com.pub.kyoku
+            @honba = com.pub.honba
             @state = 'WAREME_DICE'
             if @isMaster
                 if com.sec and com.sec.piYama
@@ -138,16 +187,33 @@ class Game
                     @s.piYama = _.shuffle([0...PaiId.MAX])
                     com.sec = { piYama: @s.piYama }
                 [{type:'WAREME_DICE'}]
-        # 山決めのサイコロを振る
+        # 割れ目決めのサイコロを振る
+        # pl: なし
+        # pub:
+        #   dice: <MASTER>サイコロの目([サイコロ１の目,サイコロ２の目])
+        #   piDoraIndicator: <MASTER>ドラ表示牌の配列(PaiId)
+        # sec: なし
         WAREME_DICE: (com)->
             @_validateState 'WAREME_DICE'
             # サイコロの情報がなかったら、ここで振る
-            if @isMaster and not com.pub
-                com.pub = [Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1]
-            @dice = com.pub.slice()
+            com.pub ?= {}
+            if @isMaster and not com.pub.dice
+                com.pub.dice = [Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1]
+            @dice = com.pub.dice.slice()
             dice = @dice[0]+@dice[1]
-            @state = 'HAIPAI'
+            # 自摸/王牌/ドラ表示牌の位置設定
+            @tsumoPos = @makePos(dice-1, dice, true )
+            @wanpaiPos = cycle(@tsumoPos-7*2,PaiId.MAX)
+            @nextDoraPos = cycle(@tsumoPos-5*2,PaiId.MAX)
+            # ドラをめくる
+            if @isMaster and not com.pub.piDoraIndicator
+                com.pub.piDoraIndicator = [@s.piYama[@nextDoraPos]]
+            @yamaState[@nextDoraPos] = YamaState.OPENED
+            @piDoraIndicator = com.pub.piDoraIndicator
+            @pkDora = [@indicateDora(@piDoraIndicator[0])]
+
             @curPlayer = 0
+            @state = 'HAIPAI'
             if @isMaster
                 # 配牌を先に作成する
                 @s.haipai = [[],[],[],[]]
@@ -185,16 +251,16 @@ class Game
             @lastStehai = pi
             @state = 'NAKI'
             if @isMaster
+                # 流局処理
+                if @restPai() <= 0
+                    return [{type:'INIT_KYOKU',pub:{bakaze:@bakaze,kyoku:@kyoku,honba:@honba+1}}]
                 pl = @nextPlayer(@curPlayer,1)
-                result = [{type:'TSUMO', pl:pl, sec:@tsumoFromYama()}]
+                result= [{type:'TSUMO', pl:pl, sec:@tsumoFromYama()}]
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, true ) )
                 pl = @nextPlayer(@curPlayer,2)
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, false ) )
                 pl = @nextPlayer(@curPlayer,3)
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, false ) )
-                # 流局処理
-                if @tsumoPos >= 130
-                    result.unshift {type:'INIT_KYOKU'}
                 result
         # 自摸
         TSUMO: (com)->
@@ -235,7 +301,7 @@ class Game
             @agari(com.pl,com.pub.score,from)
             @state = 'AGARI'
             if @isMaster
-                [{type:'INIT_KYOKU'}]
+                [{type:'INIT_KYOKU',pub:{bakaze:@bakaze,kyoku:@kyoku,honba:@honba+1}}]
         # ロン
         RON: (com)-> @commandFunc['TSUMO_AGARI'].apply( this, [com] ) # TODO: とりあえずツモと一緒
 
@@ -360,7 +426,8 @@ class Game
     # チート山牌を作成する
     @makeCheatYama: (piTehai, dice=[1,1])->
         piYama = new Array(PaiId.MAX)
-        pos = 0
+        diceNum = dice[0]+dice[1]
+        pos = cycle( -(diceNum-1)*34+diceNum*2, PaiId.MAX )
         # 牌を山に置く
         put = (pi)->
             piYama[pos] = pi
