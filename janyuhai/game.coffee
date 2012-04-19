@@ -64,14 +64,13 @@ class Game
         @piDoraIndicator = [] # ドラ表示牌の配列(PaiId)
         @isMaster = true # ゲームマスターかどうか
         @curPlayer = undefined # 現在のプレイヤー番号
-        @haifu = []
         @honba = 0 # 本場（積み棒の数)
         @lastStehai = undefined # 最後の捨牌
         @record = # 記録された牌譜ファイルの内容とほぼ同一のもの
             version: 1000 # バージョン番号*1000
             rule: @rule
             kyoku: []
-            haifu: @haifu
+            haifu: []
 
 
 
@@ -131,7 +130,7 @@ class Game
         #puts '---'
         func = @commandFunc[com.type]
         if func
-            @haifu.push com
+            @record.haifu.push com
             @choises = func.apply( this, [com] )
             #if @choises.length > 1
             #    puts c for c in @choises

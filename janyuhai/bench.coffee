@@ -10,7 +10,7 @@ kyoku = 0
 agari = 0
 cn = (0 for i in [0..30])
 try
-    count = 100*8*30000/60/15*100
+    count = 100*8*30000/60/15
     for i in [0...count]
         com = _.find( choises, (c)->c.type == 'RON' or c.type == 'TSUMO_AGARI' )
         if com
@@ -23,8 +23,7 @@ try
             kyoku++
             game.haifu = []
 catch e
-    haifu = game.haifu
-    game.haifu = []
+    haifu = game.record.haifu
     game.record = undefined
     puts game
     puts haifu.slice(haifu.length-3)
