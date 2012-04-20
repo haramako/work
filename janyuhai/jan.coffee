@@ -147,9 +147,10 @@ PaiId.fromKind = (pk,index=0)->
         throw "argument error in PaiId.fromKind(), pi=#{pk}"
 PaiId.index = (pi)-> pk % 4
 PaiId.uniq = (pis)->
-    if typeof pis[0] == 'number'
+    if typeof pis[0] == 'number' or pis[0] == undefined
         usedTable = new Array(PaiId.MAX)
         for pi,i in pis
+            continue unless pi
             while usedTable[pi]
                 pi = (pi+1)%PaiId.MAX
                 pis[i] = pi
@@ -172,21 +173,31 @@ PaiId.uniq = (pis)->
 # # ]
 #
 ###
-splitMentsu = (pks,opt)->
+splitMentsu = (pks,opt={})->
     allMentsu = []
     callNum = 0
     num = pks.length
     curMentsu = []
     paiTable = PaiKind.toPaiTable(pks)
     toitsuNum = 0
+    allowRest = if opt.allowRest then 2 else 0
     # 再帰しながら面子を分解する関数
     split = (pkCur, withoutKoutsu)->
         callNum += 1
+        found = false
         # 終了判定
         if num <= 0 and toitsuNum == 1
             allMentsu.push curMentsu.slice()
             return
-        return if pkCur >= PaiKind.MAX # 終了判定
+        if pkCur == PaiKind.MAX # 終了判定
+            if opt.allowRest
+                rest = []
+                for n,pk in paiTable
+                    rest.push pk for i in [0...n]
+                allMentsu.push [rest].concat(curMentsu)
+            else
+                allMentsu.push curMentsu.slice()
+            return
         # 牌がなかったら次へ
         if paiTable[pkCur] == 0
             split( pkCur+1 )
@@ -225,6 +236,12 @@ splitMentsu = (pks,opt)->
             paiTable[pkCur  ] += 1
             paiTable[pkCur+1] += 1
             paiTable[pkCur+2] += 1
+        # 余り牌を許すなら続行
+        if not found and allowRest >= paiTable[pkCur]
+            allowRest -= paiTable[pkCur]
+            split pkCur+1, false
+            allowRest += paiTable[pkCur]
+
     split 0
     # puts callNum
     allMentsu
@@ -723,6 +740,7 @@ scoreFromFuHan = (fu,han,oya)->
 #        puts "#{fu}符 #{han}飜 子ツモ "+scoreFromFuHan( fu,han, false, true ).slice(1)+
 #            " 子ロン "+scoreFromFuHan( fu,han, false, false )[1]
 
+isTenpai = (pks)->
 
 exports.PaiSuit = PaiSuit
 exports.PaiKind = PaiKind

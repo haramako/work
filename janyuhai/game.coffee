@@ -29,6 +29,7 @@ class Player
         @furo = [] # 副露牌(Mentsuの配列)
         @score = undefined # 点数
         @isFirst = undefined # 初巡かどうか
+        @menzen = undefined # 門前かどうか
         @s = # 秘密('s'ecret)情報、ゲームマスターもしくは自分の時だけ保持する
             piTehai: [] # 手牌
 
@@ -78,6 +79,7 @@ class Game
             rule: @rule
             kyoku: [] # 局ごとの情報（上がり牌姿など）
             haifu: []
+        @choises = [{type:'BAGIME'}]
 
 
 
@@ -213,6 +215,7 @@ class Game
                 player.kawahaiState = []
                 player.furo = []
                 player.isFirst = true
+                player.menzen = true
             @yamaState = (YamaState.CLOSED for i in [0...PaiId.MAX])
             @bakaze = com.pub.bakaze
             @kyooku = com.pub.kyoku
@@ -345,10 +348,11 @@ class Game
         CHI: (com)->
             @_validateState 'NAKI'
             piLast = @lastSutehai()
-            @p[@curPlayer].kawahaiState[@p[@curPlayer].kawahaiState.length] = KawaState.NAKI # 牌の状態を変える
+            @p[@curPlayer].kawahaiState[@p[@curPlayer].kawahaiState.length-1] = KawaState.NAKI # 牌の状態を変える
             player = @p[com.pl]
             player.furo.push new Mentsu( [piLast,com.pub[0],com.pub[1]], @cycle(@curPlayer-player.idx) )
             player.tehaiNum -= 2
+            player.menzen = false
             if @isOwner(com.pl)
                 for piMentsu in com.pub
                     player.s.piTehai = _.without( player.s.piTehai, piMentsu )
@@ -447,6 +451,9 @@ class Game
         # 通常の打牌
         result = player.s.piTehai.map (pi,i)->
             {type:'DAHAI', pl:player.idx, pub:{pi:pi} }
+        # リーチの判定
+        if player.menzen
+            0
         # ツモ和了の判定
         if jan.splitMentsu( PaiId.toKind( player.s.piTehai ) ).length > 0
             agari = jan.calcYaku( PaiId.toKind(player.s.piTehai), player.furo, @calcYakuOption({tsumo:true}) )
@@ -543,6 +550,8 @@ class Game
             for pl in [0...piTehai.length]
                 putPai piTehai[pl].shift()
 
+        piYama = PaiId.uniq( piYama )
+
         # 使ってない牌を調べる
         usedTable = [0...PaiId.MAX]
         for pi in piYama
@@ -570,3 +579,5 @@ class Game
         }
 
 exports.Game = Game
+exports.YamaState = YamaState
+exports.KawaState = KawaState

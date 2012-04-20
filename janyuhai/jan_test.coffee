@@ -99,16 +99,22 @@ vows
             check '１１１２３４４４', ['１１１ ２３４ ４４','１１ １２３ ４４４']
             check '１１１２２２３３３４４', ['１１１ ２２２ ３３３ ４４','１１ １２３ ２３４ ２３４','１２３ １２３ １２３ ４４']
             check '東東東南南南白白白発発', ['東東東 南南南 白白白 発発']
+        'apliteMentsu() は不完全な面子も分解する': ->
+            check = (from,to)->
+                result = jan.splitMentsu( jan.PaiKind.fromReadable(from), {allowRest:2} ).map (x)->x[0]
+                assert.deepEqual result, jan.PaiKind.fromReadable(to)
+            check '東東東南南南白白白発', '発 白発 南発 東発'
+            check '１１２３４５５', '５５ ２５ １４ １１'
     .addBatch
         'calcYaku()は、役の計算をする': ->
             check = (pkStr, furo, opt, expect )->
-                yaku = jan.calcYaku( PaiKind.fromReadable(pkStr), Mentsu.fromArray( PaiKind.fromReadable(furo),1), opt )
+                agari = jan.calcYaku( PaiKind.fromReadable(pkStr), Mentsu.fromArray( PaiKind.fromReadable(furo),1), opt )
                 #puts '-'
                 #puts pkStr, furo
-                yaku.yaku.sort()
-                yaku.yaku = Yaku.toString(yaku.yaku)
-                yaku.yakuman.sort()
-                yaku.yakuman = Yaku.toString(yaku.yakuman)
+                agari.yaku.sort()
+                agari.yaku = Yaku.toString(agari.yaku)
+                agari.yakuman.sort()
+                agari.yakuman = Yaku.toString(agari.yakuman)
                 expect.yaku.sort() if expect.yaku?
                 expect.yaku = Yaku.toString(expect.yaku) if expect.yaku?
                 expect.yakuman.sort() if expect.yakuman?
@@ -116,9 +122,9 @@ vows
                 #puts yaku, expect
                 for x of expect
                     if x == 'yaku' or x == 'yakuman'
-                        assert.deepEqual yaku[x], expect[x]
+                        assert.deepEqual agari[x], expect[x]
                     else
-                        assert.equal yaku[x], expect[x]
+                        assert.equal agari[x], expect[x]
             check '１２３４５６６７８一二三四四', [], {pkLast: PaiKind.SOU1 }, { yaku:[Yaku.PINFU], fu:30 }
             check '１２３４５６６７８一二三四四', [], {pkLast: PaiKind.SOU2}, { yaku:[], machi:'kanchan', fu:40 }
             check '１１１２３４５６７８９９９９' , [], {pkLast: PaiKind.SOU8}, {}

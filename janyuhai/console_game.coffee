@@ -22,7 +22,7 @@ opt.on 'record', -> record = true
 
 paths = opt.parse( process.argv.slice(2) )
 
-# 牌譜ファイルの読み込み
+# 牌譜/チート ファイルの読み込み
 if paths.length == 1
     if paths[0].split(/\.cheat$/)
         haifu = game.Game.makeCheatHaifu( JSON.parse( fs.readFileSync(paths[0],'utf-8')) )
@@ -32,16 +32,11 @@ else if paths.length > 1
     puts 'haifu file must be specified only one'
     process.exit 1
 
+# ゲームの初期化
 game = new game.Game( [], {playerNum:4} )
 if haifu
     for com in haifu.haifu
         game.progress com
-else
-    game.progress {type:'BAGIME', pub:[0,1,2,3]}
-    game.progress {type:'INIT_KYOKU', sec:{ piYama: [0...136] }, pub:{kyoku:0,bakaze:jan.PaiId.TON,kyotaku:0,score:[25000,25000,25000,25000]}}
-    game.progress {type:'WAREME_DICE', pub:{dice:[1,1]} }
-
-choises = game.choises
 
 printGame = (game)->
     puts '================================================'
@@ -64,11 +59,11 @@ unless batch
         num = parseInt(data,10)
         if num >= 0 and num < game.choises.length
             game.progress game.choises[num]
-            puts '*', game.record.haifu[game.record.haifu.length-1]
+            puts '牌譜:', janutil.prettyPrintJson(game.record.haifu[game.record.haifu.length-1])
             # 選択肢がないならそのまますすめる
             while game.choises.length == 1
-                puts '*', game.record.haifu[game.record.haifu.length-1]
                 game.progress game.choises[0]
+                puts '牌譜:', janutil.prettyPrintJson(game.record.haifu[game.record.haifu.length-1])
 
             printGame game
             process.stdout.write "[0-#{game.choises.length-1}]> "

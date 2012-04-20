@@ -52,12 +52,12 @@ class Game
 
             # 6枚ごとに分けて川牌を表示
             html = ''
-            piFeeded = []
-            piKawahai = player.piKawahai.slice(0)
-            while piKawahai.length > 0
-                piFeeded.push piKawahai[0..5]
-                piKawahai = piKawahai[6..-1]
-            html += @haiToHtml( pis )+"<br/>" for pis in piFeeded
+            for pi,n in player.piKawahai
+                if player.kawahaiState[n] == game.KawaState.NAKI
+                    html += @haiToHtml( pi, 'naki' )
+                else
+                    html += @haiToHtml( pi )
+                html += "<br/>" if n % 6 == 5
 
             @kawaDiv[i].html(html)
 
@@ -92,13 +92,17 @@ class Game
 
     # 牌をHTMLに変換する.
     # @param pi PaiId(もしくはPaiIdの配列)
-    # @param feed 折り返し枚数
+    # @param cls クラス
     # @return html文字列
-    haiToHtml: (pi,feed)->
+    haiToHtml: (pi,cls)->
         if typeof pi == 'number'
             pk = jan.PaiId.toKind(pi)
             img= if pk >= 10 then ''+pk else ('0'+pk)
-            '<img class="hai" data-pi="'+pi+'" src="./img/'+img+'.gif" />'
+            if pi == jan.PaiId.MAN5_3 or pi == jan.PaiId.PIN5_3 or pi == jan.PaiId.SOU5_3
+                img += 'r'
+            c = 'hai'
+            c += ' '+cls if cls
+            '<img class="'+c+'" data-pi="'+pi+'" src="./img/'+img+'.gif" />'
         else
             pi.map( (piOne)=>@haiToHtml(piOne) ).join('')
 
@@ -114,12 +118,15 @@ $(document).ready ->
         kv = s.split('=')
         param[kv[0]] = kv[1]
     if param.haifu
-        $.get param.haifu, (data)->
-            window.game = game = new Game()
+        $.getJSON param.haifu, (data)->
+            window.g = g = new Game()
+            unless data.version
+                data = game.Game.makeCheatHaifu( data )
             for com in data.haifu
-                game.send com, false
+                g.send com, false
+
     else
-        window.game = game = new Game()
-        game.send {type:'BAGIME'}
+        window.g = g = new Game()
+        g.showGame()
 
     puts 'ready'
