@@ -24,7 +24,10 @@ paths = opt.parse( process.argv.slice(2) )
 
 # 牌譜ファイルの読み込み
 if paths.length == 1
-    haifu = JSON.parse( fs.readFileSync(paths[0],'utf-8'))
+    if paths[0].split(/\.cheat$/)
+        haifu = game.Game.makeCheatHaifu( JSON.parse( fs.readFileSync(paths[0],'utf-8')) )
+    else
+        haifu = JSON.parse( fs.readFileSync(paths[0],'utf-8'))
 else if paths.length > 1
     puts 'haifu file must be specified only one'
     process.exit 1
@@ -35,14 +38,14 @@ if haifu
         game.progress com
 else
     game.progress {type:'BAGIME', pub:[0,1,2,3]}
-    game.progress {type:'INIT_KYOKU', sec:{ piYama: [0...136] }}
+    game.progress {type:'INIT_KYOKU', sec:{ piYama: [0...136] }, pub:{kyoku:0,bakaze:jan.PaiId.TON,kyotaku:0,score:[25000,25000,25000,25000]}}
     game.progress {type:'WAREME_DICE', pub:{dice:[1,1]} }
 
 choises = game.choises
 
 printGame = (game)->
     puts '================================================'
-    puts "東一局 #{game.honba}本場 ドラ:#{jan.PaiKind.toReadable(game.pkDora)} 残り#{game.restPai()}枚"
+    puts "#{jan.PaiKind.toReadable(game.bakaze)}#{game.kyoku+1}局 #{game.honba}本場 ドラ:#{jan.PaiKind.toReadable(game.pkDora)} 残り#{game.restPai()}枚"
     for player,pl in game.p
         puts "プレイヤー#{pl}: #{jan.PaiKind.toReadable( jan.PaiId.toKind(player.s.piTehai) )} #{player.furo}"
         puts "         河> #{jan.PaiKind.toReadable( jan.PaiId.toKind(player.piKawahai) )}"
@@ -60,11 +63,11 @@ unless batch
         # 選択した
         num = parseInt(data,10)
         if num >= 0 and num < game.choises.length
-            puts '*', game.choises[num]
             game.progress game.choises[num]
+            puts '*', game.record.haifu[game.record.haifu.length-1]
             # 選択肢がないならそのまますすめる
             while game.choises.length == 1
-                puts '*', game.choises[0]
+                puts '*', game.record.haifu[game.record.haifu.length-1]
                 game.progress game.choises[0]
 
             printGame game
@@ -74,7 +77,7 @@ unless batch
             process.stdout.write "[0-#{game.choises.length-1}]> "
 
     process.stdin.on 'end', ->
-        puts JSON.stringify( game.record, null, 2 ) if record
+        puts janutil.prettyPrintJson( game.record ) if record
 else
     puts janutil.prettyPrintJson( game.record ) if record
 
