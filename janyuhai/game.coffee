@@ -22,14 +22,16 @@ class Player
         @initIdx = idx # ゲーム開始時の位置(0-3のいずれか)
         @name = src # 名前
         @piKawahai =[] # 川牌（鳴かれた牌も含む）
-        @reachIndex = undefined # リーチした牌のpiKawahaiのインデックス
-        @reachDisplayIndex = undefined # リーチ表示牌のpiKawahaiのインデックス（鳴かれるとreadhIndexとずれる)
+        @reachIndex = undefined # リーチした牌のpiKawahaiのインデックス（鳴かれるとリーチ表示牌とはずれる可能性がある）
         @kawahaiState = [] # 鳴かれているかどうか(0:なにもない, 1:鳴かれている, 2:リーチ宣言牌)
         @tehaiNum = 0 # 手牌の数
         @furo = [] # 副露牌(Mentsuの配列)
         @score = undefined # 点数
         @isFirst = undefined # 初巡かどうか
         @menzen = undefined # 門前かどうか
+        @doubleReach = undefined # ダブルリーチならtrue
+        @rank = undefined # 順位(0はじまり)
+        @jikaze = undefined # 自風(PaiKind.TON/NAN/SHA/PEIのいずれか)
         @s = # 秘密('s'ecret)情報、ゲームマスターもしくは自分の時だけ保持する
             piTehai: [] # 手牌
 
@@ -142,6 +144,7 @@ class Game
     # WAREME_DICE  : 割れ目を決めるサイコロを振る
     # HAIPAI       : 配牌を一人分配る
     # DAHAI        : 打牌
+    # REACH        : リーチ
     # TSUMO        : 自摸
     # CHI          : チー
     # PON          : ポン
@@ -207,20 +210,27 @@ class Game
         #   sec:
         #     piYama: <MASTER>山牌(PaiIdの配列)
         INIT_KYOKU: (com)->
-            @_validateState 'INIT_KYOKU', 'AGARI', 'NAKI', 'KYUSHU', 'SUFU_RENDA'
-            # プレイヤー情報の初期化
-            for player in @p
-                player.s.piTehai = []
-                player.piKawahai = []
-                player.kawahaiState = []
-                player.furo = []
-                player.isFirst = true
-                player.menzen = true
+            @_validateState 'INIT_KYOKU', 'AGARI', 'NAKI'
+            # 場の初期化
             @yamaState = (YamaState.CLOSED for i in [0...PaiId.MAX])
             @bakaze = com.pub.bakaze
             @kyooku = com.pub.kyoku
             @kyotaku = com.pub.kyotaku
             @honba = com.pub.honba
+            # プレイヤー情報の初期化
+            @p = (@initialPlayers[@nextPlayer(0,@kyoku-i)] for i in [0...4]) # 席の移動
+            for player,i in @p
+                player.idx = i
+                player.s.piTehai = []
+                player.piKawahai = []
+                player.kawahaiState = []
+                player.reachIndex = undefined
+                player.tehaiNum = undefined
+                player.furo = []
+                player.isFirst = true
+                player.menzen = true
+                player.doubleReach = undefined
+                player.jikaze = PaiKind.TON+i
             @state = 'WAREME_DICE'
             if @isMaster
                 if com.sec and com.sec.piYama
@@ -292,6 +302,7 @@ class Game
         #   pub:
         #     pi: 捨てた牌(PaiId)
         #     idx: 捨てた牌の手出し位置
+        #     reach: 牌を横にするかどうか
         #   sec: なし
         DAHAI: (com)->
             @_validateState 'DAHAI'
@@ -302,12 +313,31 @@ class Game
             player.tehaiNum -= 1
             player.piKawahai.push pi
             player.kawahaiState.push KawaState.NORMAL
+            # リーチ牌をまだ横に倒してないなら、いま倒す
+            if player.reachIndex?
+                if player.kawahaiState.indexOf( KawaState.REACH ) == -1
+                    player.kawahaiState[player.kawahaiState.length-1] = KawaState.REACH
             @lastStehai = pi
             @state = 'NAKI'
             if @isMaster
-                # 流局処理
+                # 流局
                 if @restPai() <= 0
-                    return [{type:'RYUKYOKU'}]
+                    tenpai = []
+                    tenpaiNum = 0
+                    for p,i in @p
+                        if jan.isTenpai(PaiId.toKind(p.s.piTehai))
+                            tenpaiNum += 1
+                            tenpai.push {tenpai:true, piTehai:p.s.piTehai}
+                        else
+                            tenpai.push {tenpai:false }
+                    for p,i in @p
+                        TENPAI_POINT = 3000
+                        if tenpai[i].tenpai
+                            point = TENPAI_POINT / tenpaiNum
+                        else
+                            point = -TENPAI_POINT * tenpaiNum / (@rule.playerNum-tenpaiNum)
+                        tenpai[i].point = point
+                    return [{type:'RYUKYOKU',pub:tenpai}]
                 # 四風子連打
                 if player.idx == 3
                     sufu = true
@@ -316,15 +346,27 @@ class Game
                             sufu = false
                     if sufu
                         return [{type:'SUFU_RENDA'}]
-                # 捨牌候補を決める
+                # 次のツモ
                 pl = @nextPlayer(@curPlayer,1)
                 result= [{type:'TSUMO', pl:pl, sec:@tsumoFromYama()}]
+                # 鳴き候補
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, true ) )
                 pl = @nextPlayer(@curPlayer,2)
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, false ) )
                 pl = @nextPlayer(@curPlayer,3)
                 result = result.concat( @chooseNaki( pl, @p[pl].s.piTehai, com.pub.pi, false ) )
                 result
+        # リーチ.
+        # comパラメータはDAHAIと同じn
+        REACH: (com)->
+            player = @p[com.pl]
+            result = @commandFunc['DAHAI'].apply( this, [com] )
+            player.doubleReach = player.isFirst
+            player.score -= 1000
+            @kyotaku += 1000
+            player.reachIndex = player.piKawahai.length-1
+            player.kawahaiState[player.reachIndex] = KawaState.REACH
+            result
         # 自摸.
         # comパラメータ
         #   pl: プレイヤー番号
@@ -336,6 +378,8 @@ class Game
             if @isOwner(com.pl)
                 player.s.piTehai.push com.sec
             player.tehaiNum -= 1
+            # 前のプレイヤーのリーチを成立させる
+            prevPlayer = @nextPlayer(player.idx,-1)
             @state = 'DAHAI'
             @curPlayer = player.idx
             if @isMaster
@@ -353,6 +397,7 @@ class Game
             player.furo.push new Mentsu( [piLast,com.pub[0],com.pub[1]], @cycle(@curPlayer-player.idx) )
             player.tehaiNum -= 2
             player.menzen = false
+            player.isFirst = false # 初巡権利を失う
             if @isOwner(com.pl)
                 for piMentsu in com.pub
                     player.s.piTehai = _.without( player.s.piTehai, piMentsu )
@@ -378,7 +423,7 @@ class Game
         # comパラメータ
         #   pl: プレイヤー番号
         #   pub:
-        #     piTehai: 手牌(PaiIdの配列）
+        #     piTehai: 手牌(PaiIdの配列、ツモ牌は最後の要素）
         #     yaku: 役（Yakuの配列）
         #     score: 点数情報( jan.calcYakuの返り値のscoreとおなじ)
         #   sec: なし
@@ -389,24 +434,63 @@ class Game
             @agari(com.pl,com.pub.score,from)
             @state = 'AGARI'
             if @isMaster
-                @nextKyoku 'oyanagare'
+                if com.pl == 0
+                    @nextKyoku 'renchan'
+                else
+                    @nextKyoku 'ryukyoku'
         # ロン
+        # comパラメータ
+        #   pl: プレイヤー番号
+        #   pub:
+        #   sec:
         RON: (com)-> @commandFunc['TSUMO_AGARI'].apply( this, [com] ) # TODO: とりあえずツモと一緒
         # 流局
+        # comパラメータ
+        #   pl: プレイヤー番号
+        #   pub: 聴牌情報の配列( {tenpai:聴牌してるかどうか, piTehai:聴牌しているなら手牌(PaiId), pint:点数の増減}を４人分)
+        #   sec: なし
         RYUKYOKU: (com)->
-            # @honba += 1
+            @_validateState 'NAKI'
+            # TODO: 流し満貫
+            for info,i in com.pub
+                player = @p[i]
+                player.score += info.point
+            @state = 'INIT_KYOKU'
             if @isMaster
-                @nextKyoku 'oyanagare'
+                if com.pub[0].tenpai
+                    @nextKyoku 'renchan'
+                else
+                    @nextKyoku 'oyanagare'
         # 九種九牌
+        # comパラメータ
+        #   pl: プレイヤー番号
+        #   pub: 手牌(PaiIdの配列）
+        #   sec: なし
         KYUSHU: (com)->
             @_validateState 'DAHAI'
-            @state = 'KYUSHU'
-            @nextKyoku 'oyanagare'
-        # 九種九牌
+            @state = 'INIT_KYOKU'
+            if @isMaster
+                @nextKyoku 'oyanagare'
+        # 四風子連打
+        # comパラメータ
+        #   pl: なし
+        #   pub: なし
+        #   sec: なし
         SUFU_RENDA: (com)->
             @_validateState 'NAKI'
-            @state = 'SUFU_RENDA'
-            @nextKyoku 'oyanagare'
+            @state = 'INIT_KYOKU'
+            if @isMaster
+                @nextKyoku 'oyanagare'
+        # 半荘終了
+        # comパラメータ
+        #   pl: なし
+        #   pub: プレイヤー情報( {score:最終持ち点, rank:順位(0はじまり)}, initialPlayersのインデックス順に４人分 )
+        #   sec: なし
+        FINISH_HANCHAN: (com)->
+            @_validateState 'INIT_KYOKU'
+            @state = 'FINISHED'
+            if @isMaster
+                []
 
     #========================================================
     # ここから下は、ゲームマスターの時しか使わない関数
@@ -436,24 +520,50 @@ class Game
             @p[pl].score += total
 
     # 次の局のINIT_KYOKUコマンドを返す.
-    # @param type 流れのタイプ( 'init':半荘のはじまり, 'oyanagare':親流れの流局 のいずれか)
+    # @param type 流れのタイプ( 'init':半荘のはじまり, 'oganagare':流局（本場が加わる）, 'ryukyoku':流局（本場はクリア）, 'renchan':連荘 のいずれか)
     nextKyoku: (type)->
         if type == 'oyanagare'
             @kyoku = @kyoku + 1
-            if @kyoku >= 4
-                @bakaze += 1
-                @kyoku = 0
+            @honba += 1
 
-        [{type:'INIT_KYOKU',pub:{ bakaze:@bakaze, kyoku:@kyoku, honba:@honba, score:_.pluck(@p,'score'), kyotaku:@kyotaku }}]
+        if @kyoku >= 4
+            @bakaze += 1
+            @kyoku = 0
+            @honba += 1
+
+        if @bakaze == PaiKind.NAN
+            # ゲーム終了
+            rankedPlayers = _.sortBy( @p, (p)->-(p.score-p.initIdx) ) # 順位をつける
+            p.rank = i for p,i in rankedPlayers
+            rankedPlayers[0].score += @kyotaku # 供託点はトップにあげる
+            # ウマとオカの計算
+            for p in @initialPlayers
+                UMAOKA = [20,10,-10,-20]
+                p.point = Math.floor((p.score+499 - 30000)/1000) + UMAOKA[p.rank] # +499は五捨六入のため
+            rankedPlayers[0].point = -_.reduce(rankedPlayers[1..-1],((m,p)->p.point+m), 0) # トップは端数をあわせる
+            # コマンドの組立
+            players = @initialPlayers.map (p)->{score:p.score,rank:p.rank,point:p.point}
+            [{type:'FINISH_HANCHAN',pub: players}]
+        else
+            # 次の局へ
+            [{type:'INIT_KYOKU',pub:{ bakaze:@bakaze, kyoku:@kyoku, honba:@honba, score:_.pluck(@p,'score'), kyotaku:@kyotaku }}]
 
     # ツモったあとの自摸/打牌/リーチ/暗槓などの選択を行う
     chooseDahai: (player)->
         # 通常の打牌
-        result = player.s.piTehai.map (pi,i)->
-            {type:'DAHAI', pl:player.idx, pub:{pi:pi} }
+        if player.reachIndex?
+            result = [{type:'DAHAI', pl:player.idx, pub:{pi:player.s.piTehai[player.s.piTehai.length-1]} }]
+        else
+            result = player.s.piTehai.map (pi,i)->
+                {type:'DAHAI', pl:player.idx, pub:{pi:pi} }
         # リーチの判定
-        if player.menzen
-            0
+        # TODO: ちょっと重いかも
+        if player.menzen and not player.reachIndex?
+            piTehai = player.s.piTehai
+            for pi in piTehai
+                pkTempTehai = PaiId.toKind( _.without( piTehai, pi ) )
+                if jan.isTenpai( pkTempTehai )
+                    result.push {type:'REACH', pl:player.idx, pub:{pi:pi}}
         # ツモ和了の判定
         if jan.splitMentsu( PaiId.toKind( player.s.piTehai ) ).length > 0
             agari = jan.calcYaku( PaiId.toKind(player.s.piTehai), player.furo, @calcYakuOption({tsumo:true}) )

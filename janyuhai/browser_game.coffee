@@ -31,6 +31,9 @@ class Game
         @game = new game.Game([],{})
 
     showGame: ()->
+        # ログの表示
+        @haifuDiv.text( janutil.prettyPrintJson(@game.record) )
+
         # 状態の表示
         pos = @game.splitPos(@game.tsumoPos)
         @stateDiv.html "state=#{@game.state} curPlayer=#{@game.curPlayer} tsumoPos=#{@game.tsumoPos}\n"+
@@ -55,6 +58,8 @@ class Game
             for pi,n in player.piKawahai
                 if player.kawahaiState[n] == game.KawaState.NAKI
                     html += @haiToHtml( pi, 'naki' )
+                else if player.kawahaiState[n] == game.KawaState.REACH
+                    html += @haiToHtml( pi, 'reach' )
                 else
                     html += @haiToHtml( pi )
                 html += "<br/>" if n % 6 == 5
@@ -66,20 +71,19 @@ class Game
             div = $('<div class="choise">').html( ''+i+':'+JSON.stringify(c) ).data({choise:i})
             @choiseDiv.append( div )
 
-    send: (com,skip=true)->
+    send: (com,skip=true,display=true)->
         @game.progress com
-        @haifuDiv.text( janutil.prettyPrintJson(@game.record) )
 
         # 理牌する
         if com.type == 'DAHAI' or com.type == 'HAIPAI'
             player = @game.p[com.pl]
-            player.s.piTehai = _.sortBy(player.s.piTehai, (a,b)->a-b)
+            player.s.piTehai.sort (a,b)->a-b
 
         # skipが真で選択肢がないなら勝手にすすめる
         if skip and @game.choises.length == 1
             @send @game.choises[0]
         else
-            @showGame()
+            @showGame() if display
 
     onHaiClick: (pi)->
         if @game.state == 'DAHAI'
@@ -123,7 +127,8 @@ $(document).ready ->
             unless data.version
                 data = game.Game.makeCheatHaifu( data )
             for com in data.haifu
-                g.send com, false
+                g.send com, false, false
+            g.showGame()
 
     else
         window.g = g = new Game()

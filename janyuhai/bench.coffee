@@ -10,7 +10,7 @@ kyoku = 0
 agari = 0
 cn = (0 for i in [0..30])
 try
-    count = 100*8*30000/60/15
+    count = 100*8*10000/60/15
     for i in [0...count]
         com = _.find( choises, (c)->c.type == 'RON' or c.type == 'TSUMO_AGARI' )
         if com

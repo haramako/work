@@ -741,6 +741,31 @@ scoreFromFuHan = (fu,han,oya)->
 #            " 子ロン "+scoreFromFuHan( fu,han, false, false )[1]
 
 isTenpai = (pks)->
+    mentsu = splitMentsu pks, {allowRest:true}
+    for m in mentsu
+        rest = m[0]
+        if rest.length == 1
+            return true
+        else if rest.length == 2
+            rest.sort( (a,b)->a-b )
+            if rest[0] == rest[1]
+                return true
+            else if rest[0]+1 == rest[1] and ( PaiKind.isShuntsuStarter(rest[0]) or PaiKind.isShuntsuStarter(rest[0]-1) )
+                return true
+            else if rest[0]+2 == rest[1] and PaiKind.isShuntsuStarter(rest[0])
+                return true
+    return false
+
+###
+puts isTenpai PaiKind.fromReadable( '東東東南' )
+puts isTenpai PaiKind.fromReadable( '東東南南' )
+puts isTenpai PaiKind.fromReadable( '東東１２' )
+puts isTenpai PaiKind.fromReadable( '東東１３' )
+puts isTenpai PaiKind.fromReadable( '東東２３' )
+puts isTenpai PaiKind.fromReadable( '東東７９' )
+puts isTenpai PaiKind.fromReadable( '東東８９' )
+puts isTenpai PaiKind.fromReadable( '１１１２３４５６７８９９白' )
+###
 
 exports.PaiSuit = PaiSuit
 exports.PaiKind = PaiKind
@@ -750,3 +775,4 @@ exports.Yaku = Yaku
 exports.splitMentsu = splitMentsu
 exports.calcYaku = calcYaku
 exports.scoreFromFuHan = scoreFromFuHan
+exports.isTenpai = isTenpai

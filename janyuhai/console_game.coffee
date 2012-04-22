@@ -6,6 +6,9 @@ fs = require 'fs'
 optparse = require 'optparse'
 _ = require 'underscore'
 
+PaiId = jan.PaiId
+PaiKind = jan.PaiKind
+
 # コマンドライン引数の解析
 batch = record = false
 opt = new optparse.OptionParser([
@@ -24,7 +27,7 @@ paths = opt.parse( process.argv.slice(2) )
 
 # 牌譜/チート ファイルの読み込み
 if paths.length == 1
-    if paths[0].split(/\.cheat$/)
+    if paths[0].match(/\.cheat$/)
         haifu = game.Game.makeCheatHaifu( JSON.parse( fs.readFileSync(paths[0],'utf-8')) )
     else
         haifu = JSON.parse( fs.readFileSync(paths[0],'utf-8'))
@@ -33,22 +36,31 @@ else if paths.length > 1
     process.exit 1
 
 # ゲームの初期化
-game = new game.Game( [], {playerNum:4} )
+g = new game.Game( [], {playerNum:4} )
 if haifu
     for com in haifu.haifu
-        game.progress com
+        g.progress com
 
-printGame = (game)->
+printG = (g)->
     puts '================================================'
-    puts "#{jan.PaiKind.toReadable(game.bakaze)}#{game.kyoku+1}局 #{game.honba}本場 ドラ:#{jan.PaiKind.toReadable(game.pkDora)} 残り#{game.restPai()}枚"
-    for player,pl in game.p
-        puts "プレイヤー#{pl}: #{jan.PaiKind.toReadable( jan.PaiId.toKind(player.s.piTehai) )} #{player.furo}"
-        puts "         河> #{jan.PaiKind.toReadable( jan.PaiId.toKind(player.piKawahai) )}"
+    puts "#{PaiKind.toReadable(g.bakaze)}#{g.kyoku+1}局 #{g.honba}本場 ドラ:#{PaiKind.toReadable(g.pkDora)} 残り#{g.restPai()}枚 供託:#{g.kyotaku}点"
+    for player,pl in g.p
+        kawaStr = player.piKawahai.map (pi,i)->
+            str = jan.PaiKind.toReadable( jan.PaiId.toKind(pi) )
+            if player.kawahaiState[i] == game.KawaState.REACH
+                '<'+str+'>'
+            else if player.kawahaiState[i] == game.KawaState.NAKI
+                '('+str+')'
+            else
+                str
+        puts "プレイヤー#{pl}: #{PaiKind.toReadable(player.jikaze)} #{player.score}点"
+        puts "       手牌: #{PaiKind.toReadable( PaiId.toKind(player.s.piTehai) )} #{player.furo}"
+        puts "         河: #{kawaStr.join('')}"
     puts '----------------------'
-    for c,i in game.choises
+    for c,i in g.choises
         puts "#{i}:",c
 
-printGame game
+printG g
 
 unless batch
     process.stdout.write '[0-0]> '
@@ -57,22 +69,28 @@ unless batch
     process.stdin.on 'data', (data)->
         # 選択した
         num = parseInt(data,10)
-        if num >= 0 and num < game.choises.length
-            game.progress game.choises[num]
-            puts '牌譜:', janutil.prettyPrintJson(game.record.haifu[game.record.haifu.length-1])
+        if num >= 0 and num < g.choises.length
+            g.progress g.choises[num]
+            puts '牌譜:', janutil.prettyPrintJson(g.record.haifu[g.record.haifu.length-1])
             # 選択肢がないならそのまますすめる
-            while game.choises.length == 1
-                game.progress game.choises[0]
-                puts '牌譜:', janutil.prettyPrintJson(game.record.haifu[game.record.haifu.length-1])
+            while g.choises.length == 1
+                g.progress g.choises[0]
+                puts '牌譜:', janutil.prettyPrintJson(g.record.haifu[g.record.haifu.length-1])
 
-            printGame game
-            process.stdout.write "[0-#{game.choises.length-1}]> "
+            printG g
+            process.stdout.write "[0-#{g.choises.length-1}]> "
         else
             puts 'ERROR: invalid index'
-            process.stdout.write "[0-#{game.choises.length-1}]> "
+            process.stdout.write "[0-#{g.choises.length-1}]> "
 
     process.stdin.on 'end', ->
-        puts janutil.prettyPrintJson( game.record ) if record
+        puts '================================================'
+        puts '牌譜'
+        puts '================================================'
+        puts janutil.prettyPrintJson( g.record ) if record
 else
-    puts janutil.prettyPrintJson( game.record ) if record
+    puts '================================================'
+    puts '牌譜'
+    puts '================================================'
+    puts janutil.prettyPrintJson( g.record ) if record
 
