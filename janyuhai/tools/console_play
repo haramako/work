@@ -1,0 +1,37 @@
+#!/usr/local/bin/coffee
+
+fs = require 'fs'
+_ = require 'underscore'
+optparse = require 'optparse'
+jan = require 'jan'
+game = require 'jan/game'
+haifu = require 'jan/haifu'
+
+# コマンドライン引数の解析
+batch = record = false
+opt = new optparse.OptionParser([
+    ['-h','--help','show this messsage']
+])
+opt.banner = 'Usage: ./console_play [Options] haifu player\n'+
+    '       (player must be 0-3)'
+opt.on 'help', ->
+    puts opt.toString()
+    process.exit 0
+
+args = opt.parse( process.argv.slice(2) )
+
+# 牌譜/チート ファイルの読み込み
+if args.length != 2
+    puts 'invalid argument number!'
+    puts opt.toString()
+    process.exit 1
+
+pl = parseInt(args[1],10)
+haifu.unpack fs.readFileSync(args[0]), (err,json)->
+    # ゲームの初期化
+    g = new game.Game( pl, [], {playerNum:4} )
+    for com,i in json.haifu
+        if com.type == 'INIT_KYOKU'
+            janutil.pp json.haifu[i-1] if json.haifu[i-1].type != 'BAGIME'
+            puts jan.PaiKind.toReadable( jan.PaiId.toKind(g.initialPlayers[pl].s.piTehai) )
+        g.progress com
