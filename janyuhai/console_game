@@ -113,7 +113,7 @@ batch = record = false
 opt = new optparse.OptionParser([
     ['-h','--help','show this messsage']
     ['-b','--batch','batch mode']
-    ['-r','--record','output haifu json finally']
+    ['-r','--record','output haifu finally']
 ])
 opt.banner = 'Usage: coffee console_game.coffee [Options] haifu.json, [haifu2.json ...]'
 opt.on 'help', ->

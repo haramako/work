@@ -7,4 +7,4 @@ test: all
 	vows --no-color *_test.coffee
 
 watch:
-	coffee -w -c *.coffee
+	coffee -w -c *.coffee | grep --color line

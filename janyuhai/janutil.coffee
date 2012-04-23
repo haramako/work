@@ -66,3 +66,4 @@ exports.combinate = combinate
 exports.prettyPrint = prettyPrint
 exports.pp = pp
 global.puts = puts
+global.pp = pp
