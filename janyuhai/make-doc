@@ -1,4 +1,4 @@
-#!/bin/env coffee
+#!/usr/bin/env coffee
 #
 # 雀友牌のプログラムで使う定数群をHTMLで書きだす.
 #

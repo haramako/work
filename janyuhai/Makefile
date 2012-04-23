@@ -8,3 +8,7 @@ test: all
 
 watch:
 	coffee -w -c *.coffee | grep --color line
+
+doc:
+	coffee make-doc > list.html
+

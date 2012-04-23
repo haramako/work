@@ -1,4 +1,4 @@
-#!/usr/env coffee
+#!/usr/local/bin/coffee
 _ = require 'underscore'
 game = require './game'
 jan = require './jan'
