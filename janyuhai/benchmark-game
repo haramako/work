@@ -1,7 +1,7 @@
 #!/usr/local/bin/coffee
 _ = require 'underscore'
-game = require './game'
-jan = require './jan'
+jan = require 'jan'
+game = require 'jan.game'
 
 
 HANCHAN_NUM = 18

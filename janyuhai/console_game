@@ -2,9 +2,9 @@
 fs = require 'fs'
 optparse = require 'optparse'
 _ = require 'underscore'
-jan = require './jan'
-game = require './game'
-haifu = require './haifu'
+jan = require 'jan'
+game = require 'jan.game'
+haifu = require 'jan.haifu'
 
 PaiId = jan.PaiId
 PaiKind = jan.PaiKind

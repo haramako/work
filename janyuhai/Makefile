@@ -7,7 +7,7 @@ test: all
 	vows --no-color *_test.coffee
 
 watch:
-	coffee -w -c *.coffee | grep --color line
+	coffee -w -c . | grep --color line
 
 doc:
 	coffee make-doc > list.html
