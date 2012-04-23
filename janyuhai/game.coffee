@@ -40,24 +40,40 @@ YamaState = new janutil.Enum(['CLOSED','USED','OPENED'])
 
 KawaState = new janutil.Enum(['NORMAL','NAKI','REACH'])
 
+GameMode = new janutil.Enum(['MASTER=-1','VIWER=-2','PLAYER=-3'])
+
 ###
 # 麻雀のゲーム進行を司るクラス.
 ###
 class Game
     ###
     # コンストラクタ
+    # @param pl 自分のプレイヤー番号(undefinedならゲームマスター)
     # rule
     #   playerNum: プレイヤー数(3or4)
     ###
-    constructor: (players, rule={})->
+    constructor: (mode, players, rule={})->
         # ルールの設定
         @rule = _.clone(rule)
         @rule.playerNum ?= 4
 
+        # プレイヤー情報の設定
         @initialPlayers = for i in [0...4]
             p = new Player(i)
             p.score = 25000
             p
+
+        @owner = undefined #
+        if mode == GameMode.MASTER
+            @mode = GameMode.MASTER
+        else if mode == GameMode.VIEWER
+            @mode = GameMode.VIEWER
+        else if mode >= 0 and mode < 4
+            @mode = GameMode.PLAYER
+            @owner = @initialPlayers[mode]
+        else
+            throw "invalid mode #{mode}"
+
         @p = @initialPlayers.slice()
         @s =
             haipai: [[],[],[],[]] # 配牌を保存する(PaiIdの配列の配列)
@@ -69,7 +85,6 @@ class Game
         @yamaState = undefined # 山の状態(YamaStateの配列)
         @pkDora = [] # ドラの配列(PaiKind)
         @piDoraIndicator = [] # ドラ表示牌の配列(PaiId)
-        @isMaster = true # ゲームマスターかどうか
         @curPlayer = undefined # 現在のプレイヤー番号
         @kyoku = 0 # 局番号(0はじまり)
         @honba = 0 # 本場（積み棒の数)
@@ -106,8 +121,12 @@ class Game
         @tsumoPos = cycle(@tsumoPos+1,PaiId.MAX)
         pi
 
+    # ゲームマスターかどうか
+    isMaster: ->( @mode == GameMode.MASTER )
+
     # プレイヤーの秘密情報が見れるかどうかを返す.
-    isOwner: (pl)-> @isMaster or @owner.idx == pl
+    isOwner: (pl)->
+        @mode == GameMode.MASTER or @mode = GameMode.VIEWER or @owner.idx == pl
 
     # ドラ表示牌からドラに変換する
     indicateDora: (pi)->PaiKind.next(PaiId.toKind(pi))
@@ -138,6 +157,11 @@ class Game
     # TODO: ロン>ポン>チーの優先順位はリアルタイムでクライアントの選択がキャンセルされる例外
     # TODO: 場決めの牌選択はリアルタイム例外
     #
+    # TODO: カン、カカン、槍槓、カンドラ
+    # TODO: フリテン
+    # TODO: 点数計算
+    # TODO: 海底、河底撈魚
+    #
     # BAGIME       : 場決め
     # OYAGIME_DICE : 親決めのダイス
     # INIT_KYOKU   : 局の初期化
@@ -163,11 +187,9 @@ class Game
         #puts '---'
         func = @commandFunc[com.type]
         if func
-            @record.haifu.push com
-            @choises = func.apply( this, [com] )
-            #if @choises.length > 1
-            #    puts c for c in @choises
-            @choises
+            @record.haifu.push com if @isMaster()
+            choises = func.apply( this, [com] )
+            @choises = choises if @isMaster()
         else
             throw "invalid type in Game.progress(), type=#{com.type}"
 
@@ -187,14 +209,14 @@ class Game
         #   pub: 場決めの順番( 初期化プレイヤー番号の要素数4の配列 )
         #   sec: なし
         BAGIME: (com)->
-            if @isMaster and not com.pub
+            if @isMaster() and not com.pub
                 com.pub = [0,1,2,3]
             @_validateState 'INITIALIZED'
             for i in [0...com.pub.length]
                 @p[i] = @initialPlayers[com.pub[i]]
                 @p[i].idx = i
             @state = 'INIT_KYOKU'
-            if @isMaster
+            if @isMaster()
                 @nextKyoku 'init'
         # 局の初期化.
         # 基本的にどの状態から呼ばれても局の開始として初期化できるようにしてある。
@@ -232,7 +254,7 @@ class Game
                 player.doubleReach = undefined
                 player.jikaze = PaiKind.TON+i
             @state = 'WAREME_DICE'
-            if @isMaster
+            if @isMaster()
                 if com.sec and com.sec.piYama
                     @s.piYama = com.sec.piYama
                 else
@@ -250,7 +272,7 @@ class Game
             @_validateState 'WAREME_DICE'
             # サイコロの情報がなかったら、ここで振る
             com.pub ?= {}
-            if @isMaster and not com.pub.dice
+            if @isMaster() and not com.pub.dice
                 com.pub.dice = [Math.floor(Math.random()*6)+1, Math.floor(Math.random()*6)+1]
             @dice = com.pub.dice.slice()
             dice = @dice[0]+@dice[1]
@@ -259,7 +281,7 @@ class Game
             @wanpaiPos = cycle(@tsumoPos-7*2,PaiId.MAX)
             @nextDoraPos = cycle(@tsumoPos-5*2,PaiId.MAX)
             # ドラをめくる
-            if @isMaster and not com.pub.piDoraIndicator
+            if @isMaster() and not com.pub.piDoraIndicator
                 com.pub.piDoraIndicator = [@s.piYama[@nextDoraPos]]
             @yamaState[@nextDoraPos] = YamaState.OPENED
             @piDoraIndicator = com.pub.piDoraIndicator
@@ -267,7 +289,7 @@ class Game
 
             @curPlayer = 0
             @state = 'HAIPAI'
-            if @isMaster
+            if @isMaster()
                 # 配牌を先に作成する
                 @s.haipai = [[],[],[],[]]
                 # ４枚x3回ずつとる
@@ -291,7 +313,7 @@ class Game
                 player.s.piTehai = com.sec.slice()
                 player.tehaiNum = player.s.piTehai.length
             @state = 'DAHAI' if com.pl == 3
-            if @isMaster
+            if @isMaster()
                 if com.pl == 3
                     @chooseDahai(@p[0])
                 else
@@ -319,7 +341,7 @@ class Game
                     player.kawahaiState[player.kawahaiState.length-1] = KawaState.REACH
             @lastStehai = pi
             @state = 'NAKI'
-            if @isMaster
+            if @isMaster()
                 # 流局
                 if @restPai() <= 0
                     tenpai = []
@@ -382,7 +404,7 @@ class Game
             prevPlayer = @nextPlayer(player.idx,-1)
             @state = 'DAHAI'
             @curPlayer = player.idx
-            if @isMaster
+            if @isMaster()
                 @chooseDahai(player)
         # チー.
         # comパラメータ
@@ -403,7 +425,7 @@ class Game
                     player.s.piTehai = _.without( player.s.piTehai, piMentsu )
             @state = 'DAHAI'
             @curPlayer = player.idx
-            if @isMaster
+            if @isMaster()
                 @chooseDahai(@p[@curPlayer])
         # ポン
         # comパラメータ
@@ -433,7 +455,7 @@ class Game
                 from = @curPlayer
             @agari(com.pl,com.pub.score,from)
             @state = 'AGARI'
-            if @isMaster
+            if @isMaster()
                 if com.pl == 0
                     @nextKyoku 'renchan'
                 else
@@ -456,7 +478,7 @@ class Game
                 player = @p[i]
                 player.score += info.point
             @state = 'INIT_KYOKU'
-            if @isMaster
+            if @isMaster()
                 if com.pub[0].tenpai
                     @nextKyoku 'renchan'
                 else
@@ -469,7 +491,7 @@ class Game
         KYUSHU: (com)->
             @_validateState 'DAHAI'
             @state = 'INIT_KYOKU'
-            if @isMaster
+            if @isMaster()
                 @nextKyoku 'oyanagare'
         # 四風子連打
         # comパラメータ
@@ -479,7 +501,7 @@ class Game
         SUFU_RENDA: (com)->
             @_validateState 'NAKI'
             @state = 'INIT_KYOKU'
-            if @isMaster
+            if @isMaster()
                 @nextKyoku 'oyanagare'
         # 半荘終了
         # comパラメータ
@@ -489,7 +511,7 @@ class Game
         FINISH_HANCHAN: (com)->
             @_validateState 'INIT_KYOKU'
             @state = 'FINISHED'
-            if @isMaster
+            if @isMaster()
                 []
 
     #========================================================
@@ -688,6 +710,7 @@ class Game
             ]
         }
 
-exports.Game = Game
 exports.YamaState = YamaState
 exports.KawaState = KawaState
+exports.GameMode = GameMode
+exports.Game = Game

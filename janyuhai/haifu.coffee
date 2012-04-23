@@ -71,16 +71,11 @@ pack = (haifu, callback)->
 # 牌譜の種類を自動判別してアンパックする
 unpack = (haifu, callback)->
     unless haifu[0] == 0x1f and haifu[1] == 0x8b
-        callback( 0, haifu )
+        callback 0, JSON.parse( haifu )
     else
         zlib.gunzip haifu, (err,data)->
             haifu = unpackJson( msgpack.unpack(data) )
-            callback( 0, haifu )
-
-janutil = require './janutil'
-json = JSON.parse(fs.readFileSync('hoge.haifu'))
-pack json, (err,data)->
-    puts data.length
+            callback 0, haifu
 
 exports.pack = pack
 exports.unpack = unpack
