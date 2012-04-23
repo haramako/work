@@ -10,6 +10,7 @@ haifu = require './haifu'
 PaiId = jan.PaiId
 PaiKind = jan.PaiKind
 
+# ゲームの状況を表示する
 showGame = (g)->
     puts '================================================'
     puts "#{PaiKind.toReadable(g.bakaze)}#{g.kyoku+1}局 #{g.honba}本場 ドラ:#{PaiKind.toReadable(g.pkDora)} 残り#{g.restPai()}枚 供託:#{g.kyotaku}点"
@@ -23,48 +24,79 @@ showGame = (g)->
             else
                 str
         if player.jikaze
-            puts "プレイヤー#{pl}: #{PaiKind.toReadable(player.jikaze)} #{player.score}点"
+            puts "プレイヤー#{player.initIdx}: #{PaiKind.toReadable(player.jikaze)} #{player.score}点"
         puts "       手牌: #{PaiKind.toReadable( PaiId.toKind(player.s.piTehai) )} #{player.furo}"
         puts "         河: #{kawaStr.join('')}"
     puts '----------------------'
-    for c,i in g.choises
-        puts "#{i}:",c
 
+# ゲームの状況を比較して間違ってないか確認する
+validate = (g1,g2)->
+    for pl in [0...4]
+        p1 = g1.p[pl]
+        p2 = g2.p[pl]
+        if g2.isOwner(pl)
+            throw "piTehai is invalid #{p1.s.piTehai} #{p2.s.piTehai}" unless _.isEqual( p1.s.piTehai, p2.s.piTehai )
+        throw "piKawahai is invalid #{p1.piKawahai} #{p2.piKawahai}" unless _.isEqual( p1.piKawahai, p2.piKawahai )
+
+
+# 牌譜を出力する
 showRecord = (g)->
     puts '================================================'
     puts '牌譜'
     puts '================================================'
-    puts janutil.prettyPrint( g.record )
+    janutil.pp g.record
 
 # メイン処理
-main = (haifuJson)->
+main = (haifuJson,pl)->
     # ゲームの初期化
     g = new game.Game( game.GameMode.MASTER, [], {playerNum:4} )
+    if typeof pl == 'number'
+        playerGame = new game.Game( pl, [], {playerNum:4} )
+        masterOnly = false
+    else
+        playerGame = g
+        masterOnly = true
+
     if haifuJson
         for com in haifuJson.haifu
             g.progress com
-    showGame g
+            playerGame.progress com unless masterOnly
+            validate g, playerGame
+
+    showChoise = ->
+        showGame playerGame
+        for c,i in g.choises
+            puts "#{i}:",c
+        process.stdout.write "[0-#{g.choises.length-1}]> "
+
+    showChoise()
 
     unless batch
-        process.stdout.write '[0-0]> '
         process.stdin.resume()
         process.stdin.setEncoding('utf-8')
         process.stdin.on 'data', (data)->
             # 選択した
             num = parseInt(data,10)
             if num >= 0 and num < g.choises.length
-                g.progress g.choises[num]
+                com = _.clone( g.choises[num] )
+                g.progress com
+                playerGame.progress com unless masterOnly
+                validate g, playerGame
                 puts '牌譜:', janutil.prettyPrint(g.record.haifu[g.record.haifu.length-1])
+                # 終わりならおしまい
+                if g.choises.length == 0 and g.state = 'FINISH_HANCHAN'
+                    showRecord(g) if record
+                    process.exit 0
                 # 選択肢がないならそのまますすめる
                 while g.choises.length == 1
-                    g.progress g.choises[0]
+                    com = _.clone( g.choises[0] )
+                    g.progress com
+                    playerGame.progress com unless masterOnly
+                    validate g, playerGame
                     puts '牌譜:', janutil.prettyPrint(g.record.haifu[g.record.haifu.length-1])
-
-                showGame g
-                process.stdout.write "[0-#{g.choises.length-1}]> "
             else
                 puts 'ERROR: invalid index'
-                process.stdout.write "[0-#{g.choises.length-1}]> "
+            showChoise()
 
         process.stdin.on 'end', ->
             showRecord(g) if record
@@ -90,17 +122,19 @@ opt.on 'help', ->
 opt.on 'batch', -> batch = true
 opt.on 'record', -> record = true
 
-paths = opt.parse( process.argv.slice(2) )
-
-if paths.length > 1
+args = opt.parse( process.argv.slice(2) )
+if args.length < 1 or args.length > 2
     puts 'haifu file must be specified only one'
     process.exit 1
 
+pl = parseInt(args[1],10)
+pl = undefined if typeof(pl) != 'number' or isNaN(pl)
+
 # 牌譜/チート ファイルの読み込み
 haifuJson = undefined
-if paths[0].match(/\.cheat$/)
-    json = game.Game.makeCheatHaifu( JSON.parse( fs.readFileSync(paths[0],'utf-8')) )
-    main json
+if args[0].match(/\.cheat$/)
+    json = game.Game.makeCheatHaifu( JSON.parse( fs.readFileSync(args[0],'utf-8')) )
+    main json, pl
 else
-    haifu.unpack fs.readFileSync(paths[0]), (err,json)->
-        main json
+    haifu.unpack fs.readFileSync(args[0]), (err,json)->
+        main json, pl
