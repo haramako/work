@@ -2,7 +2,6 @@
 fs = require 'fs'
 optparse = require 'optparse'
 _ = require 'underscore'
-janutil = require './janutil'
 jan = require './jan'
 game = require './game'
 haifu = require './haifu'
@@ -44,7 +43,7 @@ showRecord = (g)->
     puts '================================================'
     puts '牌譜'
     puts '================================================'
-    janutil.pp g.record
+    pp g.record
 
 # メイン処理
 main = (haifuJson,pl)->
@@ -82,7 +81,7 @@ main = (haifuJson,pl)->
                 g.progress com
                 playerGame.progress com unless masterOnly
                 validate g, playerGame
-                puts '牌譜:', janutil.prettyPrint(g.record.haifu[g.record.haifu.length-1])
+                puts '牌譜:', jan.prettyPrint(g.record.haifu[g.record.haifu.length-1])
                 # 終わりならおしまい
                 if g.choises.length == 0 and g.state = 'FINISH_HANCHAN'
                     showRecord(g) if record
@@ -93,7 +92,7 @@ main = (haifuJson,pl)->
                     g.progress com
                     playerGame.progress com unless masterOnly
                     validate g, playerGame
-                    puts '牌譜:', janutil.prettyPrint(g.record.haifu[g.record.haifu.length-1])
+                    puts '牌譜:', jan.prettyPrint(g.record.haifu[g.record.haifu.length-1])
             else
                 puts 'ERROR: invalid index'
             showChoise()

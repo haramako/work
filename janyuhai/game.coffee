@@ -2,7 +2,6 @@
 if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
     eval('var exports, global; exports = {}; window.game = exports; global = window;')
 
-janutil = require './janutil'
 jan = require './jan'
 _ = require 'underscore'
 
@@ -36,11 +35,11 @@ class Player
             piTehai: [] # 手牌
 
 # 山牌の状態
-YamaState = new janutil.Enum(['CLOSED','USED','OPENED'])
+YamaState = new jan.Enum(['CLOSED','USED','OPENED'])
 
-KawaState = new janutil.Enum(['NORMAL','NAKI','REACH'])
+KawaState = new jan.Enum(['NORMAL','NAKI','REACH'])
 
-GameMode = new janutil.Enum(['MASTER=-1','VIWER=-2','PLAYER=-3'])
+GameMode = new jan.Enum(['MASTER=-1','VIWER=-2','PLAYER=-3'])
 
 ###
 # 麻雀のゲーム進行を司るクラス.
@@ -621,7 +620,7 @@ class Game
             # pkNakiListの組み合わせを満たす,組み合わせを調べあげる
             piChiList = pkNakiList.map (pkNaki)=>
                 piCombi = pkNaki.map (pk)-> _.filter( piTehai, (pi)->PaiId.toKind(pi) == pk )
-                janutil.combinate( piCombi )
+                jan.combinate( piCombi )
             for chi in _.flatten(piChiList,true)
                 result.push {type:'CHI', pl:pl, pub:chi}
 

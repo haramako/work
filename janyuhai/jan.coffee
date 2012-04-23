@@ -2,12 +2,86 @@
 if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
     eval('var exports, global; exports = {}; window.jan = exports; global = window;')
 
-janutil = require './janutil'
+# Enum
+class Enum
+    constructor: (names)->
+        cur = 0
+        @_numberToName = []
+        for name in names
+            pos = name.indexOf('=')
+            if pos >= 0
+                cur = parseInt(name.substring(pos+1))
+                name = name.substring(0,pos)
+            this[name] = cur
+            @_numberToName[cur] = name
+            cur++
+        @MAX = cur
+
+    toString: (num)->
+        if typeof num == 'number'
+            @_numberToName[num]
+        else if num.map
+            num.map (i)=>this.toString( i )
+        else
+            num
+
+    exportTo: (module, prefix )->
+        prefix ?= ''
+        for i in [0...@_numberToName.length]
+            module[prefix + @_numberToName[i]] = i
+        this
+
+# 組み合わせを列挙する.
+combinate = (a,i=0)->
+    if i == a.length-1
+        a[i]
+    else
+        result = []
+        for rest in combinate(a,i+1)
+            for head in a[i]
+                result.push [head].concat(rest)
+        result
+
+prettyPrint = (val,indent='  ')->
+    str = JSON.stringify(val)
+    if str.length < 500
+        str
+    else
+        if val.length and val.map
+            '[\n'+val.map( (x)->indent+ prettyPrint(x,indent+'  ') ).join(',\n')+'\n'+indent[0...-2]+']'
+        else if typeof val == 'object'
+            result = []
+            for k,v of val
+                result.push indent+'"'+k+'":'+ prettyPrint(v,indent+'  ')
+            '{\n'+result.join(',\n')+'\n'+indent[0...-2]+'}'
+        else
+            str
+
+pp = (val)->
+    puts prettyPrint(val)
+
+puts = -> console.log.apply console, arguments
+
+class Cipher
+    constructor: (key)->
+        @key = key.slice()
+        @keyLength = @key.length
+        @idx = 0
+
+    crypt: (array)->
+        result = []
+        for c,i in array
+            result.push ( c ^ @key[@idx] )
+            @key[@idx] = ( @key[@idx] << 1 ) & 0xffff | ( @key[@idx] >> 15 )
+            @idx = (@idx+1)%@keyLength
+        result
+
+    decrypt: (array)->@crypt(array)
 
 ###
 # 牌の種類（筒子、萬子、索子、字牌)を表すEnum.
 ###
-PaiSuit = new janutil.Enum(['MANZU','PINZU','SOUZU','JIHAI'])
+PaiSuit = new Enum(['MANZU','PINZU','SOUZU','JIHAI'])
 
 ###
 # 牌の種類（一萬、二萬・・・発、中）を表すEnum.
@@ -25,7 +99,7 @@ PaiSuit = new janutil.Enum(['MANZU','PINZU','SOUZU','JIHAI'])
 # PaiKind.toReadable( [ [PaiKind.MAN1, PaiKind.PIN1], [PaiKind.SOU1, PaiKind.TON] ] ) # => ['一①','１東']
 #
 ###
-PaiKind = new janutil.Enum([
+PaiKind = new Enum([
         'MAN1','MAN2','MAN3','MAN4','MAN5','MAN6','MAN7','MAN8','MAN9',
         'PIN1','PIN2','PIN3','PIN4','PIN5','PIN6','PIN7','PIN8','PIN9',
         'SOU1','SOU2','SOU3','SOU4','SOU5','SOU6','SOU7','SOU8','SOU9',
@@ -130,7 +204,7 @@ for pk in [0...PaiKind.MAX]
 #
 #
 ###
-PaiId = new janutil.Enum(PAI_ID_LIST)
+PaiId = new Enum(PAI_ID_LIST)
 PaiId.toKind = (pi)->
     if typeof pi == 'number'
         Math.floor( pi / 4 )
@@ -401,7 +475,7 @@ YAKU_TABLE = [
 ###
 # 役を表すEnum.
 ###
-Yaku = new janutil.Enum( YAKU_TABLE.map( (y)->y[0] ) )
+Yaku = new Enum( YAKU_TABLE.map( (y)->y[0] ) )
 Yaku.info = (yaku)->
     info = YAKU_TABLE[yaku]
     { num: yaku, id: info[0], name: info[1], han: info[2] }
@@ -766,6 +840,14 @@ puts isTenpai PaiKind.fromReadable( '東東７９' )
 puts isTenpai PaiKind.fromReadable( '東東８９' )
 puts isTenpai PaiKind.fromReadable( '１１１２３４５６７８９９白' )
 ###
+
+exports.Enum = Enum
+exports.puts = puts
+exports.combinate = combinate
+exports.prettyPrint = prettyPrint
+exports.pp = pp
+global.puts = puts
+global.pp = pp
 
 exports.PaiSuit = PaiSuit
 exports.PaiKind = PaiKind

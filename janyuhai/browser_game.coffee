@@ -3,7 +3,6 @@ if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
     eval('var exports, global; exports = {}; window.browser_game = exports; global = window;')
 
 _ = require 'underscore'
-janutil = require './janutil'
 jan = require './jan'
 game = require './game'
 
@@ -38,7 +37,7 @@ class Game
 
     showGame: ()->
         # ログの表示
-        @haifuDiv.text( janutil.prettyPrint(@game.record) )
+        @haifuDiv.text( jan.prettyPrint(@game.record) )
 
         # 状態の表示
         pos = @game.splitPos(@game.tsumoPos)

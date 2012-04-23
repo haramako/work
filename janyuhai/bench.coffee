@@ -3,33 +3,35 @@ _ = require 'underscore'
 game = require './game'
 jan = require './jan'
 
-game = new game.Game( [], {playerNum:4} )
-choises = game.progress {type:'BAGIME', pub:[0,1,2,3]}
 
-kyoku = 0
+HANCHAN_NUM = 18
 agari = 0
 cn = (0 for i in [0..30])
+total = 0
+console.time 'all'
 try
-    count = 100*8*10000/60/15
-    for i in [0...count]
-        com = _.find( choises, (c)->c.type == 'RON' or c.type == 'TSUMO_AGARI' )
-        if com
-            agari++
-        unless com
-            com = choises[Math.floor(Math.random()*choises.length)]
-        choises = game.progress com
-        cn[choises.length] += 1
-        if choises[0].type == 'INIT_KYOKU'
-            kyoku++
-            game.haifu = []
+    for i in [0...HANCHAN_NUM]
+        g = new game.Game( game.GameMode.MASTER, [], {playerNum:4} )
+        while g.state != 'FINISHED'
+            com = _.find( g.choises, (c)->c.type == 'RON' or c.type == 'TSUMO_AGARI' )
+            if com
+                agari++
+            unless com
+                com = g.choises[Math.floor(Math.random()*g.choises.length)]
+            g.progress com
+            cn[g.choises.length] += 1
+            total++
 catch e
-    haifu = game.record.haifu
-    game.record = undefined
-    puts game
+    # エラーが起きたら詳細を表示
+    haifu = g.record.haifu
+    g.record = undefined
+    puts g
     puts haifu.slice(haifu.length-3)
     throw e
 
-puts kyoku
-puts count/kyoku
-puts cn
-puts agari
+console.timeEnd 'all'
+
+puts "total=#{total}"
+puts "HANCHAN_NUM=#{HANCHAN_NUM}"
+puts "choise num freq=#{cn}"
+puts "agari=#{agari}"

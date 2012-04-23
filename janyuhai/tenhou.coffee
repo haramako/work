@@ -1,5 +1,4 @@
 jan = require './jan'
-janutil = require './janutil'
 libxmljs = require 'libxmljs'
 fs = require 'fs'
 zlib = require 'zlib'

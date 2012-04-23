@@ -1,5 +1,4 @@
 jan = require './jan'
-janutil = require './janutil'
 tenhou = require './tenhou'
 fs = require 'fs'
 
