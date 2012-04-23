@@ -1,2 +1,0 @@
-#!/usr/bin/env coffee
-game = require './game'

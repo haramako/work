@@ -20,5 +20,14 @@ function hoge(){
  
 */
 window.underscore = _; // underscore.jsは特別に登録する
-function require(module){ return window[module.replace(/[.¥/]+/g,'')]; }
-
+function require(name){
+  if( name.indexOf('./') == 0  ){
+    if( name == './jan' ){
+      return window.jan;
+    }else{
+      return window['jan/'+name.substr(2)]; // 相対パス
+    }
+  }else{
+    return window[name]; // 絶対パス
+  }
+}
