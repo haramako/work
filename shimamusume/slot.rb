@@ -358,3 +358,153 @@ puts '突然BIG単発後の次回ビッグまでの平均ゲーム数,REG数'
 puts '='*80
 puts "候補=%3d ゲーム数=%8d REG数=%4d BIG/G=%8.3f BIG/REG=%5.3f"%[big_num,game_num*10,reg_num, 10.0*game_num/big_num, 1.0*reg_num/big_num]
 
+# - BIG間ハマり後の平均連チャン数
+@games = games
+def each_start
+  @games.each do |line|
+    (0..line.size-1).each do |i|
+      yield line[i..-1]
+    end
+  end
+end
+
+# BIGのあと
+def filter_after_big( line )
+  if line[0][1] == 'B' and line.size > 1
+    yield line[1..-1]
+  end
+end
+
+# 連荘のあと
+def filter_after_last_big( line )
+  if line[0][1] == 'B' and line.size > 1
+    if line[1][0] > 0 and line.size > 2
+      yield line[1..-1]
+    end
+  end
+end
+
+# 連荘のあと
+def filter_after_last_tanpatsu_big( line )
+  if line.size > 1 and isTanpatsu(line,1)
+      yield line[2..-1]
+  end
+end
+
+# BIGのハマリ
+def filter_big_hamari( line, num )
+  line.each_with_index do |g,i|
+    if num < g[0]
+      yield [ [g[0]-num,g[1]] ] + line[1..-1]
+      break
+    else
+      break if g[1] == 'B'
+      num -= g[0]
+    end
+  end
+end
+
+def get_renchan( line )
+  game = 0
+  line.each_with_index do |g,i|
+    game += g[0]
+    if g[1] == 'B'
+      renchan = 0
+      line[i..-1].each do |g|
+        if g[1] == 'B'
+          renchan += 1
+        else
+          break
+        end
+      end
+      return [game,renchan]
+    end
+  end
+  [0,0]
+end
+
+
+puts '='*80
+puts 'BIG間ハマリ後の平均連荘数'
+puts '='*80
+
+renchan = Array.new(14){[0,0]}
+each_start do |line|
+  filter_after_last_big( line ) do |line|
+    filter_big_hamari( line, 0 )  do |line|
+      info = get_renchan( line )
+      renchan[info[0]/20][0] += 1
+      renchan[info[0]/20][1] += info[1]
+    end
+  end
+end
+
+renchan.each_with_index do |d,i|
+  puts "BIG間=%4d-%4dG サンプル=%4d 平均連チャン数=%8.3f"%[i*200, i*200+199, d[0], 1.0*d[1]/d[0]]
+end
+
+######################################
+puts '='*80
+puts 'BIG後130Gやめを心がけた時の情報'
+puts '='*80
+
+def sim_yame( line, num )
+  game_num = 0
+  reg = 0
+  big = 0
+  finished = false
+  line.each do |g|
+    if g[0] <= num
+      game_num += g[0]
+      if g[1] == 'B'
+        big += 1
+      else
+        reg += 1
+      end
+    else
+      game_num += num
+      finished = true
+      break
+    end
+  end
+  if finished
+    { game_num: game_num, reg: reg, big: big }
+  else
+    nil
+  end
+end
+
+data = []
+each_start do |line|
+  filter_after_last_big( line ) do |line|
+    sim = sim_yame( line, 13 )
+    data.push sim if sim
+  end
+end
+
+stat = data.inject({game_num:0,reg:0,big:0,nobig:0}) do |m,x| 
+  {game_num:x[:game_num]+m[:game_num], big:x[:big]+m[:big], reg:x[:reg]+m[:reg], nobig: m[:nobig]+if x[:big]>0 then 0 else 1 end }
+end
+
+puts "サンプル=%4d 平均ゲーム数=%3dG 平均REG数=%8.3f 平均BIG数=%8.3f BIGスルー率=%8.3f 平均BIG数(スルーしない場合)=%8.3f"%
+  [data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ]
+
+######################################
+puts '='*80
+puts '単発BIG後130Gやめを心がけた時の情報'
+puts '='*80
+
+data = []
+each_start do |line|
+  filter_after_last_tanpatsu_big( line ) do |line|
+    sim = sim_yame( line, 13 )
+    data.push sim if sim
+  end
+end
+
+stat = data.inject({game_num:0,reg:0,big:0,nobig:0}) do |m,x| 
+  {game_num:x[:game_num]+m[:game_num], big:x[:big]+m[:big], reg:x[:reg]+m[:reg], nobig: m[:nobig]+if x[:big]>0 then 0 else 1 end }
+end
+
+puts "サンプル=%4d 平均ゲーム数=%3dG 平均REG数=%8.3f 平均BIG数=%8.3f BIGスルー率=%8.3f 平均BIG数(スルーしない場合)=%8.3f"%
+  [data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ]
