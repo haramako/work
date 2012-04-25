@@ -62,7 +62,7 @@ class Server
 
         sv.get '/', (req,res)=>
             result = ['<h1>雀友牌ゲームサーバー</h1>']
-            result.push '<table width="2000" border="1"><tr><th>Session ID</th><th width="1000">Player ID</th>'
+            result.push '<table width="2000" border="1"><tr><th width="20%">Session ID</th><th width="80%">Player ID</th>'
             for sid,s of @sessions
                 result.push "<tr><td>#{sid}</td><td>#{_.pluck(s.players,'uuid').join(',')}</td></tr>"
             result.push '</table>'
@@ -88,6 +88,12 @@ class AdminSession
                     s = new Session( msg.sid, msg.pids, agame )
                     @server.addSession s
                     @conn.send JSON.stringify({t:'CREATE_SESSION_R',id:msg.id})
+                when 'SESSION_LIST'
+                    result = []
+                    for sid,s of @server.sessions
+                        players = (p.uuid for p in s.players)
+                        result.push {sid:sid, players:players}
+                    @conn.send JSON.stringify({t:'SESSION_LIST_R', id:msg.id, sessions:result})
                 else
                     throw "invalid msg.t=#{msg.t}"
 
@@ -114,6 +120,7 @@ class Session
     addConnection: (uuid,conn)->
         player = _.find(@players, (p)->p.uuid == uuid )
         player.conn = conn
+        conn.send JSON.stringify({t:'LOGIN',idx:player.idx})
         for com in @game.record.haifu
             player.conn.send JSON.stringify({t:'COM',com:com})
         @autoplay()
@@ -151,11 +158,11 @@ class Session
             @autoplay @game.choises[0]
         else
             # プレイヤーごとの選択肢に分ける
-            @choises = [[],[],[],[]]
+            @choises = [[],[],[],[]] # インデックスは初期プレイヤー番号
             @receivedChoises = [undefined,undefined,undefined,undefined]
             for c in @game.choises
                 if c.pl?
-                    @choises[c.pl].push c
+                    @choises[@game.p[c.pl].initIdx].push c
             # プレイヤーごとに選択肢を送信する
             for player in @players
                 if player.conn

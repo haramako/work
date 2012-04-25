@@ -65,12 +65,14 @@ class Client
 
          .on 'connect', (conn)=>
             puts 'client connect'
-            @game = new game.Game( 0, [], {} )
             conn
              .on 'message', (msg)=>
                 return if msg.type != 'utf8'
                 msg = JSON.parse( msg.utf8Data )
                 switch msg.t
+                    when 'LOGIN'
+                        puts 'login'
+                        @game = new game.Game( msg.idx, [], {} )
                     when 'COM'
                         @game.progress msg.com
                     when 'CHOOSE_R'
