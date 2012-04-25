@@ -24,11 +24,14 @@
 *必要なnpmパッケージ
 
 - coffee-script
+- express         HTTPサーバ
 - gzip
 - libxmljs        XMLパーサー,天鳳ファイルのパースで使用
 - msgpack2
+- node-uuid
+- node-dev        変更があると自動リロード
 - optparse
 - underscore
 - vows            テストフレームワーク
-
+- websocket
 
