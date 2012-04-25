@@ -143,6 +143,8 @@ class Session
                     throw "invalid msg.t=#{msg.t}"
 
          .on 'close', (reason,desc)=>
+            player = _.find(@players, (p)->p.uuid == uuid )
+            player.conn = undefined
             puts reason, desc
 
     autoplay: (com)->
