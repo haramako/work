@@ -17,6 +17,7 @@ require 'pp'
 # - BIG間200,400,600Gで打ち始めた時の次のBIGまで
 # - 100G単位でのREGからの平均連チャン数
 # - 突然ビッグの平均連チャン数、単発率
+# - REG後０を１３０やめをしたときの、ヒット率と累計ゲーム数、ただしbig後は０やめ（REG,REGx2,REGx3で試す)
 
 games = []
 
@@ -88,7 +89,7 @@ puts '='*80
 puts 'G数     確率      到達時確率'
 regavg.each_with_index do |g,n|
   g_rest = regavg[n..-1].inject(0){|x,i|x+i}
-  puts "%03dG %8.3f%% %8.3f%% %s"%[ n*10, (100.0*g/total_bonus), (100.0*g/g_rest),  '#'*(20000*g/total)]
+  puts "%03dG %8.3f%% %8.3f%% %s"%[ n*10, (100.0*g/total_bonus), (100.0*g/g_rest),  '#'*(20000*g/total)] rescue nil
 end
 
 regavg2 = Array.new(24){0}
@@ -101,7 +102,7 @@ puts '='*80
 puts 'G数     確率      到達時確率'
 regavg2.each_with_index do |g,n|
   g_rest = regavg2[n..-1].inject(0){|x,i|x+i}
-  puts "%04dG-%04dG %8.3f%% %8.3f%% %s"%[ n*50,n*50+49, (100.0*g/total_bonus), (100.0*g/g_rest),  '#'*(5000*g/total)]
+  puts "%04dG-%04dG %8.3f%% %8.3f%% %s"%[ n*50,n*50+49, (100.0*g/total_bonus), (100.0*g/g_rest),  '#'*(5000*g/total)] rescue nil
 end
 
 # - 指定した条件（ゲーム数）から開始した場合、平均何ゲームでBIGにあたるか(ときめき連含む)
@@ -375,6 +376,13 @@ def filter_after_big( line )
   end
 end
 
+# REGのあと
+def filter_after_reg( line )
+  if line[0][1] == 'R' and line.size > 1
+    yield line[1..-1]
+  end
+end
+
 # 連荘のあと
 def filter_after_last_big( line )
   if line[0][1] == 'B' and line.size > 1
@@ -428,7 +436,7 @@ puts '='*80
 puts 'BIG間ハマリ後の平均連荘数'
 puts '='*80
 
-renchan = Array.new(14){[0,0]}
+renchan = Array.new(20){[0,0]}
 each_start do |line|
   filter_after_last_big( line ) do |line|
     filter_big_hamari( line, 0 )  do |line|
@@ -487,7 +495,7 @@ stat = data.inject({game_num:0,reg:0,big:0,nobig:0}) do |m,x|
 end
 
 puts "サンプル=%4d 平均ゲーム数=%3dG 平均REG数=%8.3f 平均BIG数=%8.3f BIGスルー率=%8.3f 平均BIG数(スルーしない場合)=%8.3f"%
-  [data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ]
+  [data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ] rescue nil
 
 ######################################
 puts '='*80
@@ -507,4 +515,64 @@ stat = data.inject({game_num:0,reg:0,big:0,nobig:0}) do |m,x|
 end
 
 puts "サンプル=%4d 平均ゲーム数=%3dG 平均REG数=%8.3f 平均BIG数=%8.3f BIGスルー率=%8.3f 平均BIG数(スルーしない場合)=%8.3f"%
-  [data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ]
+  [data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ] rescue nil
+
+######################################
+puts '='*80
+puts 'REGG後130Gやめを心がけた時の情報(ただしBIG後は即ヤメ)'
+puts '='*80
+
+def sim_yame_big_sokuyame( line, num )
+  game_num = 0
+  reg = 0
+  big = 0
+  finished = false
+  line.each do |g|
+    if g[0] <= num
+      game_num += g[0]
+      if g[1] == 'B'
+        big += 1
+        num = 0
+      else
+        reg += 1
+      end
+    else
+      game_num += num
+      finished = true
+      break
+    end
+  end
+  if finished
+    { game_num: game_num, reg: reg, big: big }
+  else
+    nil
+  end
+end
+
+[0,1,2,3,4,5].each do |x2|
+
+  data = []
+  each_start do |line|
+    filter_after_reg( line ) do |line|
+      next if line[0][0] == 0
+      ok = true
+      x2.times do |n|
+        line.shift
+        if line.empty? or line[0][1] != 'R'
+          ok = false
+          break
+        end
+      end
+      next unless ok
+      sim = sim_yame_big_sokuyame( line, 13 )
+      data.push sim if sim
+    end
+  end
+
+  stat = data.inject({game_num:0,reg:0,big:0,nobig:0}) do |m,x| 
+    {game_num:x[:game_num]+m[:game_num], big:x[:big]+m[:big], reg:x[:reg]+m[:reg], nobig: m[:nobig]+if x[:big]>0 then 0 else 1 end }
+  end
+
+  puts "%d回ぬけ サンプル=%4d 平均ゲーム数=%3dG 平均REG数=%8.3f 平均BIG数=%8.3f BIGスルー率=%8.3f 平均BIG数(スルーしない場合)=%8.3f"%
+    [x2,data.size, 10.0*stat[:game_num]/data.size, 1.0*stat[:reg]/data.size, 1.0*stat[:big]/data.size, 1.0*stat[:nobig]/data.size, 1.0*stat[:big]/(data.size-stat[:nobig]) ] rescue nil
+end

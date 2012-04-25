@@ -1,0 +1,187 @@
+#!/usr/bin/env coffee
+
+_ = require 'underscore'
+websocket = require( 'websocket' )
+jan = require 'jan'
+game = require 'jan/game'
+express = require 'express'
+
+###
+# ゲームサーバー.
+#
+###
+
+###
+#
+###
+class Server
+    ###
+    # コンストラクタ.
+    # opt:
+    #   port: ポート(Default:20001)
+    ###
+    constructor: (opt={})->
+        @opt = _.extend opt,
+            port: 20001
+
+        # HTTPサーバーをつくる
+        @httpServer = express.createServer()
+        @_setupHttp()
+        @httpServer.listen @opt.port
+
+        # WebSocketサーバーをつくる
+        @sv = new websocket.server( { httpServer: @httpServer, autoAcceptConnections: false })
+        @sv
+         .on 'request', (request)=>
+            puts "request from #{request.remoteAddress}"
+            switch request.resource
+             when '/admin' # 管理セッション
+                puts 'admin-client login'
+                conn = request.accept('janyuhai-game-admin',request.origin)
+                new AdminSession(conn,this)
+             else # 通常のセッション
+                conn = request.accept('janyuhai-game',request.origin)
+                uuid = request.resource.substring(1)
+                puts "login from #{request.remoteAddress}, uuid=#{uuid}"
+                session = Session.findByUuid(uuid)
+                session.addConnection( uuid, conn )
+
+        @sessions = {}
+        @sessionsByPlayerId = {}
+
+    addSession: (session)->
+        @sessions[session.sid] = session
+        for player in session.players
+            @sessionsByPlayerId[player.uuid] = session
+
+    _setupHttp: ->
+        sv = @httpServer
+        sv.use express.logger()
+        sv.use express.methodOverride()
+        sv.use express.bodyParser()
+
+        sv.get '/', (req,res)=>
+            result = ['<h1>雀友牌ゲームサーバー</h1>']
+            result.push '<table width="2000" border="1"><tr><th>Session ID</th><th width="1000">Player ID</th>'
+            for sid,s of @sessions
+                result.push "<tr><td>#{sid}</td><td>#{_.pluck(s.players,'uuid').join(',')}</td></tr>"
+            result.push '</table>'
+            res.send result.join('')
+
+        sv.get '/sessions', (req,res)=>
+            result = []
+            for sid,s of @sessions
+                result.push {sid:sid, players:_.pluck(s.players,'uuid')}
+            res.send JSON.stringify(result)
+
+        sv.post '/sessions/create', (req,res)=>
+            agame = new game.Game( game.GameMode.MASTER, [], {} )
+            s = new Session( req.body.sid, req.body.pids, agame )
+            @addSession s
+            res.send JSON.stringify('OK')
+
+        sv.get '/session/:sid', (req,res)=>
+            res.send jan.prettyPrint( Session.sessions )
+
+###
+# 管理セッション
+###
+class AdminSession
+    constructor: (conn,server)->
+        @server = server
+        @conn = conn
+        @conn
+         .on 'message', (msg)=>
+            return if msg.type != 'utf8'
+            msg = JSON.parse(msg.utf8Data)
+            switch msg.t
+                when 'CREATE_SESSION'
+                    agame = new game.Game( game.GameMode.MASTER, [], {} )
+                    s = new Session( msg.sid, msg.pids, agame )
+                    @server.addSession s
+                    @conn.send JSON.stringify({t:'CREATE_SESSION_R',id:msg.id})
+                else
+                    throw "invalid msg.t=#{msg.t}"
+
+         .on 'close', (reason,desc)=>
+            puts "close admin-session readon=#{reason}, desc=#{desc}"
+
+###
+# セッション（一つの卓の１ゲームに対応）
+###
+class Session
+    constructor: (sid, uuids,_game)->
+        @sid = sid
+        @players = for i in [0...4]
+            {
+                idx: i
+                uuid: uuids[i]
+                conn: undefined
+            }
+        for p in @players
+            Session.sessions[p.uuid] = this
+        @choises = []
+        @game = _game
+
+    addConnection: (uuid,conn)->
+        player = _.find(@players, (p)->p.uuid == uuid )
+        player.conn = conn
+        @autoplay()
+        conn
+         .on 'message', (msg)=>
+            return if msg.type != 'utf8'
+            # puts 'recv: '+m.utf8Data
+            msg = JSON.parse(msg.utf8Data)
+            player = _.find(@players, (p)->p.conn == conn )
+            switch msg.t
+                when 'CHOOSE'
+                    @receivedChoises[player.idx] = msg.com
+                    conn.send JSON.stringify( {t:'CHOOSE_R', id:msg.id} )
+                    finished = true
+                    for c,i in @choises
+                        finished = false if c.length > 0 and not @receivedChoises[i]?
+                    if finished
+                        @autoplay msg.com
+                else
+                    throw "invalid msg.t=#{msg.t}"
+
+         .on 'close', (reason,desc)=>
+            puts reason, desc
+
+    autoplay: (com)->
+        if com
+            @game.progress com
+            for player in @players
+                if player.conn
+                    player.conn.send JSON.stringify({t:'COM', com:com})
+        if @game.state == 'FINISHED'
+            # pp @game.p
+            return
+        if @game.choises.length == 1
+            @autoplay @game.choises[0]
+        else
+            # プレイヤーごとの選択肢に分ける
+            @choises = [[],[],[],[]]
+            @receivedChoises = [undefined,undefined,undefined,undefined]
+            for c in @game.choises
+                if c.pl?
+                    @choises[c.pl].push c
+            # プレイヤーごとに選択肢を送信する
+            for player in @players
+                if player.conn
+                    if @choises[player.idx].length > 0
+                        player.conn.send JSON.stringify({t:'CHOISES', ch:@choises[player.idx]})
+                else
+                    @receivedChoises[player.idx] = @choises[player.idx][0]
+            if true
+                    finished = true
+                    for c,i in @choises
+                        finished = false if c.length > 0 and not @receivedChoises[i]?
+                    if finished
+                        @autoplay _.find(@receivedChoises, (x)->x?)
+
+    @findByUuid: (uuid)->@sessions[uuid]
+    @sessions = {}
+
+server = new Server()
+

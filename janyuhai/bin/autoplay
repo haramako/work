@@ -1,0 +1,133 @@
+#!/usr/bin/env coffee
+
+_ = require 'underscore'
+websocket = require 'websocket'
+http = require 'http'
+url = require 'url'
+uuid = require 'node-uuid'
+jan = require 'jan'
+game = require 'jan/game'
+
+###
+httpGet = (targetUrl,callback)->
+    param = url.parse( targetUrl )
+    body = []
+    req = http.get param, (res)->
+        res.on 'data', (data)->
+            body.push data
+        res.on 'end', (data)->
+            callback 200, body.join('')
+
+httpPost = (targetUrl,bodyJson,callback)->
+    param = url.parse( targetUrl )
+    param.method = 'POST'
+    body = JSON.stringify(bodyJson)
+    param.headers = {}
+    param.headers['Content-Type'] = 'application/json'
+    param.headers['Content-Length'] = body.length
+    responseBody = []
+    req = http.request param, (res)->
+        res.on 'data', (data)->responseBody.push data
+        res.on 'end', (data)->callback undefined, responseBody.join('')
+    req.on 'error', (err)->callback err, undefined
+    req.write body
+    req.end()
+###
+
+class AdminClient
+    constructor: (host,port,callback)->
+        @host = host
+        @port = port or 20001
+        @messageId = 0
+        @callbackById = {}
+        @ws = new websocket.client()
+         .on 'connectFailed', (err)=>
+            puts 'client connectFailed', err
+
+         .on 'connect', (conn)=>
+            @game = new game.Game( 0, [], {} )
+            @conn = conn
+            @conn
+             .on 'message', (msg)=>
+                return if msg.type != 'utf8'
+                msg = JSON.parse( msg.utf8Data )
+                if msg.id?
+                    callback = @callbackById[msg.id]
+                    callback(msg) if callback
+                    delete @callbackById[msg.id]
+                else
+                    puts "unknown message, msg=#{JSON.stringify(msg)}"
+
+             .on 'close', ->
+                puts 'admin-client close'
+
+             .on 'error', (err)->
+                puts 'admin-client error'
+
+            callback()
+        @ws.connect "ws://#{@host}:#{port}/admin", 'janyuhai-game-admin'
+
+    send: (msg,callback)->
+        msg.id = @messageId
+        @callbackById[msg.id] = callback
+        @messageId++
+        @conn.send JSON.stringify(msg)
+
+    close: ->
+        @conn.close() if @conn
+
+class Client
+    constructor: (pid)->
+        @game = undefined
+        @messageId = 0
+        @pid = pid
+        @ws = new websocket.client()
+        @ws
+         .on 'connectFailed', (err)=>
+            puts 'client connectFailed', err
+
+         .on 'connect', (conn)=>
+            puts 'client connect'
+            @game = new game.Game( 0, [], {} )
+            conn
+             .on 'message', (msg)=>
+                return if msg.type != 'utf8'
+                msg = JSON.parse( msg.utf8Data )
+                switch msg.t
+                    when 'COM'
+                        @game.progress msg.com
+                    when 'CHOOSE_R'
+                        # puts "comand accepted, id=#{msg.id}"
+                        0
+                    when 'CHOISES'
+                        conn.send JSON.stringify({t:'CHOOSE',id:@messageId,com:msg.ch[0]})
+                        @messageId++
+                    else
+                        throw "invalid msg.t=#{msg.t}"
+                # puts "state=#{@game.state}"
+                if @game.state == 'FINISHED'
+                    conn.close()
+
+             .on 'close', ->
+                puts 'client close'
+
+             .on 'error', (err)->
+                puts 'client error'
+
+        @ws.connect "ws://localhost:20001/#{@pid}", 'janyuhai-game'
+
+#httpPost 'http://localhost:20001/sessions/create', {sid:uuid.v4(), pids:pids}, (err,body)->
+#    puts body
+#    httpGet 'http://localhost:20001/sessions', (status,body)->
+#        puts body
+
+exports.AdminClient = AdminClient
+exports.Client = Client
+
+if __filename = process.argv[1]
+    pids = (uuid.v4() for i in [0...4])
+    admin = new AdminClient 'localhost', 20001, ->
+        admin.send {t:'CREATE_SESSION',sid:uuid.v4(), pids }, (msg)->
+            cli = new Client(pids[0])
+            admin.close()
+
