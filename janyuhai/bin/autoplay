@@ -3,36 +3,13 @@
 _ = require 'underscore'
 websocket = require 'websocket'
 http = require 'http'
+optparse = require 'optparse'
 url = require 'url'
+fs = require 'fs'
 uuid = require 'node-uuid'
 jan = require 'jan'
 game = require 'jan/game'
-
-###
-httpGet = (targetUrl,callback)->
-    param = url.parse( targetUrl )
-    body = []
-    req = http.get param, (res)->
-        res.on 'data', (data)->
-            body.push data
-        res.on 'end', (data)->
-            callback 200, body.join('')
-
-httpPost = (targetUrl,bodyJson,callback)->
-    param = url.parse( targetUrl )
-    param.method = 'POST'
-    body = JSON.stringify(bodyJson)
-    param.headers = {}
-    param.headers['Content-Type'] = 'application/json'
-    param.headers['Content-Length'] = body.length
-    responseBody = []
-    req = http.request param, (res)->
-        res.on 'data', (data)->responseBody.push data
-        res.on 'end', (data)->callback undefined, responseBody.join('')
-    req.on 'error', (err)->callback err, undefined
-    req.write body
-    req.end()
-###
+haifu = require 'jan/haifu'
 
 class AdminClient
     constructor: (host,port,callback)->
@@ -121,13 +98,37 @@ class Client
 #    httpGet 'http://localhost:20001/sessions', (status,body)->
 #        puts body
 
-exports.AdminClient = AdminClient
-exports.Client = Client
+#=====================================
+# エントリーポイント
+#=====================================
+#
+# コマンドライン引数の解析
+haifuFile = undefined
+opt = new optparse.OptionParser([
+    ['-h','--help','show this messsage']
+    ['--haifu haifu','use haifu file']
+])
+opt.banner = 'Usage: ./autoplay [Options] haifu player\n'+
+    '       (player must be 0-3)'
+opt.on 'help', ->
+    puts opt.toString()
+    process.exit 0
+opt.on 'haifu', (op,file)->
+    haifuFile = fs.readFileSync( file )
+args = opt.parse( process.argv.slice(2) )
 
-if __filename = process.argv[1]
+main = ->
     pids = (uuid.v4() for i in [0...4])
     admin = new AdminClient 'localhost', 20001, ->
-        admin.send {t:'CREATE_SESSION',sid:uuid.v4(), pids }, (msg)->
-            cli = new Client(pids[0])
+        admin.send {t:'CREATE_SESSION', sid:uuid.v4(), pids:pids, haifu:haifuJson }, (msg)->
             admin.close()
+            cli = new Client(pids[0])
+
+haifuJson = undefined
+if haifuFile
+    haifu.unpack haifuFile, (err,data)->
+        haifuJson = data
+        main()
+else
+    main()
 

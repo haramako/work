@@ -68,21 +68,6 @@ class Server
             result.push '</table>'
             res.send result.join('')
 
-        sv.get '/sessions', (req,res)=>
-            result = []
-            for sid,s of @sessions
-                result.push {sid:sid, players:_.pluck(s.players,'uuid')}
-            res.send JSON.stringify(result)
-
-        sv.post '/sessions/create', (req,res)=>
-            agame = new game.Game( game.GameMode.MASTER, [], {} )
-            s = new Session( req.body.sid, req.body.pids, agame )
-            @addSession s
-            res.send JSON.stringify('OK')
-
-        sv.get '/session/:sid', (req,res)=>
-            res.send jan.prettyPrint( Session.sessions )
-
 ###
 # 管理セッション
 ###
@@ -97,6 +82,9 @@ class AdminSession
             switch msg.t
                 when 'CREATE_SESSION'
                     agame = new game.Game( game.GameMode.MASTER, [], {} )
+                    if msg.haifu?.haifu?
+                        for com in msg.haifu.haifu
+                            agame.progress com
                     s = new Session( msg.sid, msg.pids, agame )
                     @server.addSession s
                     @conn.send JSON.stringify({t:'CREATE_SESSION_R',id:msg.id})
@@ -126,6 +114,8 @@ class Session
     addConnection: (uuid,conn)->
         player = _.find(@players, (p)->p.uuid == uuid )
         player.conn = conn
+        for com in @game.record.haifu
+            player.conn.send JSON.stringify({t:'COM',com:com})
         @autoplay()
         conn
          .on 'message', (msg)=>
