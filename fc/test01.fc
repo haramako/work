@@ -1,0 +1,36 @@
+options (
+         inesprg: 1, // プログラムにいくつのバンクを使うか。今は１つ。
+         ineschr: 1, // グラフィックデータにいくつのバンクを使うか。今は１つ。
+         inesmir: 0, // 水平ミラーリング
+         inesmap: 0  //   - マッパー。０番にする。
+         );
+
+include_bin( file: "character.chr", bank: 2 );
+include_bin( file: "giko.pal", name: PALLET );
+
+var PPU_CTRL1 @ 0x2000;
+var PPU_CTRL2 @ 0x2001;
+var PPU_STAT @ 0x2002;
+var PPU_ADDR @ 0x2006;
+var PPU_DATA @ 0x2007;
+
+// function ppu_put( addr, num );
+
+function main()
+{
+  var x, y;
+  PPU_CTRL1 = 0b00000000;
+  PPU_CTRL2 = 0b00000000; // 画面表示をOFF
+  PPU_ADDR = 0x3F;
+  PPU_ADDR = 0x00;
+  ppu_put( PALLET, 32 );
+  PPU_ADDR = 0x20;
+  PPU_ADDR = 0x00;
+  x = 1;
+  while( x != 0 ){
+    PPU_DATA = x;
+    x = x + 1;
+  }
+  PPU_CTRL2 = 0b00011000;
+  asm("sei");
+}
