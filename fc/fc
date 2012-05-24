@@ -6,7 +6,12 @@
 #
 
 require 'pp'
+require 'optparse'
 require_relative 'parser'
+
+def mangle(str)
+  str.gsub(/\$|_/){|v| { '$'=>'L' }[v] }
+end
 
 class FcParser
   def initialize( src )
@@ -20,44 +25,374 @@ class FcParser
 
     c = @src[@pos]
     case c
-    when /\(|\)|\{|\}|;|:|<|>|\+|-|=|,/
+    when /\(|\)|\{|\}|;|:|<|>|\+|-|=|,|@/ 
+      # 記号
       @pos += 1
       return [c,c]
     when /\d/
-      mo = @src.match( /\d+/, @pos )
-      @pos += mo[0].length
-      return [:NUMBER, mo[0].to_i ]
-    when /[a-zA-Z]/
+      # 数字
+      if @src[@pos,2] == '0x' and mo = @src.match( /0x[0-9a-zA-Z]+/, @pos )
+        @pos += mo[0].length
+        return [:NUMBER, mo[0].to_i(16) ]
+      elsif @src[@pos,2] == '0b' and mo = @src.match( /0b[01]+/, @pos )
+        @pos += mo[0].length
+        return [:NUMBER, mo[0].to_i(2) ]
+      else
+        mo = @src.match( /\d+/, @pos )
+        @pos += mo[0].length
+        return [:NUMBER, mo[0].to_i ]
+      end
+    when /[a-zA-Z]/ 
+      # 識別子/キーワード
       mo = @src.match( /[a-zA-Z0-9_]+/, @pos )
       @pos += mo[0].length
-      if /function|var|if|else/ === mo[0]
+      # キーワードかどうかを判別する
+      if /function|const|var|if|else|while|return|break|continue/ === mo[0]
         return [mo[0], mo[0]]
       else
-        return [:IDENT, mo[0] ]
+        return [:IDENT, mo[0].to_sym ]
       end
+    when /"/
+      # 文字列
+      mo = @src.match( /"([^"]+)"/, @pos )
+      @pos += mo[0].length
+      return [:STRING, mo[1] ]
     else
-      @pos += 1
-      return [:OTHER,c]
+      raise "invalid character #{c}"
+    end
+  end
+
+  def self.parse( src )
+    parser = FcParser.new( src )
+    parser.do_parse
+  end
+end
+
+class Variable
+  attr_reader :id, :function
+  attr_accessor :val, :address
+  def initialize( id, function = nil )
+    @id = id
+    @function = function
+  end
+  def to_asm
+    if val
+      '#'+val.to_s
+    else
+      mangle(to_s)
+    end
+  end
+  def to_s
+    if function
+      "#{function.id}$#{id}"
+    else
+      "#{id}"
     end
   end
 end
 
-src = <<EOT
-function hoge( x ) {
-  var x, y;
-  moge = hoge + fuga;
-  moge( a, b );
-  x = y = - a+b;
-  if( x ) if(y) hoge; else{ fuga; }
-}
-EOT
+class Function
+  attr_reader :id, :args, :vars, :ast, :ops
+  def initialize( global, id, args, ast )
+    @global = global
+    @id = id
+    @vars = Hash.new
+    @arg_len = args.size
+    @args = args.map {|v| new_var(v) }
+    @ast = ast
+    @tmp_count = 0
+    @label_count = 0
+    @ops = []
+  end
 
-parser = FcParser.new( src )
-pp parser.do_parse
-=begin
-loop do
-  token = parser.next_token
-  break unless token[0]
-  puts token
+  def compile_block( block )
+    block.each do |ast|
+      exp( ast )
+    end
+  end
+
+  def exp( ast )
+    case ast
+    when Array 
+      case ast[0]
+      when :var
+        ast[1].each do |v|
+          new_var v
+        end
+        nil
+      when :'if'
+        then_label, else_label, end_label = new_label('then', 'else','end')
+        cond = exp(ast[1])
+        emit :if, cond, else_label
+        emit :label, then_label
+        compile_block(ast[2])
+        emit :jump, end_label
+        emit :label, else_label
+        if ast[3]
+          compile_block(ast[3])
+          emit :label, end_label
+        end
+        nil
+      when :while
+        begin_label, end_label = new_label('begin', 'end')
+        emit :label, begin_label
+        cond = exp(ast[1])
+        emit :if, cond, end_label
+        compile_block ast[2]
+        emit :jump, begin_label
+        emit :label, end_label
+      when :return
+        emit :return, exp(ast[1])
+      when :call
+        func = @global.func[ ast[1] ]
+        ast[2].each_with_index do |arg,i|
+          emit :load, func.args[i], exp(arg)
+        end
+        emit :call, func
+      when :put
+        emit :load, exp(ast[1]), exp(ast[2])
+      when :add, :sub, :mul, :div
+        r = new_tmp
+        left = exp(ast[1])
+        right = exp(ast[2])
+        emit ast[0], r, left, right
+        r
+      else
+        # raise
+      end
+    when Symbol
+      find_var ast
+    when Numeric
+      ast
+    else
+      raise "invalid ast #{ast}"
+    end
+  end
+
+  def emit( *op )
+    @ops << op
+  end
+
+  def new_label( *names )
+    r = names.map { |n| '.'+n+'_'+@label_count.to_s }
+    @label_count += 1
+    r
+  end
+
+  def new_tmp
+    var = new_var("#{@tmp_count}".intern)
+    @tmp_count += 1
+    var
+  end
+
+  def new_var(id)
+    raise "var #{id} already defined" if @vars[id]
+    var = Variable.new(id,self)
+    @vars[id] = var
+    var
+  end
+
+  def find_var(id)
+    if @vars[id]
+      @vars[id]
+    elsif @global.vars[id]
+      @global.vars[id]
+    else
+      raise "var #{id} not defined"
+    end
+  end
+
+  def to_s
+    "<Function:#{id}>"
+  end
+
+  def to_asm
+    id.to_s
+  end
+
 end
-=end
+
+module OpCompiler
+  module_function
+
+  def to_asm( op )
+    if op.respond_to?(:to_asm)
+      op.to_asm
+    elsif Numeric === op
+      "#"+op.to_s
+    else
+      op.to_s
+    end
+  end
+
+  def compile( ops )
+    r = []
+    ops.each do |op|
+      case op[0]
+      when :label
+        r << op[1] + ':'
+      when :if
+        r << "lda #{to_asm(op[1])}"
+        r << "beq #{to_asm(op[2])}"
+      when :jump
+        r << "jmp #{to_asm(op[1])}"
+      when :return
+        r << "lda #{to_asm(op[1])}"
+        r << "rts"
+      when :call
+        r << "jsr #{to_asm(op[1])}"
+      when :load
+        r << "lda #{to_asm(op[2])}"
+        r << "sta #{to_asm(op[1])}"
+      when :add
+        r << "lda #{to_asm(op[2])}"
+        r << "clc"
+        r << "adc #{to_asm(op[3])}"
+        r << "sta #{to_asm(op[1])}"
+      when :sub
+        r << "lda #{to_asm(op[2])}"
+        r << "clc"
+        r << "sbc #{to_asm(op[3])}"
+        r << "sta #{to_asm(op[1])}"
+      end
+    end
+    # ラベル行以外はインデントする
+    r = r.map do |line|
+      if line.index(':')
+        line
+      else
+        "    "+line
+      end
+    end
+    r
+  end
+end
+
+class Compiler
+  attr_reader :ast, :func ,:vars
+
+  def initialize
+    @vars = Hash.new
+    @func = Hash.new
+  end
+
+  def compile( src )
+    ast = FcParser.parse( src )
+    ast.each do |e|
+      case e[0] 
+      when :function
+        @func[e[1]] = Function.new( self, *e[1..-1] )
+      when :const
+        var = Variable.new( e[1] )
+        var.val = e[2]
+        @vars[e[1]] = var
+      when :var
+        var = Variable.new( e[1] )
+        var.address = e[2] if e[2]
+        @vars[e[1]] = var
+      else
+        raise
+      end
+    end
+
+    # アセンブラコードの出力
+    var_asm = []
+    func_asm = []
+
+    var_asm << "; global"
+    @vars.each do |id,v|
+      if v.address
+        var_asm << "#{v.to_asm} = $#{'%4x'%[v.address]}"
+      else
+        var_asm << "#{v.to_asm} .db 1"
+      end
+    end
+
+    @func.each do |id,f|
+      func_asm << "; function #{id}"
+      func_asm << "#{id}:"
+      f.compile_block( f.ast )
+
+      var_asm << "; function #{id}"
+      f.vars.each do |id,v|
+        var_asm << "#{v.to_asm} .db 1"
+      end
+        
+      func_asm.concat OpCompiler.compile( f.ops )
+      func_asm << "    rts"
+    end
+    template = Compiler.templates['base.asm']
+    asm = template.gsub('@VARS'){var_asm.join("\n")}.gsub('@FUNCS'){func_asm.join("\n")}.split("\n")
+    asm
+  end
+
+  def self.templates
+    @@templates
+  end
+
+  @@templates = Hash.new
+  DATA.read.split(/^@@/m)[1..-1].each do |tmpl|
+    name, body = tmpl.split(/\n/,2)
+    @@templates[name] = body
+  end
+      
+end
+
+if __FILE__ == $0
+  $out = 'a.asm'
+  opt = OptionParser.new( "NES Compiler\nUsage: fc [options] <src.fc> ...\nOptions:\n" )
+  opt.on( '-h', '--help' ){ puts opt; exit }
+  opt.on( '-o', 'output file' ){|v| $out = v }
+  opt.on( '-S', 'output asm file' ){|v| $asm = true }
+  opt.on( '-d', '--debug', 'show debug info' ){|v| $debug_info = true }
+  opt.parse!
+
+  asm_file = ARGV[0].sub(/\..+$/){'.asm'}
+  src = ARGF.read
+    
+  @com = Compiler.new
+  asm = @com.compile( src )
+
+  if $debug_info
+    pp @com
+    @com.func.each { |id,f| puts f; pp f.args; pp f.vars; pp f.ast; pp f.ops }
+    puts
+    puts asm
+  end
+
+  open(asm_file,'w'){|f| f.write asm.join("\n") }
+
+  unless $asm
+    system( 'nesasm', $out, asm_file )
+  end
+
+end
+
+__END__
+@@base.asm
+	.inesprg 1 ;   - プログラムにいくつのバンクを使うか。今は１つ。
+	.ineschr 1 ;   - グラフィックデータにいくつのバンクを使うか。今は１つ。
+	.inesmir 0 ;   - 水平ミラーリング
+	.inesmap 0 ;   - マッパー。０番にする。
+
+	.bank 1
+	.org $FFFA
+	.dw 0
+	.dw __start
+	.dw 0
+
+	.bank 0
+	.org $0000
+@VARS
+
+	.org $8000
+__start:
+	sei
+	cli
+	ldx #0
+	txs
+	jsr main
+.loop:
+    jmp .loop
+
+@FUNCS
