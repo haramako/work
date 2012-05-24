@@ -2,7 +2,7 @@ options (
          inesprg: 1, // プログラムにいくつのバンクを使うか。今は１つ。
          ineschr: 1, // グラフィックデータにいくつのバンクを使うか。今は１つ。
          inesmir: 0, // 水平ミラーリング
-         inesmap: 0  //   - マッパー。０番にする。
+         inesmap: 0  // マッパー。０番にする。
          );
 
 include_bin( file: "character.chr", bank: 2 );
@@ -11,19 +11,29 @@ include_bin( file: "giko.pal", name: PALLET );
 var PPU_CTRL1 @ 0x2000;
 var PPU_CTRL2 @ 0x2001;
 var PPU_STAT @ 0x2002;
+var PPU_SCROLL @ 0x2005;
 var PPU_ADDR @ 0x2006;
 var PPU_DATA @ 0x2007;
+
+var frame;
+var vblank_flag;
+var scroll0;
+var scroll1;
 
 // function ppu_put( addr, num );
 
 function main()
 {
   var x, y;
+  scroll0 = 0;
+  scroll1 = 0;
   PPU_CTRL1 = 0b00000000;
   PPU_CTRL2 = 0b00000000; // 画面表示をOFF
+  
   PPU_ADDR = 0x3F;
   PPU_ADDR = 0x00;
   ppu_put( PALLET, 32 );
+
   PPU_ADDR = 0x20;
   PPU_ADDR = 0x00;
   x = 1;
@@ -31,6 +41,38 @@ function main()
     PPU_DATA = x;
     x = x + 1;
   }
+  
+  PPU_ADDR = 0x22;
+  PPU_ADDR = 0x00;
+  ppu_fill( 0x44, 0 );
+  
+  reset_scroll();
+  PPU_CTRL1 = 0b10000000;
   PPU_CTRL2 = 0b00011000;
-  asm("sei");
+  
+  while( 1 ){
+    wait_vblank();
+    frame = frame + 1;
+    PPU_ADDR = 0x21;
+    PPU_ADDR = frame;
+    PPU_DATA = frame;
+    reset_scroll();
+  }
+}
+
+function reset_scroll()
+{
+  PPU_SCROLL = scroll0;
+  PPU_SCROLL = scroll1;
+}
+
+function wait_vblank()
+{
+  vblank_flag = 1;
+  while( vblank_flag ){}
+}
+
+function interrupt()
+{
+  vblank_flag = 0;
 }
