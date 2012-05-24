@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
+#
+#
+#
+
+require 'pp'
+require_relative 'parser'
+
+class FcParser
+  def initialize( src )
+    @pos = 0
+    @src = src
+  end
+
+  def next_token
+    @pos+=1 while /\s/ === @src[@pos]
+    return [false,false] if @pos >= @src.size
+
+    c = @src[@pos]
+    case c
+    when /\(|\)|\{|\}|;|:|<|>|\+|-|=|,/
+      @pos += 1
+      return [c,c]
+    when /\d/
+      mo = @src.match( /\d+/, @pos )
+      @pos += mo[0].length
+      return [:NUMBER, mo[0].to_i ]
+    when /[a-zA-Z]/
+      mo = @src.match( /[a-zA-Z0-9_]+/, @pos )
+      @pos += mo[0].length
+      if /function|var|if|else/ === mo[0]
+        return [mo[0], mo[0]]
+      else
+        return [:IDENT, mo[0] ]
+      end
+    else
+      @pos += 1
+      return [:OTHER,c]
+    end
+  end
+end
+
+src = <<EOT
+function hoge( x ) {
+  var x, y;
+  moge = hoge + fuga;
+  moge( a, b );
+  x = y = - a+b;
+  if( x ) if(y) hoge; else{ fuga; }
+}
+EOT
+
+parser = FcParser.new( src )
+pp parser.do_parse
+=begin
+loop do
+  token = parser.next_token
+  break unless token[0]
+  puts token
+end
+=end

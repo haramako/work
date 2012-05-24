@@ -1,0 +1,10 @@
+(defun hoge (a b)
+       (+ a b))
+
+
+int hoge( int a, int b)
+{
+    return a+b;
+}
+
+
