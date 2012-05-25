@@ -1,4 +1,6 @@
-var PPU_CTRL1:int options (address:0x2000);
+// comment
+/* comment */
+var PPU_CTRL1:int = 3 * 4 options (address:0x2000);
 
 function main()
 {
@@ -6,7 +8,8 @@ function main()
   var x:int, y:int;
   // a + b;
   // a == b;
-  x == y;
+  x == y + (( 2 + 3 * 12 * 12 ) + a);
+  /*
   x != y;
   x < y;
   x > y;
@@ -20,6 +23,7 @@ function main()
   while(1){
     PPU_CTRL1 = 0;
   }
+  */
 }
 
 /*

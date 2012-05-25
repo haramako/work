@@ -2,9 +2,9 @@ class Parser
   prechigh
     nonassoc UMINUS
     left '(' '['
-    left '<' '>' '<=' '>=' '==' '!='
     left '*' '/'
     left '+' '-'
+    left '<' '>' '<=' '>=' '==' '!='
     right '='
   preclow
   expect 1 /* if-if-else's shift/recude confilec */
@@ -25,11 +25,14 @@ arg_list: arg_list ',' IDENT { result = val[0] + [val[2]] }
         | { result = [] }
 
 block: '{' statement_list '}' { result = val[1] }
-     | '{' '}' { result = [] }
-     | statement              { result = [val[0]] }
+     | '{' '}'                { result = [] }
+     | statement_i            { result = [val[0]] }
+     | ';'                    { result = [] }
 
-statement_list: statement_list statement { result = val[0] + [val[1]] }
-              | statement { result = [val[0]] }
+statement_list: statement_list statement_i { result = val[0] + [val[1]] }
+              | statement_i { result = [val[0]] }
+
+statement_i: statement { info(val[0]) }
 
 statement: exp ';' { result = [:exp, val[0]] }
          | 'if' '(' exp ')' block else_block { result = [:if, val[2], val[4], val[5]] }
@@ -41,7 +44,8 @@ statement: exp ';' { result = [:exp, val[0]] }
          
 else_block: | 'else' block { result = val[1] }
 
-exp: exp '='  exp { result = [:load, val[0], val[2]] }
+exp: '(' exp ')' { result = val[1] }
+   | exp '='  exp { result = [:load, val[0], val[2]] }
    | exp '+'  exp { result = [:add, val[0], val[2]] }
    | exp '-'  exp { result = [:sub, val[0], val[2]] }
    | exp '*'  exp { result = [:mul, val[0], val[2]] }

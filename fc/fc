@@ -7,6 +7,7 @@
 
 require 'pp'
 require 'optparse'
+require 'strscan'
 require_relative 'parser'
 
 def mangle(str)
@@ -17,77 +18,56 @@ end
 # パーサー
 ######################################################################
 class Parser
+
   def initialize( src )
-    @pos = 0
-    @src = src
+    @scanner = StringScanner.new(src)
+    @line = 1
     @pos_info = Hash.new
   end
 
   def next_token
-    next_token2
-  end
-
-  def next_token2
-    @pos+=1 while /\s/ === @src[@pos]
-    return nil if @pos >= @src.size
-
-    c = @src[@pos]
-    case c
-    when /\//
-      # コメント、もしくは '/'
-      if @src[@pos+1] == '/'
-        mo = @src.match( /\/\/.+/, @pos )
-        @pos += mo[0].length
-        return next_token
-      elsif @src[@pos+1] == '*'
-        mo = @src.match( /\/\*.+?\*\//m, @pos )
-        @pos += mo[0].length
-        return next_token
-      else
-        @pos += 1
-        return [c,c]
-      end
-    when /\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|=|,|@|!|\*/ 
-      # 記号
-      mo = @src.match( /<=|>=|==|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|=|,|@|!|\*/, @pos )
-      @pos += mo[0].length
-      return [mo[0],mo[0]]
-    when /\d/
-      # 数字
-      if @src[@pos,2] == '0x' and mo = @src.match( /0x[0-9a-zA-Z]+/, @pos )
-        @pos += mo[0].length
-        return [:NUMBER, mo[0].to_i(16) ]
-      elsif @src[@pos,2] == '0b' and mo = @src.match( /0b[01]+/, @pos )
-        @pos += mo[0].length
-        return [:NUMBER, mo[0].to_i(2) ]
-      else
-        mo = @src.match( /\d+/, @pos )
-        @pos += mo[0].length
-        return [:NUMBER, mo[0].to_i ]
-      end
-    when /[a-zA-Z]/ 
-      # 識別子/キーワード
-      mo = @src.match( /[a-zA-Z0-9_]+/, @pos )
-      @pos += mo[0].length
-      # キーワードかどうかを判別する
-      if /function|const|var|options|if|else|while|return|break|continue|include_bin|int|uint|int8|uint8|int16|uint16/ === mo[0]
-        return [mo[0], mo[0]]
-      else
-        return [:IDENT, mo[0].to_sym ]
-      end
-    when /"/
-      # 文字列
-      mo = @src.match( /"([^"]+)"/, @pos )
-      @pos += mo[0].length
-      return [:STRING, mo[1] ]
-    else
-      raise "invalid character #{c}"
+    # コメントと空白を飛ばす
+    while @scanner.scan(/ \s+ | \/\/.+?\n | \/\*.+?\*\/ /mx)
+      @scanner[0].gsub(/\n/){ @line += 1 }
     end
+    if @scanner.eos?
+      r = nil
+    elsif @scanner.scan(/<=|>=|==|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|=|,|@|!/)
+      # 記号
+      r = [@scanner[0], @scanner[0]]
+    elsif @scanner.scan(/0[xX](\d+)/)
+      # 16進数
+      r = [:NUMBER, @scanner[1].to_i(16)]
+    elsif @scanner.scan(/0[bB](\d+)/)
+      # 2進数
+      r = [:NUMBER, @scanner[1].to_i(2)]
+    elsif @scanner.scan(/\d+/)
+      # 10進数
+      r = [:NUMBER, @scanner[0].to_i]
+    elsif @scanner.scan(/\w+/)
+      # 識別子/キーワード
+      if /function|const|var|options|if|else|while|return|break|continue|include_bin|int|uint|int8|uint8|int16|uint16/ === @scanner[0]
+        r = [@scanner[0], @scanner[0]]
+      else
+        r = [:IDENT, @scanner[0].to_sym ]
+      end
+    elsif @scanner.scan(/"([^\\"]|\\.)*"/)
+      # 文字列
+      r = [:STRING, @scanner[0][1..-2]]
+    else
+      raise "invalid token at #{@line}"
+    end
+    # pp r
+    r
   end
 
-  def self.parse( src )
-    parser = Parser.new( src )
-    parser.do_parse
+  def info( ast )
+    @pos_info[ast] = @line
+  end
+
+  def parse
+    ast = do_parse
+    [ast, @pos_info]
   end
 end
 
@@ -125,6 +105,7 @@ class TypeDecl
         @size = @base.size * @length
       end
     end
+
     case @type
     when :int
       @str = ast
@@ -151,32 +132,37 @@ class TypeDecl
 end
 
 ######################################################################
-# 変数
+# 値を持つもの(変数、テンポラリ変数、リテラル、定数など）
 ######################################################################
 class Value
+  attr_reader :kind # 種類( :var, :temp, :const, :literal のいずれか）
   attr_reader :id # 変数名( リテラルの場合は、nil )
   attr_reader :type # TypeDecl
-  attr_reader :val # リテラルもしくは定数の値
+  attr_reader :val # リテラルもしくは定数の場合は数値、変数の場合は初期化式のASTかnil
   attr_reader :opt # オプション
   attr_reader :scope # スコープ(Function)
   attr_reader :temp # テンポラリ変数かどうか
 
   def self.literal( val )
-    Value.new( nil, TypeDecl["int"], val, nil, nil )
+    Value.new( nil, TypeDecl["int"], val, nil, nil, :literal )
   end
 
-  def initialize( id, type, val, opt, scope, temp=false )
-    raise "invalid type, #{val}" unless TypeDecl === type
+  def initialize( id, type, val, opt, scope, kind=:var )
+    raise "invalid type, #{type}" unless TypeDecl === type
     @id = id
     @type = type
     @val = val
     @opt = opt
     @scope = scope
-    @temp = temp
+    @kind = kind
   end
 
   def left_value?
-    @id and not @temp
+    (@kind == :var)
+  end
+
+  def const?
+    Numeric === @val
   end
 
   def to_s
@@ -191,6 +177,12 @@ class Value
     end
   end
 
+end
+
+# エラークラス
+class CompileError < RuntimeError
+  attr_accessor :line
+  attr_accessor :file
 end
 
 ######################################################################
@@ -215,21 +207,36 @@ class Function
     @label_count = 0
     @ops = []
     @loops = []
+    @cur_line = 0
+  end
+
+  def compile( ast )
+    begin
+      compile_block( ast )
+    rescue CompileError
+      puts "hoge.fc:#{@cur_line}: #{$!}"
+      raise
+    rescue
+      puts "hoge.fc:#{@cur_line}: error"
+      raise
+    end
   end
 
   def compile_block( block )
     block.each do |ast|
-      exp( ast )
+      compile_statement( ast )
     end
   end
 
-  def exp( ast )
+  def compile_statement( ast )
+    update_pos( ast )
     case ast[0]
     when :var
       ast[1].each do |v|
         new_var v[0], TypeDecl[v[1]], v[2], v[3]
       end
       nil
+
     when :'if'
       then_label, else_label, end_label = new_labels('then', 'else','end')
       cond = rval(ast[1])
@@ -243,6 +250,7 @@ class Function
         emit :label, end_label
       end
       nil
+
     when :'while'
       begin_label, end_label = new_labels('begin', 'end')
       @loops << end_label
@@ -253,24 +261,74 @@ class Function
       emit :jump, begin_label
       emit :label, end_label
       @loops.pop
+
     when :break
-      raise "cannot break without loop" if @loops.empty?
+      raise CompileError.new("cannot break without loop") if @loops.empty?
       emit :jump, @loops[-1]
+
     when :return
       emit :return, rval(ast[1])
+
     when :exp
+      pp ast[1]
+      const_eval( ast[1] )
       rval( ast[1] )
+      pp const_eval( ast[1] )
+
     else
       raise "unknow op #{ast}"
     end
   end
 
-  def rval( ast)
+  def const_eval( ast )
+    r = ast
     case ast
     when Symbol
-      find_var( ast )
+      var = find_var( ast )
+      r = var.val if var.const?
     when Numeric
-      Value.literal( ast )
+      r = ast
+    when String
+      r = ast
+      # TODO
+    when Array
+      case ast[0]
+      when :add, :sub, :mul, :div, :eq, :ne, :lt, :gt, :le, :ge
+        ast[1] = const_eval( ast[1] )
+        ast[2] = const_eval( ast[2] )
+        if Numeric === ast[1] and Numeric === ast[2]
+          case ast[0]
+          when :add then r = ast[1] +  ast[2]
+          when :sub then r = ast[1] -  ast[2]
+          when :mul then r = ast[1] *  ast[2]
+          when :div then r = ast[1] /  ast[2]
+          when :eq  then r = ast[1] == ast[2]
+          when :ne  then r = ast[1] != ast[2]
+          when :lt  then r = ast[1] <  ast[2]
+          when :gt  then r = ast[1] >  ast[2]
+          when :le  then r = ast[1] <= ast[2]
+          when :ge  then r = ast[1] >= ast[2]
+          end
+        end
+      when :not, :uminus
+        ast[1] = const_eval( ast[1] )
+        if Numeric === ast[1]
+          case ast[0]
+          when :not then r = ~ast[1]
+          when :uminus then r = -ast[1]
+          end
+        end
+      end
+    end
+    r
+  end
+
+  def rval( ast )
+    case ast
+    when Symbol
+      r = find_var( ast )
+    when Numeric
+      r = Value.literal( ast )
     when String
       # TODO
     when Array
@@ -279,39 +337,36 @@ class Function
         left = rval(ast[1])
         right = rval(ast[2])
         compatible_type( left.type, right.type )
-        raise "#{left} is not left value" unless left.left_value?
+        raise CompileError.new("#{left} is not left value") unless left.left_value?
         emit :load, left, right
-        left
+        r = left
       when :not, :uminus
         left = rval(ast[1])
         r = new_tmp( left.type )
         emit ast[0], r, left
-        r
       when :add, :sub, :mul, :div
         left = rval(ast[1])
         right = rval(ast[2])
         r = new_tmp( compatible_type( left.type, right.type ) )
         emit ast[0], r, left, right
-        r
       when :eq, :lt
         left = rval(ast[1])
         right = rval(ast[2])
         compatible_type( left.type, right.type )
         r = new_tmp( TypeDecl["int"] )
         emit ast[0], r, left, right
-        r
       when :ne, :gt, :le, :ge
         left = ast[1]
         right = ast[2]
         case ast[0]
         when :ne
-          rval([:not, [:eq, left, right]])
+          r = rval([:not, [:eq, left, right]])
         when :gt
-          rval([:lt, right, left])
+          r = rval([:lt, right, left])
         when :le
-          rval([:not, [:lt, right, left]])
+          r = rval([:not, [:lt, right, left]])
         when :ge
-          rval([:not, [:lt, left, right]])
+          r = rval([:not, [:lt, left, right]])
         end
       when :call
         func = @global.find_func( ast[1] )
@@ -329,6 +384,7 @@ class Function
     else
       raise "unknown op #{ast}"
     end
+    r
   end
 
   def compatible_type( a, b )
@@ -337,6 +393,13 @@ class Function
       if a.size > b.size then return a else return b end
     end
     raise "cant convert type #{a} and #{b}"
+  end
+
+  def update_pos( ast )
+    if @global.pos_info[ast]
+      @cur_line = @global.pos_info[ast]
+      puts "compling ... line #{@cur_line}"
+    end
   end
 
   def emit( *op )
@@ -359,8 +422,8 @@ class Function
   end
 
   def new_var(id,type,init,opt,temp=false)
-    raise "var #{id} already defined" if @vars[id]
-    var = Value.new(id,type,init,opt,self,temp)
+    raise CompileError.new("var #{id} already defined") if @vars[id]
+    var = Value.new(id,type,init,opt,self, temp ? :temp : :var )
     @vars[id] = var
     var
   end
@@ -385,25 +448,29 @@ end
 # コンパイラ
 ######################################################################
 class Compiler
-  attr_reader :ast, :func ,:vars, :options, :include_bin
+  attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info
 
   def initialize
     @vars = Hash.new
     @func = Hash.new
     @options = Hash.new
     @include_bin = []
+    @pos_info = nil
   end
 
   def compile( src )
-    ast = Parser.parse( src )
+    ast, @pos_info = Parser.new(src).parse
     pp ast
+
     ast.each do |e|
       case e[0] 
       when :function
         @func[e[1]] = Function.new( self, *e[1..-1] )
       when :const
-        var = Value.new( e[1] )
-        var.val = e[2]
+        e[1].each do |v|
+          raise "const without value #{v}" unless v[2]
+          @vars[v[0]] = Value.new( v[0], TypeDecl[v[1]], v[2], v[3], nil )
+        end
         @vars[e[1]] = var
       when :var
         e[1].each do |v|
@@ -468,7 +535,7 @@ class Compiler
       func_asm << "; function #{id}"
       func_asm << "#{id}:"
 
-      f.compile_block( f.ast )
+      f.compile( f.ast )
 
       var_asm << "; function #{id}"
       # func_asm.concat OpCompiler.compile( f.ops )
