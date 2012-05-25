@@ -230,9 +230,6 @@ class ScopedBlock
     rescue CompileError
       puts "hoge.fc:#{@cur_line}: #{$!}"
       raise
-    rescue
-      puts "hoge.fc:#{@cur_line}: error"
-      raise
     end
   end
 
@@ -254,6 +251,7 @@ class ScopedBlock
     when :const
       ast[1].each do |v|
         raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
+        v[2] = const_eval( v[2] )
         add_var Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :const )
       end
       nil
@@ -452,7 +450,6 @@ class ScopedBlock
   end
 
   def find_var(id)
-    pp @base.vars
     if @vars[id]
       @vars[id]
     elsif @base and @base.vars[id]
@@ -485,6 +482,7 @@ class Compiler
 
   def compile( src )
     ast, @pos_info = Parser.new(src).parse
+    puts '====AST===='
     pp ast
 
     @block = ScopedBlock.new( self, nil, '$root', [] )
@@ -492,7 +490,6 @@ class Compiler
     ast.each do |e|
       case e[0] 
       when :function
-        pp e
         @func[e[1]] = Function.new( self, e[1], e[2], e[3] )
       when :const, :var
         block.ast << e
@@ -530,9 +527,10 @@ class Compiler
 
     @func.each do |id,f|
       puts 
-      pp f
+      puts f
       pp f.args
       pp f.block.vars
+      pp f.block.ops
     end
 
   end
@@ -559,11 +557,6 @@ if __FILE__ == $0
   @com = Compiler.new
 
   asm = @com.compile( src )
-
-  if $debug_info
-    pp @com
-    @com.func.each { |id,f| puts f; pp f.block.ops }
-  end
 
   open(asm_file,'w'){|f| f.write asm }
 
