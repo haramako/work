@@ -10,7 +10,7 @@ require 'optparse'
 require_relative 'parser'
 
 def mangle(str)
-  str.gsub(/\$|_/){|v| { '$'=>'L' }[v] }
+  str.gsub(/\$|_/){|v| { '$'=>'_V', '_'=>'__' }[v] }
 end
 
 class FcParser
@@ -95,7 +95,7 @@ class Variable
     @function = function
   end
   def to_asm
-    if val
+    if Numeric === val
       '#'+val.to_s
     else
       mangle(to_s)
@@ -207,6 +207,10 @@ class Function
       find_var ast
     when Numeric
       ast
+    when String
+      var = new_tmp
+      var.val = ast
+      var
     else
       raise "invalid ast #{ast}"
     end
@@ -369,6 +373,11 @@ class Compiler
       raise "asm must be string, but #{asm}" unless String === asm
       f.emit :asm, [asm]
     end
+
+    add_func :print, [:str] do |f,str|
+      raise "asm must be string, but #{asm}" unless String === asm
+      f.emit :asm, [asm]
+    end
   end
 
   def add_func( id, args, &block )
@@ -435,7 +444,7 @@ class Compiler
 
     var_asm << "; global"
     @vars.each do |id,v|
-      if v.include_bin
+      if v.include_bin or v.val
         # DO NOTHING
       elsif v.address
         var_asm << "#{v.to_asm} = $#{'%4x'%[v.address]}"
@@ -452,14 +461,18 @@ class Compiler
       f.compile_block( f.ast )
 
       var_asm << "; function #{id}"
-      f.vars.each do |id,v|
-        var_asm << "#{v.to_asm} .ds 1"
-      end
-        
       func_asm.concat OpCompiler.compile( f.ops )
       func_asm << "    rts"
 
+      f.vars.each do |id,v|
+        if v.val
+          func_asm << "#{v.to_asm} .db \"#{v.val}\",0"
+        else
+          var_asm << "#{v.to_asm} .ds 1"
+        end
+      end
     end
+
     template = Compiler.templates['base.asm']
     asm = template
       .gsub('@OPTIONS'){opt_asm.join("\n")}
@@ -527,6 +540,9 @@ __END__
 	.bank 0
 	.org $0000
 __reg: .ds 8
+__putc_pos: .ds 1
+
+	.org $0200
 @VARS
 
 	.org $8000
@@ -570,6 +586,11 @@ __ppu_fill:
     inx
     cpx __reg+1
     bne .loop
+    rts
+
+__putc:
+    sta $70,x
+    inx
     rts
 
 @FUNCS

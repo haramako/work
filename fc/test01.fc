@@ -41,6 +41,8 @@ function main()
     PPU_DATA = x;
     x = x + 1;
   }
+
+  x = "hoge";
   
   PPU_ADDR = 0x22;
   PPU_ADDR = 0x00;
