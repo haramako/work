@@ -10,19 +10,16 @@ class Parser
   expect 1 /* if-if-else's shift/recude confilec */
 rule
 
+/****************************************************/
+/* program */
 program: program decl { result = val[0] + [val[1]] }
        | decl { result = [val[0]] }
        
-
 decl: 'function' IDENT '(' var_decl_list_if ')' block { result = [:function, val[1], val[3], val[5]] }
-    | 'const' IDENT '=' exp ';' { result = [:const, val[1], val[3]] }
+    | 'const' var_decl_list ';' { result = [:const, val[1]] }
     | 'var' var_decl_list ';' { result = [:var, val[1]] }
     | 'options' '(' option_list ')' ';' { result = [:options, val[2]] }
     | 'include_bin' '(' option_list ')' ';' { result = [:include_bin, val[2]] }
-
-arg_list: arg_list ',' IDENT { result = val[0] + [val[2]] }
-        | IDENT { result = [val[0]] }
-        | { result = [] }
 
 block: '{' statement_list '}' { result = val[1] }
      | '{' '}'                { result = [] }
@@ -31,6 +28,9 @@ block: '{' statement_list '}' { result = val[1] }
 
 statement_list: statement_list statement_i { result = val[0] + [val[1]] }
               | statement_i { result = [val[0]] }
+
+/****************************************************/
+/* statement */
 
 statement_i: statement { info(val[0]) }
 
@@ -67,12 +67,14 @@ exp_list: exp_list ',' exp { result = val[0] + [val[2]] }
         | exp { result = [val[0]] }
         | { result = [] }
 
+/****************************************************/
 /* option */
 option_list: option_list_sub { result = Hash[ *val[0] ] }
 option_list_sub: option_list_sub ',' option { result = val[0] + val[2] }
            | option { result = val[0] }
 option: IDENT ':' exp { result = [val[0],val[2]] }
     
+/****************************************************/
 /* type declaration */
 var_decl_list_if: {result = [] } | var_decl_list
 var_decl_list: var_decl_list ',' var_decl { result = val[0]+[val[2]] }

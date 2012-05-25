@@ -1,6 +1,7 @@
 // comment
 /* comment */
-var PPU_CTRL1:int = 3 * 4 options (address:0x2000);
+const CONST:int = 10+10;
+var PPU_CTRL1:int options (address:0x2000);
 
 function main()
 {
@@ -8,7 +9,7 @@ function main()
   var x:int, y:int;
   // a + b;
   // a == b;
-  x == y + (( 2 + 3 * 12 * 12 ) + a);
+  x == y + (1+CONST);
   /*
   x != y;
   x < y;

@@ -158,11 +158,11 @@ class Value
   end
 
   def left_value?
-    (@kind == :var)
+    ( @kind == :var )
   end
 
   def const?
-    Numeric === @val
+    ( @kind == :literal or @kind == :const )
   end
 
   def to_s
@@ -189,20 +189,34 @@ end
 # 関数
 ######################################################################
 class Function
-  attr_reader :id, :args, :vars, :ast, :ops, :special, :block
-  def initialize( global, id, args, ast_or_block )
-    @global = global
+  attr_reader :id, :args, :ast, :block
+  def initialize( compiler, id, args, ast )
+    @compiler = compiler
     @id = id
-    @vars = Hash.new
     @arg_len = args.size
-    @args = args.map {|v| new_var(*v) }
-    if Proc === ast_or_block
-      @special = true
-      @block = ast_or_block
-    else
-      @special = false
-      @ast = ast_or_block
+    @block = ScopedBlock.new( compiler, compiler.block, id, ast )
+    @args = args.map do |v| 
+      @block.add_var Value.new(v[0],v[1],v[2],v[3],v[4],@block,:var) 
     end
+  end
+
+  def to_s
+    "<Function:#{@id}>"
+  end
+end
+
+######################################################################
+# スコープ月ブロック
+######################################################################
+class ScopedBlock
+  attr_reader :base, :id, :ast, :vars, :ops
+
+  def initialize( compiler, base, id, ast )
+    @compiler = compiler
+    @base = base
+    @id = id
+    @ast = ast
+    @vars = Hash.new
     @tmp_count = 0
     @label_count = 0
     @ops = []
@@ -210,9 +224,9 @@ class Function
     @cur_line = 0
   end
 
-  def compile( ast )
+  def compile
     begin
-      compile_block( ast )
+      compile_block( @ast )
     rescue CompileError
       puts "hoge.fc:#{@cur_line}: #{$!}"
       raise
@@ -233,7 +247,14 @@ class Function
     case ast[0]
     when :var
       ast[1].each do |v|
-        new_var v[0], TypeDecl[v[1]], v[2], v[3]
+        add_var Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :var )
+      end
+      nil
+
+    when :const
+      ast[1].each do |v|
+        raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
+        add_var Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :const )
       end
       nil
 
@@ -270,57 +291,12 @@ class Function
       emit :return, rval(ast[1])
 
     when :exp
-      pp ast[1]
       const_eval( ast[1] )
       rval( ast[1] )
-      pp const_eval( ast[1] )
 
     else
       raise "unknow op #{ast}"
     end
-  end
-
-  def const_eval( ast )
-    r = ast
-    case ast
-    when Symbol
-      var = find_var( ast )
-      r = var.val if var.const?
-    when Numeric
-      r = ast
-    when String
-      r = ast
-      # TODO
-    when Array
-      case ast[0]
-      when :add, :sub, :mul, :div, :eq, :ne, :lt, :gt, :le, :ge
-        ast[1] = const_eval( ast[1] )
-        ast[2] = const_eval( ast[2] )
-        if Numeric === ast[1] and Numeric === ast[2]
-          case ast[0]
-          when :add then r = ast[1] +  ast[2]
-          when :sub then r = ast[1] -  ast[2]
-          when :mul then r = ast[1] *  ast[2]
-          when :div then r = ast[1] /  ast[2]
-          when :eq  then r = ast[1] == ast[2]
-          when :ne  then r = ast[1] != ast[2]
-          when :lt  then r = ast[1] <  ast[2]
-          when :gt  then r = ast[1] >  ast[2]
-          when :le  then r = ast[1] <= ast[2]
-          when :ge  then r = ast[1] >= ast[2]
-          end
-        end
-      when :not, :uminus
-        ast[1] = const_eval( ast[1] )
-        if Numeric === ast[1]
-          case ast[0]
-          when :not then r = ~ast[1]
-          when :uminus then r = -ast[1]
-          end
-        end
-      end
-    end
-    r
   end
 
   def rval( ast )
@@ -387,6 +363,49 @@ class Function
     r
   end
 
+  def const_eval( ast )
+    r = ast
+    case ast
+    when Symbol
+      var = find_var( ast )
+      r = var.val if var.const?
+    when Numeric
+      r = ast
+    when String
+      r = ast
+      # TODO
+    when Array
+      case ast[0]
+      when :add, :sub, :mul, :div, :eq, :ne, :lt, :gt, :le, :ge
+        ast[1] = const_eval( ast[1] )
+        ast[2] = const_eval( ast[2] )
+        if Numeric === ast[1] and Numeric === ast[2]
+          case ast[0]
+          when :add then r = ast[1] +  ast[2]
+          when :sub then r = ast[1] -  ast[2]
+          when :mul then r = ast[1] *  ast[2]
+          when :div then r = ast[1] /  ast[2]
+          when :eq  then r = ast[1] == ast[2]
+          when :ne  then r = ast[1] != ast[2]
+          when :lt  then r = ast[1] <  ast[2]
+          when :gt  then r = ast[1] >  ast[2]
+          when :le  then r = ast[1] <= ast[2]
+          when :ge  then r = ast[1] >= ast[2]
+          end
+        end
+      when :not, :uminus
+        ast[1] = const_eval( ast[1] )
+        if Numeric === ast[1]
+          case ast[0]
+          when :not then r = ~ast[1]
+          when :uminus then r = -ast[1]
+          end
+        end
+      end
+    end
+    r
+  end
+
   def compatible_type( a, b )
     return a if  a == b
     if a.type == :int and b.type == :int
@@ -396,8 +415,8 @@ class Function
   end
 
   def update_pos( ast )
-    if @global.pos_info[ast]
-      @cur_line = @global.pos_info[ast]
+    if @compiler.pos_info[ast]
+      @cur_line = @compiler.pos_info[ast]
       puts "compling ... line #{@cur_line}"
     end
   end
@@ -421,25 +440,30 @@ class Function
     var
   end
 
+  def add_var(var)
+    raise CompileError.new("var #{var.id} already defined") if @vars[var.id]
+    @vars[var.id] = var
+  end
+
   def new_var(id,type,init,opt,temp=false)
-    raise CompileError.new("var #{id} already defined") if @vars[id]
     var = Value.new(id,type,init,opt,self, temp ? :temp : :var )
-    @vars[id] = var
+    add_var(var)
     var
   end
 
   def find_var(id)
+    pp @base.vars
     if @vars[id]
       @vars[id]
-    elsif @global.vars[id]
-      @global.vars[id]
+    elsif @base and @base.vars[id]
+      @base.vars[id]
     else
-      raise "var #{id} not defined"
+      raise " #{id} not defined"
     end
   end
 
   def to_s
-    "<Function:#{id}>"
+    "<Block:#{@id}>"
   end
 
 end
@@ -448,7 +472,7 @@ end
 # コンパイラ
 ######################################################################
 class Compiler
-  attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info
+  attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info, :block
 
   def initialize
     @vars = Hash.new
@@ -456,26 +480,22 @@ class Compiler
     @options = Hash.new
     @include_bin = []
     @pos_info = nil
+    @block = nil
   end
 
   def compile( src )
     ast, @pos_info = Parser.new(src).parse
     pp ast
 
+    @block = ScopedBlock.new( self, nil, '$root', [] )
+
     ast.each do |e|
       case e[0] 
       when :function
-        @func[e[1]] = Function.new( self, *e[1..-1] )
-      when :const
-        e[1].each do |v|
-          raise "const without value #{v}" unless v[2]
-          @vars[v[0]] = Value.new( v[0], TypeDecl[v[1]], v[2], v[3], nil )
-        end
-        @vars[e[1]] = var
-      when :var
-        e[1].each do |v|
-          @vars[v[0]] = Value.new( v[0], TypeDecl[v[1]], v[2], v[3], nil )
-        end
+        pp e
+        @func[e[1]] = Function.new( self, e[1], e[2], e[3] )
+      when :const, :var
+        block.ast << e
       when :options
         @options.merge!( e[1] )
       when :include_bin
@@ -490,6 +510,9 @@ class Compiler
       end
     end
 
+    # ルートブロックのコンパイル
+    @block.compile
+
     # interruptがない場合は、追加する
     unless @func[:interrupt]
       @func[:interrupt] = Function.new( self, :interrupt, [], [] )
@@ -501,60 +524,15 @@ class Compiler
     var_asm = []
     func_asm = []
 
-    opt_asm << "; options"
-    @options.each do |opt,val|
-      if [:inesprg, :ineschr, :inesmir, :inesmap].include?(opt)
-        opt_asm << "    .#{opt} #{val};"
-      end
-    end
-
-    inc_asm << '; include_bin'
-    @include_bin.each do |inc|
-      if inc[:bank]
-        inc_asm << "    .bank #{inc[:bank]}"
-        inc_asm << "    .org #{inc[:address] or 0}" 
-        inc_asm << "    .incbin \"#{inc[:file]}\""
-      else
-        func_asm << "#{inc[:name]}: .incbin \"#{inc[:file]}\""
-      end
-    end
-
-    var_asm << "; global"
-    @vars.each do |id,v|
-      #if v.include_bin or v.val
-        # DO NOTHING
-      #elsif v.address
-        # var_asm << "#{v.to_asm} = $#{'%4x'%[v.address]}"
-      #else
-        # var_asm << "#{v.to_asm} .ds 1"
-      #end
-    end
-
     @func.each do |id,f|
-      next unless f.ast
-      func_asm << "; function #{id}"
-      func_asm << "#{id}:"
-
-      f.compile( f.ast )
-
-      var_asm << "; function #{id}"
-      # func_asm.concat OpCompiler.compile( f.ops )
-      func_asm << "    rts"
-
-      f.vars.each do |id,v|
-        if v.val
-          # func_asm << "#{v.to_asm} .db \"#{v.val}\",0"
-        else
-          # var_asm << "#{v.to_asm} .ds 1"
-        end
-      end
+      f.block.compile
     end
 
     @func.each do |id,f|
       puts 
       pp f
       pp f.args
-      pp f.vars
+      pp f.block.vars
     end
 
   end
@@ -584,7 +562,7 @@ if __FILE__ == $0
 
   if $debug_info
     pp @com
-    @com.func.each { |id,f| puts f; pp f.ops }
+    @com.func.each { |id,f| puts f; pp f.block.ops }
   end
 
   open(asm_file,'w'){|f| f.write asm }
