@@ -13,19 +13,23 @@ def mangle(str)
   str.gsub(/\$|_/){|v| { '$'=>'_V', '_'=>'__' }[v] }
 end
 
-class FcParser
+######################################################################
+# パーサー
+######################################################################
+class Parser
   def initialize( src )
     @pos = 0
     @src = src
+    @pos_info = Hash.new
   end
 
   def next_token
-    next_token2# .tap{|v| p v }
+    next_token2
   end
 
   def next_token2
     @pos+=1 while /\s/ === @src[@pos]
-    return [false,false] if @pos >= @src.size
+    return nil if @pos >= @src.size
 
     c = @src[@pos]
     case c
@@ -43,9 +47,9 @@ class FcParser
         @pos += 1
         return [c,c]
       end
-    when /\(|\)|\{|\}|;|:|<|>|\+|-|=|,|@|!/ 
+    when /\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|=|,|@|!|\*/ 
       # 記号
-      mo = @src.match( /<=|>=|==|!=|\(|\)|\{|\}|;|:|<|>|\+|-|=|,|@|!/, @pos )
+      mo = @src.match( /<=|>=|==|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|=|,|@|!|\*/, @pos )
       @pos += mo[0].length
       return [mo[0],mo[0]]
     when /\d/
@@ -66,7 +70,7 @@ class FcParser
       mo = @src.match( /[a-zA-Z0-9_]+/, @pos )
       @pos += mo[0].length
       # キーワードかどうかを判別する
-      if /function|const|var|options|if|else|while|return|break|continue|include_bin/ === mo[0]
+      if /function|const|var|options|if|else|while|return|break|continue|include_bin|int|uint|int8|uint8|int16|uint16/ === mo[0]
         return [mo[0], mo[0]]
       else
         return [:IDENT, mo[0].to_sym ]
@@ -82,34 +86,116 @@ class FcParser
   end
 
   def self.parse( src )
-    parser = FcParser.new( src )
+    parser = Parser.new( src )
     parser.do_parse
   end
 end
 
-class Variable
-  attr_reader :id, :function
-  attr_accessor :val, :address, :include_bin
-  def initialize( id, function = nil )
-    @id = id
-    @function = function
-  end
-  def to_asm
-    if Numeric === val
-      '#'+val.to_s
+######################################################################
+# 型
+######################################################################
+class TypeDecl
+
+  attr_reader :type # 種類( :int, :pointer, :array のいずれか )
+  attr_reader :size # サイズ[byte]
+  attr_reader :length # 配列の要素数
+  attr_reader :signed # signedかどうか(intの場合のみ)
+  attr_reader :base # ベース型(pointerとarrayの場合のみ)
+
+  def initialize( ast )
+    if String === ast
+      @type = :int
+      case ast
+      when 'int'
+        @size = 1
+        @signed = true
+      when 'uint'
+        @size = 1
+        @signed = false
+      end
+    elsif Array === ast 
+      if ast[0] == :pointer
+        @type = :pointer
+        @base = TypeDecl[ ast[1] ]
+        @size = 2
+      else Array === ast[0] and ast[0][0] == :array
+        @type = :array
+        @base = TypeDecl[ ast[1] ]
+        @length = ast[0][1]
+        @size = @base.size * @length
+      end
+    end
+    case @type
+    when :int
+      @str = ast
+    when :pointer
+      @str = "#{@base}*"
+    when :array
+      @str = "#{@base}[#{@length}]"
     else
-      mangle(to_s)
+      raise "invalid type declaration #{ast}"
     end
   end
+
+  def self.[]( ast )
+    @@cache = Hash.new unless defined?(@@cache)
+    type = TypeDecl.new( ast )
+    @@cache[type.to_s] = type unless @@cache[type.to_s]
+    @@cache[type.to_s]
+  end
+
   def to_s
-    if function
-      "#{function.id}$#{id}"
-    else
-      "#{id}"
-    end
+    @str
   end
+
 end
 
+######################################################################
+# 変数
+######################################################################
+class Value
+  attr_reader :id # 変数名( リテラルの場合は、nil )
+  attr_reader :type # TypeDecl
+  attr_reader :val # リテラルもしくは定数の値
+  attr_reader :opt # オプション
+  attr_reader :scope # スコープ(Function)
+  attr_reader :temp # テンポラリ変数かどうか
+
+  def self.literal( val )
+    Value.new( nil, TypeDecl["int"], val, nil, nil )
+  end
+
+  def initialize( id, type, val, opt, scope, temp=false )
+    raise "invalid type, #{val}" unless TypeDecl === type
+    @id = id
+    @type = type
+    @val = val
+    @opt = opt
+    @scope = scope
+    @temp = temp
+  end
+
+  def left_value?
+    @id and not @temp
+  end
+
+  def to_s
+    if @id
+      if @scope
+        "#{scope.id}$#{id}:#{type}"
+      else
+        "#{id}:#{type}"
+      end
+    else
+      @val.inspect
+    end
+  end
+
+end
+
+######################################################################
+# 関数
+######################################################################
 class Function
   attr_reader :id, :args, :vars, :ast, :ops, :special, :block
   def initialize( global, id, args, ast_or_block )
@@ -117,7 +203,7 @@ class Function
     @id = id
     @vars = Hash.new
     @arg_len = args.size
-    @args = args.map {|v| new_var(v) }
+    @args = args.map {|v| new_var(*v) }
     if Proc === ast_or_block
       @special = true
       @block = ast_or_block
@@ -138,82 +224,119 @@ class Function
   end
 
   def exp( ast )
-    case ast
-    when Array 
-      case ast[0]
-      when :var
-        ast[1].each do |v|
-          new_var v
-        end
-        nil
-      when :'if'
-        then_label, else_label, end_label = new_labels('then', 'else','end')
-        cond = exp(ast[1])
-        emit :if, cond, else_label
-        emit :label, then_label
-        compile_block(ast[2])
-        emit :jump, end_label
-        emit :label, else_label
-        if ast[3]
-          compile_block(ast[3])
-          emit :label, end_label
-        end
-        nil
-      when :'while'
-        begin_label, end_label = new_labels('begin', 'end')
-        @loops << end_label
-        emit :label, begin_label
-        cond = exp(ast[1])
-        emit :if, cond, end_label
-        compile_block ast[2]
-        emit :jump, begin_label
+    case ast[0]
+    when :var
+      ast[1].each do |v|
+        new_var v[0], TypeDecl[v[1]], v[2], v[3]
+      end
+      nil
+    when :'if'
+      then_label, else_label, end_label = new_labels('then', 'else','end')
+      cond = rval(ast[1])
+      emit :if, cond, else_label
+      emit :label, then_label
+      compile_block(ast[2])
+      emit :jump, end_label
+      emit :label, else_label
+      if ast[3]
+        compile_block(ast[3])
         emit :label, end_label
-        @loops.pop
-      when :break
-        raise "cannot break without loop" if @loops.empty?
-        emit :jump, @loops[-1]
-      when :return
-        emit :return, exp(ast[1])
+      end
+      nil
+    when :'while'
+      begin_label, end_label = new_labels('begin', 'end')
+      @loops << end_label
+      emit :label, begin_label
+      cond = rval(ast[1])
+      emit :if, cond, end_label
+      compile_block ast[2]
+      emit :jump, begin_label
+      emit :label, end_label
+      @loops.pop
+    when :break
+      raise "cannot break without loop" if @loops.empty?
+      emit :jump, @loops[-1]
+    when :return
+      emit :return, rval(ast[1])
+    when :exp
+      rval( ast[1] )
+    else
+      raise "unknow op #{ast}"
+    end
+  end
+
+  def rval( ast)
+    case ast
+    when Symbol
+      find_var( ast )
+    when Numeric
+      Value.literal( ast )
+    when String
+      # TODO
+    when Array
+      case ast[0]
+      when :load
+        left = rval(ast[1])
+        right = rval(ast[2])
+        compatible_type( left.type, right.type )
+        raise "#{left} is not left value" unless left.left_value?
+        emit :load, left, right
+        left
+      when :not, :uminus
+        left = rval(ast[1])
+        r = new_tmp( left.type )
+        emit ast[0], r, left
+        r
+      when :add, :sub, :mul, :div
+        left = rval(ast[1])
+        right = rval(ast[2])
+        r = new_tmp( compatible_type( left.type, right.type ) )
+        emit ast[0], r, left, right
+        r
+      when :eq, :lt
+        left = rval(ast[1])
+        right = rval(ast[2])
+        compatible_type( left.type, right.type )
+        r = new_tmp( TypeDecl["int"] )
+        emit ast[0], r, left, right
+        r
+      when :ne, :gt, :le, :ge
+        left = ast[1]
+        right = ast[2]
+        case ast[0]
+        when :ne
+          rval([:not, [:eq, left, right]])
+        when :gt
+          rval([:lt, right, left])
+        when :le
+          rval([:not, [:lt, right, left]])
+        when :ge
+          rval([:not, [:lt, left, right]])
+        end
       when :call
         func = @global.find_func( ast[1] )
         if func.special
           func.block.call self, *ast[2]
         else
           ast[2].each_with_index do |arg,i|
-            emit :load, func.args[i], exp(arg)
+            emit :load, func.args[i], rval(arg)
           end
           emit :call, func
         end
-      when :put
-        emit :load, exp(ast[1]), exp(ast[2])
-        ast[1]
-      when :not, :uminus
-        r = new_tmp
-        left = exp(ast[1])
-        emit ast[0], r, left
-        r
-      when :add, :sub, :mul, :div, :ne, :lt
-        r = new_tmp
-        left = exp(ast[1])
-        right = exp(ast[2])
-        emit ast[0], r, left, right
-        r
-      when :eq
-        exp([:not, [:ne, ast[1], ast[2]]])
       else
-        raise "unknow op #{ast}"
+        raise "unknown op #{ast}"
       end
-    when Symbol
-      find_var ast
-    when Numeric
-      ast
-    when String
-      var = new_tmp
-      var.val = ast
-      var
     else
-      raise "invalid ast #{ast}"
+      raise "unknown op #{ast}"
     end
+  end
+
+  def compatible_type( a, b )
+    return a if  a == b
+    if a.type == :int and b.type == :int
+      if a.size > b.size then return a else return b end
+    end
+    raise "cant convert type #{a} and #{b}"
   end
 
   def emit( *op )
@@ -221,8 +344,7 @@ class Function
   end
 
   def new_label( name )
-    @label_count += 1
-    '.'+name+'_'+@label_count.to_s
+    new_labels( [name] )[0]
   end
 
   def new_labels( *names )
@@ -230,15 +352,15 @@ class Function
     names.map { |n| '.'+n+'_'+@label_count.to_s }
   end
 
-  def new_tmp
-    var = new_var("#{@tmp_count}".intern)
+  def new_tmp( type )
+    var = new_var("#{@tmp_count}".intern, type, nil, nil, true )
     @tmp_count += 1
     var
   end
 
-  def new_var(id)
+  def new_var(id,type,init,opt,temp=false)
     raise "var #{id} already defined" if @vars[id]
-    var = Variable.new(id,self)
+    var = Value.new(id,type,init,opt,self,temp)
     @vars[id] = var
     var
   end
@@ -257,85 +379,11 @@ class Function
     "<Function:#{id}>"
   end
 
-  def to_asm
-    id.to_s
-  end
-
 end
 
-module OpCompiler
-  module_function
-
-  def to_asm( op )
-    if op.respond_to?(:to_asm)
-      op.to_asm
-    elsif Numeric === op
-      "#"+op.to_s
-    else
-      op.to_s
-    end
-  end
-
-  def compile( ops )
-    r = []
-    ops.each do |op|
-      r << "; #{op.inspect}"
-      case op[0]
-      when :label
-        r << op[1] + ':'
-      when :if
-        r << "lda #{to_asm(op[1])}"
-        r << "beq #{to_asm(op[2])}"
-      when :jump
-        r << "jmp #{to_asm(op[1])}"
-      when :return
-        r << "lda #{to_asm(op[1])}"
-        r << "rts"
-      when :call
-        r << "jsr #{to_asm(op[1])}"
-      when :load
-        r << "lda #{to_asm(op[2])}"
-        r << "sta #{to_asm(op[1])}"
-      when :add
-        r << "lda #{to_asm(op[2])}"
-        r << "clc"
-        r << "adc #{to_asm(op[3])}"
-        r << "sta #{to_asm(op[1])}"
-      when :sub
-        r << "lda #{to_asm(op[2])}"
-        r << "sec"
-        r << "sbc #{to_asm(op[3])}"
-        r << "sta #{to_asm(op[1])}"
-      when :ne
-        r << "lda #{to_asm(op[2])}"
-        r << "sec"
-        r << "sbc #{to_asm(op[3])}"
-        r << "eor #255"
-        r << "sta #{to_asm(op[1])}"
-      when :not
-        r << "lda #{to_asm(op[2])}"
-        r << "eor #255"
-        r << "sta #{to_asm(op[1])}"
-      when :asm
-        op[1].each do |line|
-          r << "#{line[0]} " + line[1..-1].map{|o|to_asm(o)}.join(",")
-        end
-      else
-        raise "unknow op #{op}"
-      end
-    end
-    # ラベル行以外はインデントする
-    r = r.map do |line|
-      if line.index(':') and line[0] != ';'
-        line
-      else
-        "    "+line
-      end
-    end
-    r
-  end
-end
-
+######################################################################
+# コンパイラ
+######################################################################
 class Compiler
   attr_reader :ast, :func ,:vars, :options, :include_bin
 
@@ -344,67 +392,29 @@ class Compiler
     @func = Hash.new
     @options = Hash.new
     @include_bin = []
-
-    add_func :ppu_put, [:addr,:size] do |f,addr,size|
-      raise "addr must be symbol, but #{addr}" unless Symbol === addr
-      raise "size must be number, but #{size}" unless Numeric === size
-      f.emit :asm, [ [:lda, "#LOW(#{addr})"],
-                     [:sta, "__reg+0"],
-                     [:lda, "#HIGH(#{addr})"],
-                     [:sta, "__reg+1"],
-                     [:lda, f.exp(size)],
-                     [:sta, "__reg+2"],
-                     [:jsr, "__ppu_put"]]
-      nil
-    end
-
-    add_func :ppu_fill, [:data,:size] do |f,data,size|
-      raise "data must be number or variable, but #{data}" unless Variable === data or Numeric === data
-      raise "size must be number, but #{size}" unless Numeric === size
-      f.emit :asm, [ [:lda, f.exp(data)],
-                     [:sta, "__reg+0"],
-                     [:lda, f.exp(size)],
-                     [:sta, "__reg+1"],
-                     [:jsr, "__ppu_fill"]]
-      nil
-    end
-
-    add_func :asm, [:asm] do |f,asm|
-      raise "asm must be string, but #{asm}" unless String === asm
-      f.emit :asm, [asm]
-    end
-
-    add_func :print, [:str] do |f,str|
-      raise "asm must be string, but #{asm}" unless String === asm
-      f.emit :asm, [asm]
-    end
   end
-
-  def add_func( id, args, &block )
-    @func[id] = Function.new( self, id, args, block )
-  end
-    
 
   def compile( src )
-    ast = FcParser.parse( src )
+    ast = Parser.parse( src )
+    pp ast
     ast.each do |e|
       case e[0] 
       when :function
         @func[e[1]] = Function.new( self, *e[1..-1] )
       when :const
-        var = Variable.new( e[1] )
+        var = Value.new( e[1] )
         var.val = e[2]
         @vars[e[1]] = var
       when :var
-        var = Variable.new( e[1] )
-        var.address = e[2] if e[2]
-        @vars[e[1]] = var
+        e[1].each do |v|
+          @vars[v[0]] = Value.new( v[0], TypeDecl[v[1]], v[2], v[3], nil )
+        end
       when :options
         @options.merge!( e[1] )
       when :include_bin
         @include_bin << e[1]
         if e[1][:name]
-          var = Variable.new( e[1][:name] )
+          var = Value.new( e[1][:name] )
           var.include_bin = true
           @vars[e[1]] = var
         end
@@ -444,13 +454,13 @@ class Compiler
 
     var_asm << "; global"
     @vars.each do |id,v|
-      if v.include_bin or v.val
+      #if v.include_bin or v.val
         # DO NOTHING
-      elsif v.address
-        var_asm << "#{v.to_asm} = $#{'%4x'%[v.address]}"
-      else
-        var_asm << "#{v.to_asm} .ds 1"
-      end
+      #elsif v.address
+        # var_asm << "#{v.to_asm} = $#{'%4x'%[v.address]}"
+      #else
+        # var_asm << "#{v.to_asm} .ds 1"
+      #end
     end
 
     @func.each do |id,f|
@@ -461,25 +471,25 @@ class Compiler
       f.compile_block( f.ast )
 
       var_asm << "; function #{id}"
-      func_asm.concat OpCompiler.compile( f.ops )
+      # func_asm.concat OpCompiler.compile( f.ops )
       func_asm << "    rts"
 
       f.vars.each do |id,v|
         if v.val
-          func_asm << "#{v.to_asm} .db \"#{v.val}\",0"
+          # func_asm << "#{v.to_asm} .db \"#{v.val}\",0"
         else
-          var_asm << "#{v.to_asm} .ds 1"
+          # var_asm << "#{v.to_asm} .ds 1"
         end
       end
     end
 
-    template = Compiler.templates['base.asm']
-    asm = template
-      .gsub('@OPTIONS'){opt_asm.join("\n")}
-      .gsub('@INCLUDES'){inc_asm.join("\n")}
-      .gsub('@VARS'){var_asm.join("\n")}
-      .gsub('@FUNCS'){func_asm.join("\n")}
-    asm
+    @func.each do |id,f|
+      puts 
+      pp f
+      pp f.args
+      pp f.vars
+    end
+
   end
 
   def find_func( id )
@@ -487,16 +497,6 @@ class Compiler
     @func[id]
   end
 
-  def self.templates
-    @@templates
-  end
-
-  @@templates = Hash.new
-  DATA.read.split(/^@@/m)[1..-1].each do |tmpl|
-    name, body = tmpl.split(/\n/,2)
-    @@templates[name] = body
-  end
-      
 end
 
 if __FILE__ == $0
@@ -512,85 +512,19 @@ if __FILE__ == $0
   src = ARGF.read
     
   @com = Compiler.new
+
   asm = @com.compile( src )
 
   if $debug_info
     pp @com
-    @com.func.each { |id,f| puts f; pp f.args; pp f.vars; pp f.ast; pp f.ops }
+    @com.func.each { |id,f| puts f; pp f.ops }
   end
 
   open(asm_file,'w'){|f| f.write asm }
 
   unless $asm
-    system( 'nesasm', $out, asm_file )
+    # system( 'nesasm', $out, asm_file )
   end
 
 end
 
-__END__
-@@base.asm
-@OPTIONS
-@INCLUDES
-	.bank 1
-	.org $FFFA
-	.dw __interrupt
-	.dw __start
-	.dw 0
-
-	.bank 0
-	.org $0000
-__reg: .ds 8
-__putc_pos: .ds 1
-
-	.org $0200
-@VARS
-
-	.org $8000
-__start:
-	sei
-	ldx #0
-	txs
-	jsr main
-.loop:
-    jmp .loop
-
-__interrupt:
-    pha
-    txa
-    pha
-    tya
-    pha
-    jsr interrupt
-    pla
-    tay
-    pla
-    tax
-    pla
-    rti
-
-__ppu_put:
-    ldy #0
-.loop:
-    lda [__reg+0],y
-    sta $2007
-    iny
-    cpy __reg+2
-    bne .loop
-    rts
-
-__ppu_fill:
-    ldx #0
-.loop:
-    lda __reg+0
-    sta $2007
-    inx
-    cpx __reg+1
-    bne .loop
-    rts
-
-__putc:
-    sta $70,x
-    inx
-    rts
-
-@FUNCS

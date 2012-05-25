@@ -1,14 +1,29 @@
-var PPU @ 0x2022;
+var PPU_CTRL1:int options (address:0x2000);
 
 function main()
 {
-  PPU = 0b00001000;
+  var a:int* = 0, b:uint[3] options (address:0);
+  var x:int, y:int;
+  // a + b;
+  // a == b;
+  x == y;
+  x != y;
+  x < y;
+  x > y;
+  x <= y;
+  x >= y;
+  x + y;
+  x - y;
+  x = y;
+  x = 2;
+  PPU_CTRL1 = 0b00001000;
   while(1){
-    add( PPU, 2 );
+    PPU_CTRL1 = 0;
   }
 }
 
-function add( a, b )
+/*
+function add( a:int, b:int )
 {
   if( a ){
     return a + b;
@@ -16,3 +31,4 @@ function add( a, b )
     return a - b;
   }
 }
+*/
