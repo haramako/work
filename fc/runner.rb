@@ -11,7 +11,7 @@ class Runner
     @vars = Hash.new
     @compiler.func.each do |func_id,f|
       f.block.vars.each do |id,v|
-        @vars[v] = 0
+        @vars[v] = new_var( v.type )
       end
     end
 
@@ -25,6 +25,19 @@ class Runner
     @block = @compiler.func[:main].block
     @pc = 0
     @ret = nil
+  end
+
+  def new_var( type )
+    case type.type
+    when :int
+      0
+    when :array
+      Array.new(type.length){ new_var( type.base ) }
+    when :pointer
+      nil
+    else
+      raise
+    end
   end
 
   def run
@@ -45,12 +58,21 @@ class Runner
       end
     when :load
       put op[1], get(op[2])
-    when :add, :sub, :mul, :div, :eq, :ne, :lt, :gt, :le, :ge
-      hash = { add: :+, sub: :-, mul: :*, div: :/, eq: :==, ne: :!=, lt: :<, gt: :>, le: :<=, ge: :>= }
+    when :add, :sub, :mul, :div, :eq, :lt
+      hash = { add: :+, sub: :-, mul: :*, div: :/, eq: :==, lt: :< }
       v = get(op[2]).__send__(hash[op[0]], get(op[3]) )
       v = 1 if v === true
       v = 0 if v === false
       put op[1], v
+    when :index
+      ptr = get(op[2])
+      put op[1], [ptr, get(op[3])]
+    when :pget
+      ptr = get(op[2])
+      put op[1], ptr[0][ ptr[1] ]
+    when :pset
+      ptr = get(op[1])
+      ptr[0][ ptr[1] ] = get(op[2])
     when :return
       @ret = get(op[1])
       @block, @pc = @stack.pop

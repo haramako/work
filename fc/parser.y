@@ -59,9 +59,9 @@ exp: '(' exp ')' { result = val[1] }
    | '-' exp = UMINUS { result = [:uminus, val[1]] }
    | exp '(' exp_list ')' { result = [:call, val[0], val[2]] }
    | exp '[' exp ']' { result = [:index, val[0], val[2]] }
-   | NUMBER { result = val[0] }
-   | IDENT  { result = val[0] }
-   | STRING { result = val[0] }
+   | NUMBER
+   | IDENT
+   | STRING
 
 exp_list: exp_list ',' exp { result = val[0] + [val[2]] }
         | exp { result = [val[0]] }
@@ -94,6 +94,6 @@ type_decl: type_decl type_modifier { result = [val[1], val[0]] }
 type_modifier: '[' exp ']' { result = [:array, val[1]] }
              | '*' { result = :pointer }
 
-basic_type: 'int' | 'uint' | 'int8' | 'uint8' | 'int16' | 'uint16'
+basic_type: IDENT
 
 end

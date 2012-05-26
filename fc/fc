@@ -42,7 +42,7 @@ class Parser
       r = [:NUMBER, @scanner[0].to_i]
     elsif @scanner.scan(/\w+/)
       # 識別子/キーワード
-      if /^(function|const|var|options|if|else|while|return|break|continue|include_bin|int|uint|int8|uint8|int16|uint16)$/ === @scanner[0]
+      if /^(function|const|var|options|if|else|while|return|break|continue|include_bin)$/ === @scanner[0]
         r = [@scanner[0], @scanner[0]]
       else
         r = [:IDENT, @scanner[0].to_sym ]
@@ -78,16 +78,16 @@ class TypeDecl
   attr_reader :signed # signedかどうか(intの場合のみ)
   attr_reader :base # ベース型(pointerとarrayの場合のみ)
 
+  BASIC_TYPES = { int:[1,true], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
+
   def initialize( ast )
-    if String === ast
+    if Symbol === ast
       @type = :int
-      case ast
-      when 'int'
-        @size = 1
-        @signed = true
-      when 'uint'
-        @size = 1
-        @signed = false
+      if BASIC_TYPES[ast]
+        @size = BASIC_TYPES[ast][0]
+        @signed = BASIC_TYPES[ast][1]
+      else
+        raise
       end
     elsif Array === ast 
       if ast[0] == :pointer
@@ -99,12 +99,13 @@ class TypeDecl
         @base = TypeDecl[ ast[1] ]
         @length = ast[0][1]
         @size = @base.size * @length
+        raise
       end
     end
 
     case @type
     when :int
-      @str = ast
+      @str = "#{ast}"
     when :pointer
       @str = "#{@base}*"
     when :array
@@ -114,16 +115,16 @@ class TypeDecl
     end
   end
 
+  def to_s
+    @str
+  end
+
   def self.[]( ast_or_type )
     return ast_or_type if TypeDecl === ast_or_type
     @@cache = Hash.new unless defined?(@@cache)
     type = TypeDecl.new( ast_or_type )
     @@cache[type.to_s] = type unless @@cache[type.to_s]
     @@cache[type.to_s]
-  end
-
-  def to_s
-    @str
   end
 
 end
@@ -141,7 +142,7 @@ class Value
   attr_reader :temp # テンポラリ変数かどうか
 
   def self.literal( val )
-    Value.new( nil, TypeDecl["int"], val, nil, nil, :literal )
+    Value.new( nil, TypeDecl[:int], val, nil, nil, :literal )
   end
 
   def initialize( id, type, val, opt, scope, kind=:var )
@@ -154,8 +155,8 @@ class Value
     @kind = kind
   end
 
-  def left_value?
-    ( @kind == :var )
+  def assignable?
+    ( @kind == :var or @type.type == :pointer )
   end
 
   def const?
@@ -297,6 +298,18 @@ class ScopedBlock
   end
 
   def rval( ast )
+    v, left = lval( ast )
+    if left
+      r = new_tmp( v.type.base )
+      emit :pget, r, v
+      r
+    else
+      v
+    end
+  end
+
+  def lval( ast )
+    left_value = false
     case ast
     when Symbol
       r = find_var( ast )
@@ -307,12 +320,20 @@ class ScopedBlock
     when Array
       case ast[0]
       when :load
-        left = rval(ast[1])
+        left, left_value = lval(ast[1])
         right = rval(ast[2])
-        compatible_type( left.type, right.type )
-        raise CompileError.new("#{left} is not left value") unless left.left_value?
-        emit :load, left, right
-        r = left
+        if left_value
+          compatible_type( left.type.base, right.type )
+          raise CompileError.new("#{left} is not left value") unless left.assignable?
+          emit :pset, left, right
+          r = left
+          left_value = true
+        else
+          compatible_type( left.type, right.type )
+          raise CompileError.new("#{left} is not left value") unless left.assignable?
+          emit :load, left, right
+          r = left
+        end
       when :not, :uminus
         left = rval(ast[1])
         r = new_tmp( left.type )
@@ -326,9 +347,10 @@ class ScopedBlock
         left = rval(ast[1])
         right = rval(ast[2])
         compatible_type( left.type, right.type )
-        r = new_tmp( TypeDecl["int"] )
+        r = new_tmp( TypeDecl[:int] )
         emit ast[0], r, left, right
       when :ne, :gt, :le, :ge
+        # これらは、eq,lt の引数の順番とnotを組合せて合成する
         left = ast[1]
         right = ast[2]
         case ast[0]
@@ -348,13 +370,21 @@ class ScopedBlock
           emit :load, func.args[i], rval(arg)
         end
         emit :call, r, func
+      when :index
+        left = rval(ast[1])
+        right = rval(ast[2])
+        raise CompileError.new("index must be pointer or array") unless left.type.type == :pointer or left.type.type == :array
+        raise CompileError.new("index must be int") if right.type.type != :int
+        r = new_tmp( TypeDecl[[:pointer, left.type.base]] )
+        emit :index, r, left, right
+        left_value = true
       else
         raise "unknown op #{ast}"
       end
     else
       raise "unknown op #{ast}"
     end
-    r
+    [r,left_value]
   end
 
   def const_eval( ast )
@@ -508,7 +538,7 @@ class Compiler
 
     # interruptがない場合は、追加する
     unless @func[:interrupt]
-      @func[:interrupt] = Function.new( self, :interrupt, [], 'int', [] )
+      @func[:interrupt] = Function.new( self, :interrupt, [], :int, [] )
     end
 
     # アセンブラコードの出力
@@ -522,8 +552,7 @@ class Compiler
     end
 
     @func.each do |id,f|
-      puts 
-      puts f
+      puts "\n==function #{f.id}=="
       pp f.args
       pp f.block.vars
       pp f.block.ops

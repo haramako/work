@@ -1,14 +1,19 @@
 // comment
 /* comment */
+options ( int_size:8, pointer_size:16 );
+
 const CONST:int = 10+10;
 var PPU_CTRL1:int options (address:0x2000);
 
 function print(i:int):int {}
 
-function main(): int
+function main(): int16
 {
   var a:int* = 0, b:uint[3] options (address:0);
   var x:int, y:int;
+  var array:int[10];
+  array[0] = 0;
+  print( array[0] + 1 );
   // a + b;
   // a == b;
   /*
@@ -25,6 +30,7 @@ function main(): int
   while( x < 10 ){
     print(x);
     x = x + 1;
+    array[x] = add( array[x-1], x );
   }
       
   //x == y + (1+CONST);
