@@ -55,6 +55,7 @@ module OpCompiler
         r << "eor #255"
         r << "sta #{to_asm(op[1])}"
       when :lt
+        
         r << "lda #{to_asm(op[2])}"
         r << "sec"
         r << "sbc #{to_asm(op[3])}"
