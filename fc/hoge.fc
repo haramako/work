@@ -27,6 +27,7 @@ function main(): int16
   }
   */
   x = 0;
+  y = 0;
   while( x < 10 ){
     print(x);
     x = x + 1;
