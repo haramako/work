@@ -99,7 +99,6 @@ class TypeDecl
         @base = TypeDecl[ ast[1] ]
         @length = ast[0][1]
         @size = @base.size * @length
-        raise
       end
     end
 
