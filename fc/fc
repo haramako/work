@@ -10,10 +10,6 @@ require 'optparse'
 require 'strscan'
 require_relative 'parser'
 
-def mangle(str)
-  str.gsub(/\$|_/){|v| { '$'=>'_V', '_'=>'__' }[v] }
-end
-
 ######################################################################
 # パーサー
 ######################################################################
@@ -46,7 +42,7 @@ class Parser
       r = [:NUMBER, @scanner[0].to_i]
     elsif @scanner.scan(/\w+/)
       # 識別子/キーワード
-      if /function|const|var|options|if|else|while|return|break|continue|include_bin|int|uint|int8|uint8|int16|uint16/ === @scanner[0]
+      if /^(function|const|var|options|if|else|while|return|break|continue|include_bin|int|uint|int8|uint8|int16|uint16)$/ === @scanner[0]
         r = [@scanner[0], @scanner[0]]
       else
         r = [:IDENT, @scanner[0].to_sym ]
@@ -118,9 +114,10 @@ class TypeDecl
     end
   end
 
-  def self.[]( ast )
+  def self.[]( ast_or_type )
+    return ast_or_type if TypeDecl === ast_or_type
     @@cache = Hash.new unless defined?(@@cache)
-    type = TypeDecl.new( ast )
+    type = TypeDecl.new( ast_or_type )
     @@cache[type.to_s] = type unless @@cache[type.to_s]
     @@cache[type.to_s]
   end
@@ -189,15 +186,17 @@ end
 # 関数
 ######################################################################
 class Function
-  attr_reader :id, :args, :ast, :block
-  def initialize( compiler, id, args, ast )
+  attr_reader :id, :args, :ast, :type, :block
+  def initialize( compiler, id, args, type, ast )
     @compiler = compiler
     @id = id
+    @type = TypeDecl[type]
     @arg_len = args.size
     @block = ScopedBlock.new( compiler, compiler.block, id, ast )
     @args = args.map do |v| 
-      @block.add_var Value.new(v[0],v[1],v[2],v[3],v[4],@block,:var) 
+      @block.add_var Value.new(v[0],TypeDecl[v[1]],v[2],v[3],@block,:var) 
     end
+    @block.new_tmp( @type ) # 返り値の変数
   end
 
   def to_s
@@ -343,15 +342,12 @@ class ScopedBlock
           r = rval([:not, [:lt, left, right]])
         end
       when :call
-        func = @global.find_func( ast[1] )
-        if func.special
-          func.block.call self, *ast[2]
-        else
-          ast[2].each_with_index do |arg,i|
-            emit :load, func.args[i], rval(arg)
-          end
-          emit :call, func
+        func = @compiler.find_func( ast[1] )
+        r = new_tmp( func.type )
+        ast[2].each_with_index do |arg,i|
+          emit :load, func.args[i], rval(arg)
         end
+        emit :call, r, func
       else
         raise "unknown op #{ast}"
       end
@@ -490,7 +486,7 @@ class Compiler
     ast.each do |e|
       case e[0] 
       when :function
-        @func[e[1]] = Function.new( self, e[1], e[2], e[3] )
+        @func[e[1]] = Function.new( self, e[1], e[2], e[3], e[4] )
       when :const, :var
         block.ast << e
       when :options
@@ -512,7 +508,7 @@ class Compiler
 
     # interruptがない場合は、追加する
     unless @func[:interrupt]
-      @func[:interrupt] = Function.new( self, :interrupt, [], [] )
+      @func[:interrupt] = Function.new( self, :interrupt, [], 'int', [] )
     end
 
     # アセンブラコードの出力
@@ -547,6 +543,7 @@ if __FILE__ == $0
   opt = OptionParser.new( "NES Compiler\nUsage: fc [options] <src.fc> ...\nOptions:\n" )
   opt.on( '-h', '--help' ){ puts opt; exit }
   opt.on( '-o', 'output file' ){|v| $out = v }
+  opt.on( '-r', 'run interpreter' ){ $run = true }
   opt.on( '-S', 'output asm file' ){|v| $asm = true }
   opt.on( '-d', '--debug', 'show debug info' ){|v| $debug_info = true }
   opt.parse!
@@ -554,11 +551,18 @@ if __FILE__ == $0
   asm_file = ARGV[0].sub(/\..+$/){'.asm'}
   src = ARGF.read
     
-  @com = Compiler.new
+  com = Compiler.new
 
-  asm = @com.compile( src )
+  asm = com.compile( src )
 
   open(asm_file,'w'){|f| f.write asm }
+
+  if $run
+    require_relative 'runner'
+    puts '====RUN===='
+    runner = Runner.new( com )
+    runner.run
+  end
 
   unless $asm
     # system( 'nesasm', $out, asm_file )

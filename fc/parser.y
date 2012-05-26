@@ -15,10 +15,10 @@ rule
 program: program decl { result = val[0] + [val[1]] }
        | decl { result = [val[0]] }
        
-decl: 'function' IDENT '(' var_decl_list_if ')' block { result = [:function, val[1], val[3], val[5]] }
+decl: 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if block { result = [:function, val[1], val[3], val[6], val[8]] }
     | 'const' var_decl_list ';' { result = [:const, val[1]] }
     | 'var' var_decl_list ';' { result = [:var, val[1]] }
-    | 'options' '(' option_list ')' ';' { result = [:options, val[2]] }
+    | options ';'
     | 'include_bin' '(' option_list ')' ';' { result = [:include_bin, val[2]] }
 
 block: '{' statement_list '}' { result = val[1] }
@@ -69,6 +69,9 @@ exp_list: exp_list ',' exp { result = val[0] + [val[2]] }
 
 /****************************************************/
 /* option */
+options_if: | options
+options : 'options' '(' option_list ')' { result = [:options, val[2]] }
+
 option_list: option_list_sub { result = Hash[ *val[0] ] }
 option_list_sub: option_list_sub ',' option { result = val[0] + val[2] }
            | option { result = val[0] }
