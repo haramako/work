@@ -411,7 +411,7 @@ class ScopedBlock
   def update_pos( ast )
     if @compiler.pos_info[ast]
       @cur_line = @compiler.pos_info[ast]
-      puts "compling ... line #{@cur_line}"
+      # puts "compiling ... line #{@cur_line}"
     end
   end
 
@@ -478,8 +478,8 @@ class Compiler
 
   def compile( src )
     ast, @pos_info = Parser.new(src).parse
-    puts '====AST===='
-    pp ast
+    #puts '====AST===='
+    #pp ast
 
     @block = ScopedBlock.new( self, nil, '$root', [] )
 
@@ -522,11 +522,13 @@ class Compiler
     end
 
     @func.each do |id,f|
+=begin
       puts 
       puts f
       pp f.args
       pp f.block.vars
       pp f.block.ops
+=end
     end
 
   end
@@ -562,7 +564,13 @@ if __FILE__ == $0
     puts '====RUN===='
     runner = Runner.new( com )
     runner.run
+    exit
   end
+
+  require_relative 'asm'
+  pp com.func[:main].block.ops
+  asm = OpCompiler.compile( com.func[:main].block.ops )
+  puts asm.join("\n")
 
   unless $asm
     # system( 'nesasm', $out, asm_file )
