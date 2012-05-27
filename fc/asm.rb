@@ -7,84 +7,252 @@ end
 ######################################################################
 # 中間コードコンパイラ
 ######################################################################
-module OpCompiler
-  module_function
+class OpCompiler
+  attr_reader :code_asm, :data_asm
 
-  def to_asm( op )
-    if op.const?
-      "#{op.val}"
-    else
-      "#{op.scope.id}_V#{op.id}"
+  def initialize
+    @label_count = 0
+    @code_asm = []
+    @data_asm = []
+  end
+
+  def compile( com )
+    com.func.each do |id,f|
+      # 関数のデータをコンパイル
+      @data_asm << "; function #{id}"
+      f.block.vars.each do |id,v|
+        @data_asm << "#{to_asm(v)}: .ds #{v.type.size}"
+      end
+      @data_asm << ''
+
+      # 関数のコードをコンパイル
+      @code_asm << "; function #{id}"
+      @code_asm << "_#{id}:"
+      @code_asm << compile_block( f.block )
+      @code_asm << ''
     end
   end
 
-  def compile( ops )
+  def compile_block( block )
+    ops = block.ops
     r = []
-    ops.each do |op|
+    ops.each do |op| # op=オペランド
       r << "; #{op.inspect}"
+      a = op.map{|x| if Value === x then to_asm(x) else x end } # アセンブラ表記に直したop, Value以外はそのまま
       case op[0]
+
       when :label
         r << op[1] + ':'
+
       when :if
-        r << "lda #{to_asm(op[1])}"
-        r << "beq #{op[2]}"
+        then_label = new_label
+        op[1].type.size.times do |i|
+          r << "lda #{byte(op[1],i)}"
+          r << "bne #{then_label}"
+        end
+        r << "jmp #{op[2]}"
+        r << "#{then_label}:"
+
       when :jump
         r << "jmp #{op[1]}"
+
       when :return
-        r << "lda #{to_asm(op[1])}"
+        r.concat load( block.vars[:'0'], op[1] )
         r << "rts"
+
       when :call
-        r << "jsr #{to_asm(op[1])}"
+        r << "jsr #{to_asm(op[2])}"
+        r.concat load( op[1], op[2].block.vars[:'0'] )
+
       when :load
-        r << "lda #{to_asm(op[2])}"
-        r << "sta #{to_asm(op[1])}"
+        r.concat load( op[1], op[2] )
+
       when :add
-        r << "lda #{to_asm(op[2])}"
-        r << "clc"
-        r << "adc #{to_asm(op[3])}"
-        r << "sta #{to_asm(op[1])}"
+        op[1].type.size.times do |i|
+          r << "clc" if i == 0
+          if op[2].type.size > i
+            r << "lda #{byte(op[2],i)}"
+          elsif op[2].type.size == i
+            r << "lda #0"
+          end
+          r << "adc #{byte(op[3],i)}" if op[3].type.size > i
+          r << "sta #{byte(op[1],i)}"
+        end
+
       when :sub
-        r << "lda #{to_asm(op[2])}"
-        r << "sec"
-        r << "sbc #{to_asm(op[3])}"
-        r << "sta #{to_asm(op[1])}"
-      when :ne
-        r << "lda #{to_asm(op[2])}"
-        r << "sec"
-        r << "sbc #{to_asm(op[3])}"
-        r << "eor #255"
-        r << "sta #{to_asm(op[1])}"
+        op[1].type.size.times do |i|
+          r << "sec" if i == 0
+          if op[2].type.size > i
+            r << "lda #{byte(op[2],i)}"
+          elsif op[2].type.size == i
+            r << "lda #0"
+          end
+          r << "sbc #{byte(op[3],i)}" if op[3].type.size > i
+          r << "sta #{byte(op[1],i)}"
+        end
+
+      when :eq
+        true_label, end_label = new_label(2)
+        ([op[2].type.size,op[3].type.size].max-1).downto(0) do |i|
+          if op[2].type.size > i
+            r << "lda #{byte(op[2],i)}"
+          elsif op[2].type.size == i
+            r << "lda #0"
+          end
+          if op[3].type.size > i
+            r << "cmp #{byte(op[3],i)}" 
+          else
+            r << "cmp #0" 
+          end
+          r << "beq #{true_label}"
+        end
+        # falseのとき
+        r << "lda #0"
+        r << "sta #{a[1]}"
+        r << "jmp #{end_label}"
+        # trueのとき
+        r << "#{true_label}:"
+        r << "lda #1"
+        r << "sta #{a[1]}"
+        r << "#{end_label}:"
+
       when :lt
-        
-        r << "lda #{to_asm(op[2])}"
-        r << "sec"
-        r << "sbc #{to_asm(op[3])}"
-        r << "eor #255"
-        r << "sta #{to_asm(op[1])}"
+        true_label, end_label = new_label(2)
+        ([op[2].type.size,op[3].type.size].max-1).downto(0) do |i|
+          if op[2].type.size > i
+            r << "lda #{byte(op[2],i)}"
+          elsif op[2].type.size == i
+            r << "lda #0"
+          end
+          if op[3].type.size > i
+            r << "cmp #{byte(op[3],i)}" 
+          else
+            r << "cmp #0" 
+          end
+          r << "bcs #{true_label}"
+        end
+        # falseのとき
+        r << "lda #0"
+        r << "sta #{a[1]}"
+        r << "jmp #{end_label}"
+        # trueのとき
+        r << "#{true_label}:"
+        r << "lda #1"
+        r << "sta #{a[1]}"
+        r << "#{end_label}:"
+
       when :not
+        true_label, end_label = new_label(2)
+        op[2].type.size.times do |i|
+          r << "lda #{byte(op[2],i)}"
+          r << "beq #{true_label}"
+        end
+        # falseのとき
+        r << "lda #0"
+        r << "sta #{a[1]}"
+        r << "jmp #{end_label}"
+        # trueのとき
+        r << "#{true_label}:"
+        r << "lda #1"
+        r << "sta #{a[1]}"
+        r << "#{end_label}:"
+
         r << "lda #{to_asm(op[2])}"
         r << "eor #255"
         r << "sta #{to_asm(op[1])}"
+
       when :asm
         op[1].each do |line|
           r << "#{line[0]} " + line[1..-1].map{|o|to_asm(o)}.join(",")
         end
+
+      when :index
+        raise if op[3].type != TypeDecl[:int]
+        raise if op[2].kind != :var
+        r << "clc"
+        r << "lda LOW(#{a[2]})+0"
+        r << "adc #{a[3]}"
+        r << "sta #{a[1]}+0"
+        r << "lda HIGH(#{a[2]})+1"
+        r << "adc #0"
+        r << "sta #{a[1]}+1"
+
+      when :pget
+        r << "lda LOW(#{a[2]})"
+        r << "sta __reg+0"
+        r << "lda HIGH(#{a[2]})"
+        r << "sta __reg+1"
+        r << "ldy #0"
+        r << "lda (__reg+0),y"
+        r << "sta #{a[1]}"
+
+      when :pset
+        r << "lda LOW(#{a[2]})"
+        r << "sta __reg+0"
+        r << "lda HIGH(#{a[2]})"
+        r << "sta __reg+1"
+        r << "ldy #0"
+        r << "lda #{a[1]}"
+        r << "sta (__reg+0),y"
+
       else
         raise "unknow op #{op}"
       end
     end
+
     # ラベル行以外はインデントする
     r = r.map do |line|
       if line.index(':') and line[0] != ';'
         line
       else
-        "    "+line
+        "\t"+line
       end
+    end
+
+    r
+  end
+
+  def load( to, from )
+    r = []
+    to.type.size.times do |i|
+      if from.type.size > i
+        r << "lda #{byte(from,i)}"
+      elsif from.type.size == i
+        r << "lda #0"
+      end
+      r << "sta #{byte(to,i)}"
     end
     r
   end
-end
 
+  def new_label
+    @label_count += 1
+    "._#{@label_count}"
+  end
+
+  def new_labels( n )
+    Array.new(n){new_label }
+  end
+
+  def to_asm( v )
+    if Function === v
+      "_#{v.id}"
+    elsif v.const?
+      "##{v.val.to_s}"
+    else
+      "_#{v.scope.id}_D#{v.id}"
+    end
+  end
+
+  def byte( v, n )
+    if v.const?
+      "##{v.val >> (n*8) % 256}"
+    else
+      "#{to_asm(v)}+#{n}"
+    end
+  end
+
+end
 
 __END__
 @@base.asm
@@ -99,7 +267,6 @@ __END__
 	.bank 0
 	.org $0000
 __reg: .ds 8
-__putc_pos: .ds 1
 
 	.org $0200
 @VARS
@@ -126,30 +293,5 @@ __interrupt:
     tax
     pla
     rti
-
-__ppu_put:
-    ldy #0
-.loop:
-    lda [__reg+0],y
-    sta $2007
-    iny
-    cpy __reg+2
-    bne .loop
-    rts
-
-__ppu_fill:
-    ldx #0
-.loop:
-    lda __reg+0
-    sta $2007
-    inx
-    cpx __reg+1
-    bne .loop
-    rts
-
-__putc:
-    sta $70,x
-    inx
-    rts
 
 @FUNCS

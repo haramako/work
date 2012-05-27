@@ -31,7 +31,7 @@ class Parser
     elsif @scanner.scan(/<=|>=|==|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|=|,|@|!/)
       # 記号
       r = [@scanner[0], @scanner[0]]
-    elsif @scanner.scan(/0[xX](\d+)/)
+    elsif @scanner.scan(/0[xX]([\d\w]+)/)
       # 16進数
       r = [:NUMBER, @scanner[1].to_i(16)]
     elsif @scanner.scan(/0[bB](\d+)/)
@@ -196,7 +196,7 @@ class Function
     @args = args.map do |v| 
       @block.add_var Value.new(v[0],TypeDecl[v[1]],v[2],v[3],@block,:var) 
     end
-    @block.new_tmp( @type ) # 返り値の変数
+    @block.add_var Value.new(:'0',@type,nil,nil,@block,:var) 
   end
 
   def to_s
@@ -216,7 +216,7 @@ class ScopedBlock
     @id = id
     @ast = ast
     @vars = Hash.new
-    @tmp_count = 0
+    @tmp_count = 1
     @label_count = 0
     @ops = []
     @loops = []
@@ -550,12 +550,14 @@ class Compiler
       f.block.compile
     end
 
+=begin
     @func.each do |id,f|
       puts "\n==function #{f.id}=="
       pp f.args
       pp f.block.vars
       pp f.block.ops
     end
+=end
 
   end
 
@@ -567,7 +569,7 @@ class Compiler
 end
 
 if __FILE__ == $0
-  $out = 'a.asm'
+  $out = 'a.nes'
   opt = OptionParser.new( "NES Compiler\nUsage: fc [options] <src.fc> ...\nOptions:\n" )
   opt.on( '-h', '--help' ){ puts opt; exit }
   opt.on( '-o', 'output file' ){|v| $out = v }
@@ -593,13 +595,84 @@ if __FILE__ == $0
     exit
   end
 
+  # 中間コードをアセンブラにコンパイルする
   require_relative 'asm'
   pp com.func[:main].block.ops
-  asm = OpCompiler.compile( com.func[:main].block.ops )
-  puts asm.join("\n")
+  op_com = OpCompiler.new
+  op_com.compile( com )
+
+  template = <<EOT
+@OPTIONS
+	.inesprg 1 ;   - プログラムにいくつのバンクを使うか。今は１つ。
+	.ineschr 1 ;   - グラフィックデータにいくつのバンクを使うか。今は１つ。
+	.inesmir 0 ;   - 水平ミラーリング
+	.inesmap 0 ;   - マッパー。０番にする。
+@INCLUDES
+	.bank 2
+	.org $0000
+	.incbin "character.chr"
+
+	.bank 1
+	.org $FFFA
+	.dw __interrupt
+	.dw __start
+	.dw 0
+
+	.bank 0
+	.org $0000
+__reg: .ds 8
+
+	.org $0200
+@DATA
+
+	.org $8000
+__start:
+	sei
+	ldx #255
+	txs
+	lda #255
+	sta 0
+	jsr _main
+.loop:
+    jmp .loop
+
+__interrupt:
+    pha
+    txa
+    pha
+    tya
+    pha
+    jsr interrupt
+    pla
+    tay
+    pla
+    tax
+    pla
+    rti
+
+interrupt:
+    rts
+
+@CODE
+EOT
+
+  str = template.gsub(/@OPTIONS/){''}
+    .gsub(/@INCLUDES/){''}
+    .gsub(/@DATA/){op_com.data_asm.join("\n")}
+    .gsub(/@CODE/){op_com.code_asm.join("\n")}
+
+  asm_file = File.basename($out,'.*')+".asm"
+  puts asm_file
+
+  open( asm_file, 'w' ) do |f|
+    f.write str
+  end
 
   unless $asm
-    # system( 'nesasm', $out, asm_file )
+    puts '====ASSEMBLE====' if $debug_info
+    if system( '/Users/makoto/bin/nesasm', asm_file ).nil?
+      raise 'cannot exec nesasm'
+    end
   end
 
 end

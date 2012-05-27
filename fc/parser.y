@@ -56,6 +56,7 @@ exp: '(' exp ')' { result = val[1] }
    | exp '>'  exp { result = [:gt, val[0], val[2]] }
    | exp '<=' exp { result = [:le, val[0], val[2]] }
    | exp '>=' exp { result = [:ge, val[0], val[2]] }
+   | '!' exp      { result = [:not, val[1]] }
    | '-' exp = UMINUS { result = [:uminus, val[1]] }
    | exp '(' exp_list ')' { result = [:call, val[0], val[2]] }
    | exp '[' exp ']' { result = [:index, val[0], val[2]] }
