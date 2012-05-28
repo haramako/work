@@ -7,4 +7,5 @@ parser.rb: parser.y
 
 .PHONY: clean
 clean:
-	rm -f *.asm *.nes
+	rm -f *.asm *.nes parser.output parser.rb
+

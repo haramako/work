@@ -1,0 +1,16 @@
+// comment
+/* comment */
+// const CONST:int = 10+10;
+var PPU_CTRL1 :int options (address:0x2000);
+
+function main(): int
+{
+  function add( a:int, b:int ): int  options ( reentrant: true )
+  {
+    return a + b;
+  }
+  var x:int = 0;
+  x = add( 1, 2 );
+  return 0;
+}
+

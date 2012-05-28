@@ -95,16 +95,16 @@ class TypeDecl
         @type = :pointer
         @base = TypeDecl[ ast[1] ]
         @size = 2
-      elsif Array === ast[0] and ast[0][0] == :array
+      elsif ast[0] == :array
         @type = :array
-        @base = TypeDecl[ ast[1] ]
-        @length = ast[0][1]
+        @base = TypeDecl[ ast[2] ]
+        @length = ast[1]
         @size = @base.size * @length
-      elsif Array === ast[0] and ast[0][0] == :lambda
+      elsif ast[0] == :lambda
         @type = :lambda
         @base = TypeDecl[ ast[1] ]
-        @args = ast[0][1]
-        @length = ast[0][1]
+        @args = args
+        @size = 2
       end
     end
 
@@ -152,6 +152,10 @@ class Value
     Value.new( nil, TypeDecl[:int], val, nil, nil, :literal )
   end
 
+  def self.literal_string( val )
+    Value.new( nil, TypeDecl[[:array,val.size,:int]], [:array, val.unpack('a*')+[0]], nil, nil, :const )
+  end
+
   def initialize( id, type, val, opt, scope, kind=:var )
     raise "invalid type, #{type}" unless TypeDecl === type
     @id = id
@@ -194,10 +198,11 @@ end
 # 関数
 ######################################################################
 class Lambda
-  attr_reader :id, :type, :block
-  def initialize( id, type, block )
+  attr_reader :id, :type, :args, :block
+  def initialize( id, type, args, block )
     @id = id
     @type = type
+    @args = args
     @block = block
   end
 
@@ -227,16 +232,31 @@ class ScopedBlock
 
   def compile
     begin
+      # メインブロックのコンパイル
       compile_block( @ast )
+
+      # lambdaのコンパイル
+      @vars.each do |id,v|
+        if v.val and Lambda === v.val
+          v.val.block.compile
+        end
+      end
+=begin
+      puts "====FUNCTION===="
+      puts @id
+      pp @ast
+      pp @ops
+=end
+
     rescue CompileError
       puts "hoge.fc:#{@cur_line}: #{$!}"
       raise
     end
   end
 
-  def compile_block( block )
-    block.each do |ast|
-      compile_statement( ast )
+  def compile_block( ast )
+    ast.each do |stat|
+      compile_statement( stat )
     end
   end
 
@@ -255,21 +275,21 @@ class ScopedBlock
       end
 
     when :function
-      pp ast
-      lmd = Lambda.new( ast[1], type, block )
-      type = TypeDecl[ [[:lambda,args],ret_type] ]
-      @args = args.map do |v| 
-        block.add_var Value.new(v[0],TypeDecl[v[1]],v[2],v[3],@block,:var) 
+      block = ScopedBlock.new( @compiler, self, ast[1], ast[4] )
+      args = ast[2].map do |v|
+        Value.new(v[0], TypeDecl[v[1]], v[2], v[3], block, :var)
       end
-      @block.add_var Value.new(:'0',@type,nil,nil,@block,:var) 
-      add_var Value.new( v[0], lmd.type, lmd, nil, self, :const )
+      type = TypeDecl[ [:lambda,ast[3], args] ]
+      lmd = Lambda.new( ast[1], type, args, block )
+      args.each { |arg| block.add_var(arg) }
+      block.add_var Value.new(:'0', type, nil, nil, block, :var) 
+      add_var Value.new( ast[1], lmd.type, lmd, nil, self, :const )
 
     when :var
       ast[1].each do |v|
         var = add_var( Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :var ) )
         compile_statement( [:exp, [:load, var.id, v[2]]] ) if v[2]
       end
-      nil
 
     when :const
       ast[1].each do |v|
@@ -277,7 +297,6 @@ class ScopedBlock
         v[2] = const_eval( v[2] )
         add_var Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :const )
       end
-      nil
 
     when :'if'
       then_label, else_label, end_label = new_labels('then', 'else','end')
@@ -291,7 +310,6 @@ class ScopedBlock
         compile_block(ast[3])
         emit :label, end_label
       end
-      nil
 
     when :'while'
       begin_label, end_label = new_labels('begin', 'end')
@@ -339,9 +357,13 @@ class ScopedBlock
     when Numeric
       r = Value.literal( ast )
     when String
+      r = Value.new(@tmp_count.to_s.intern, TypeDecl[[:array,ast.length+1,:int]], ast.unpack('C*')+[0], nil, self, :const)
+      @tmp_count += 1
+      add_var r
       # TODO
     when Array
       case ast[0]
+
       when :load
         left, left_value = lval(ast[1])
         right = rval(ast[2])
@@ -357,21 +379,25 @@ class ScopedBlock
           emit :load, left, right
           r = left
         end
+
       when :not, :uminus
         left = rval(ast[1])
         r = new_tmp( left.type )
         emit ast[0], r, left
+
       when :add, :sub, :mul, :div
         left = rval(ast[1])
         right = rval(ast[2])
         r = new_tmp( compatible_type( left.type, right.type ) )
         emit ast[0], r, left, right
+
       when :eq, :lt
         left = rval(ast[1])
         right = rval(ast[2])
         compatible_type( left.type, right.type )
         r = new_tmp( TypeDecl[:int] )
         emit ast[0], r, left, right
+
       when :ne, :gt, :le, :ge
         # これらは、eq,lt の引数の順番とnotを組合せて合成する
         left = ast[1]
@@ -386,15 +412,17 @@ class ScopedBlock
         when :ge
           r = rval([:not, [:lt, left, right]])
         end
+
       when :call
-        func = @compiler.find_func( ast[1] )
-        r = new_tmp( func.type )
+        func = find_var( ast[1] )
+        r = new_tmp( func.type.base )
         ast[2].each_with_index do |arg,i|
           v = rval(arg)
-          pp func.args[i], v
-          emit :load, func.args[i], v
+          compatible_type( func.val.args[i].type, v.type )
+          emit :load, func.val.args[i], v
         end
         emit :call, r, func
+
       when :index
         left = rval(ast[1])
         right = rval(ast[2])
@@ -403,6 +431,7 @@ class ScopedBlock
         r = new_tmp( TypeDecl[[:pointer, left.type.base]] )
         emit :index, r, left, right
         left_value = true
+
       else
         raise "unknown op #{ast}"
       end
@@ -459,6 +488,8 @@ class ScopedBlock
     return a if  a == b
     if a.type == :int and b.type == :int
       if a.size > b.size then return a else return b end
+    elsif a.type == :pointer and b.type == :array and a.base == b.base
+      return a
     end
     raise "cant convert type #{a} and #{b}"
   end
@@ -504,8 +535,8 @@ class ScopedBlock
   def find_var(id)
     if @vars[id]
       @vars[id]
-    elsif @base and @base.vars[id]
-      @base.vars[id]
+    elsif @upper 
+      @upper.find_var(id)
     else
       raise " #{id} not defined"
     end
@@ -524,49 +555,13 @@ class Compiler
   attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info, :root
 
   def initialize
-    @vars = Hash.new
-    @options = Hash.new
-    @include_bin = []
-    @lambdas = []
     @pos_info = nil
   end
 
   def compile( src )
     ast, @pos_info = Parser.new(src).parse
-    #puts '====AST===='
-    #pp ast
-
-    block = ScopedBlock.new( self, nil, :'', ast )
-    @root = Lambda.new( :'', [:void], block )
-
-    # interruptがない場合は、追加する
-    #unless @func[:interrupt]
-    #  @func[:interrupt] = Lambda.new( self, :interrupt, [], :int, [] )
-    #end
-
-    # アセンブラコードの出力
-    opt_asm = []
-    inc_asm = []
-    var_asm = []
-    func_asm = []
-
-    @root.block.compile
-    pp @root.block.ops
-
-=begin
-    @func.each do |id,f|
-      puts "\n==function #{f.id}=="
-      pp f.args
-      pp f.block.vars
-      pp f.block.ops
-    end
-=end
-
-  end
-
-  def find_func( id )
-    raise "function #{id} not found " unless @func[id]
-    @func[id]
+    @root = ScopedBlock.new( self, nil, :'', ast )
+    @root.compile
   end
 
 end
@@ -576,18 +571,17 @@ if __FILE__ == $0
   opt = OptionParser.new( "NES Compiler\nUsage: fc [options] <src.fc> ...\nOptions:\n" )
   opt.on( '-h', '--help' ){ puts opt; exit }
   opt.on( '-o', 'output file' ){|v| $out = v }
-  opt.on( '-r', 'run interpreter' ){ $run = true }
+  opt.on( '-e', 'run by interpreter' ){ $run = true }
   opt.on( '-S', 'output asm file' ){|v| $asm = true }
   opt.on( '-d', '--debug', 'show debug info' ){|v| $debug_info = true }
   opt.parse!
 
   asm_file = ARGV[0].sub(/\..+$/){'.asm'}
   src = ARGF.read
-    
+
+  # ソースコードを中間コードのコンパイル
   com = Compiler.new
-
   asm = com.compile( src )
-
   open(asm_file,'w'){|f| f.write asm }
 
   if $run
@@ -600,9 +594,8 @@ if __FILE__ == $0
 
   # 中間コードをアセンブラにコンパイルする
   require_relative 'asm'
-  pp com.func[:main].block.ops
   op_com = OpCompiler.new
-  op_com.compile( com )
+  op_com.compile( com.root )
 
   template = <<EOT
 @OPTIONS
@@ -633,9 +626,7 @@ __start:
 	sei
 	ldx #255
 	txs
-	lda #255
-	sta 0
-	jsr _main
+	jsr _Vmain
 .loop:
     jmp .loop
 
@@ -665,7 +656,6 @@ EOT
     .gsub(/@CODE/){op_com.code_asm.join("\n")}
 
   asm_file = File.basename($out,'.*')+".asm"
-  puts asm_file
 
   open( asm_file, 'w' ) do |f|
     f.write str

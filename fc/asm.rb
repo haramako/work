@@ -14,29 +14,43 @@ class OpCompiler
     @label_count = 0
     @code_asm = []
     @data_asm = []
+    @addr = 0x200
   end
 
-  def compile( com )
-    addr = 0x200
-    com.func.each do |id,f|
-      # 関数のデータをコンパイル
-      @data_asm << "; function #{id}"
-      f.block.vars.each do |id,v|
-        if v.opt and v.opt[:address]
-          @data_asm << "#{to_asm(v)} = #{v.opt[:address]}"
-        else
-          @data_asm << "#{to_asm(v)}: .ds #{v.type.size} ; $#{'%04x'%[addr]}"
-          addr += v.type.size
-        end
-      end
-      @data_asm << ''
+  def compile( block )
 
-      # 関数のコードをコンパイル
-      @code_asm << "; function #{id}"
-      @code_asm << "#{to_asm(f)}:"
-      @code_asm << compile_block( f.block )
-      @code_asm << ''
+    # lambdaのコンパイル
+    block.vars.each do |id,v|
+      if Lambda === v.val
+        compile v.val.block
+      end
     end
+
+    @data_asm << "; function #{block.id}"
+    @code_asm << "; function #{block.id}" 
+
+    # 関数のコードをコンパイル
+    @code_asm << "#{to_asm(block)}:" unless block.id == :''
+    @code_asm << compile_block( block )
+
+    # 関数のデータをコンパイル
+    block.vars.each do |id,v|
+      if v.opt and v.opt[:address]
+        @data_asm << "#{to_asm(v)} = #{v.opt[:address]}"
+      elsif v.const?
+        if Array === v.val
+          @code_asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
+        end
+        # DO NOTHING
+      else
+        @data_asm << "#{to_asm(v)}: .ds #{v.type.size} ; $#{'%04x'%[@addr]}"
+        @addr += v.type.size
+      end
+    end
+
+    @code_asm << ''
+    @data_asm << ''
+
   end
 
   def compile_block( block )
@@ -68,7 +82,7 @@ class OpCompiler
 
       when :call
         r << "jsr #{to_asm(op[2])}"
-        r.concat load( op[1], op[2].block.vars[:'0'] )
+        r.concat load( op[1], op[2].val.block.vars[:'0'] )
 
       when :load
         r.concat load( op[1], op[2] )
@@ -171,13 +185,25 @@ class OpCompiler
       when :index
         raise if op[3].type != TypeDecl[:int]
         raise if op[2].kind != :var
-        r << "clc"
-        r << "lda #LOW(#{a[2]})"
-        r << "adc #{a[3]}"
-        r << "sta #{a[1]}+0"
-        r << "lda #HIGH(#{a[2]})"
-        r << "adc #0"
-        r << "sta #{a[1]}+1"
+        if op[2].type.type == :array
+          r << "clc"
+          r << "lda #LOW(#{a[2]})"
+          r << "adc #{a[3]}"
+          r << "sta #{a[1]}+0"
+          r << "lda #HIGH(#{a[2]})"
+          r << "adc #0"
+          r << "sta #{a[1]}+1"
+        elsif op[2].type.type == :pointer
+          r << "clc"
+          r << "lda #{byte(op[2],0)}"
+          r << "adc #{a[3]}"
+          r << "sta #{byte(op[1],0)}"
+          r << "lda #{byte(op[2],1)}"
+          r << "adc #0"
+          r << "sta #{byte(op[1],1)}"
+        else
+          raise
+        end
 
       when :pget
         r << "lda #{byte(op[2],0)}"
@@ -216,13 +242,22 @@ class OpCompiler
 
   def load( to, from )
     r = []
-    to.type.size.times do |i|
-      if from.type.size > i
-        r << "lda #{byte(from,i)}"
-      elsif from.type.size == i
-        r << "lda #0"
+    if to.type.type == :pointer and from.type.type == :array
+      # 配列からポインタに変換
+      r << "lda #LOW(#{to_asm(from)})"
+      r << "sta #{byte(to,0)}"
+      r << "lda #HIGH(#{to_asm(from)})"
+      r << "sta #{byte(to,1)}"
+    else
+      # 通常の代入
+      to.type.size.times do |i|
+        if from.type.size > i
+          r << "lda #{byte(from,i)}"
+        elsif from.type.size == i
+          r << "lda #0"
+        end
+        r << "sta #{byte(to,i)}"
       end
-      r << "sta #{byte(to,i)}"
     end
     r
   end
@@ -237,23 +272,25 @@ class OpCompiler
   end
 
   def to_asm( v )
-    if Lambda === v
-      "_#{v.id}"
-    elsif ScopedBlock === v
-      if v.base
-        "#{to_asm(v.base)}_#{v.id}"
+    if ScopedBlock === v
+      if v.upper
+        "#{to_asm(v.upper)}_V#{v.id}"
       else
         "#{v.id}"
       end
-    elsif v.const?
+    elsif v.kind == :literal
       "##{v.val.to_s}"
     else
-      "#{to_asm(v.scope)}_V#{v.id}"
+      if v.scope
+        "#{to_asm(v.scope)}_V#{v.id}"
+      else
+        "#{v.id}"
+      end
     end
   end
 
   def byte( v, n )
-    if v.const?
+    if v.const? and Numeric === v.val
       "##{v.val >> (n*8) % 256}"
     else
       "#{to_asm(v)}+#{n}"
@@ -262,44 +299,3 @@ class OpCompiler
 
 end
 
-__END__
-@@base.asm
-@OPTIONS
-@INCLUDES
-	.bank 1
-	.org $FFFA
-	.dw __interrupt
-	.dw __start
-	.dw 0
-
-	.bank 0
-	.org $0000
-__reg: .ds 8
-
-	.org $0200
-@VARS
-
-	.org $8000
-__start:
-	sei
-	ldx #0
-	txs
-	jsr main
-.loop:
-    jmp .loop
-
-__interrupt:
-    pha
-    txa
-    pha
-    tya
-    pha
-    jsr interrupt
-    pla
-    tay
-    pla
-    tax
-    pla
-    rti
-
-@FUNCS
