@@ -1,1 +1,0 @@
-{:print=><Function:print>, :main=><Function:main>, :add=><Function:add>, :interrupt=><Function:interrupt>}
