@@ -17,17 +17,23 @@ class OpCompiler
   end
 
   def compile( com )
+    addr = 0x200
     com.func.each do |id,f|
       # 関数のデータをコンパイル
       @data_asm << "; function #{id}"
       f.block.vars.each do |id,v|
-        @data_asm << "#{to_asm(v)}: .ds #{v.type.size}"
+        if v.opt and v.opt[:address]
+          @data_asm << "#{to_asm(v)} = #{v.opt[:address]}"
+        else
+          @data_asm << "#{to_asm(v)}: .ds #{v.type.size} ; $#{'%04x'%[addr]}"
+          addr += v.type.size
+        end
       end
       @data_asm << ''
 
       # 関数のコードをコンパイル
       @code_asm << "; function #{id}"
-      @code_asm << "_#{id}:"
+      @code_asm << "#{to_asm(f)}:"
       @code_asm << compile_block( f.block )
       @code_asm << ''
     end
@@ -92,7 +98,7 @@ class OpCompiler
         end
 
       when :eq
-        true_label, end_label = new_label(2)
+        true_label, end_label = new_labels(2)
         ([op[2].type.size,op[3].type.size].max-1).downto(0) do |i|
           if op[2].type.size > i
             r << "lda #{byte(op[2],i)}"
@@ -117,7 +123,7 @@ class OpCompiler
         r << "#{end_label}:"
 
       when :lt
-        true_label, end_label = new_label(2)
+        true_label, end_label = new_labels(2)
         ([op[2].type.size,op[3].type.size].max-1).downto(0) do |i|
           if op[2].type.size > i
             r << "lda #{byte(op[2],i)}"
@@ -129,7 +135,7 @@ class OpCompiler
           else
             r << "cmp #0" 
           end
-          r << "bcs #{true_label}"
+          r << "bcc #{true_label}"
         end
         # falseのとき
         r << "lda #0"
@@ -142,7 +148,7 @@ class OpCompiler
         r << "#{end_label}:"
 
       when :not
-        true_label, end_label = new_label(2)
+        true_label, end_label = new_labels(2)
         op[2].type.size.times do |i|
           r << "lda #{byte(op[2],i)}"
           r << "beq #{true_label}"
@@ -157,10 +163,6 @@ class OpCompiler
         r << "sta #{a[1]}"
         r << "#{end_label}:"
 
-        r << "lda #{to_asm(op[2])}"
-        r << "eor #255"
-        r << "sta #{to_asm(op[1])}"
-
       when :asm
         op[1].each do |line|
           r << "#{line[0]} " + line[1..-1].map{|o|to_asm(o)}.join(",")
@@ -170,30 +172,30 @@ class OpCompiler
         raise if op[3].type != TypeDecl[:int]
         raise if op[2].kind != :var
         r << "clc"
-        r << "lda LOW(#{a[2]})+0"
+        r << "lda #LOW(#{a[2]})"
         r << "adc #{a[3]}"
         r << "sta #{a[1]}+0"
-        r << "lda HIGH(#{a[2]})+1"
+        r << "lda #HIGH(#{a[2]})"
         r << "adc #0"
         r << "sta #{a[1]}+1"
 
       when :pget
-        r << "lda LOW(#{a[2]})"
+        r << "lda #{byte(op[2],0)}"
         r << "sta __reg+0"
-        r << "lda HIGH(#{a[2]})"
+        r << "lda #{byte(op[2],1)}"
         r << "sta __reg+1"
         r << "ldy #0"
-        r << "lda (__reg+0),y"
+        r << "lda [__reg+0],y"
         r << "sta #{a[1]}"
 
       when :pset
-        r << "lda LOW(#{a[2]})"
+        r << "lda #{byte(op[1],0)}"
         r << "sta __reg+0"
-        r << "lda HIGH(#{a[2]})"
+        r << "lda #{byte(op[1],1)}"
         r << "sta __reg+1"
         r << "ldy #0"
-        r << "lda #{a[1]}"
-        r << "sta (__reg+0),y"
+        r << "lda #{a[2]}"
+        r << "sta [__reg+0],y"
 
       else
         raise "unknow op #{op}"
@@ -237,10 +239,16 @@ class OpCompiler
   def to_asm( v )
     if Function === v
       "_#{v.id}"
+    elsif ScopedBlock === v
+      if v.base
+        "#{to_asm(v.base)}_#{v.id}"
+      else
+        "#{v.id}"
+      end
     elsif v.const?
       "##{v.val.to_s}"
     else
-      "_#{v.scope.id}_D#{v.id}"
+      "#{to_asm(v.scope)}_V#{v.id}"
     end
   end
 

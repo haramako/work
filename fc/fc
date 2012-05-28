@@ -28,7 +28,7 @@ class Parser
     end
     if @scanner.eos?
       r = nil
-    elsif @scanner.scan(/<=|>=|==|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|=|,|@|!/)
+    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|=|,|@|!/)
       # 記号
       r = [@scanner[0], @scanner[0]]
     elsif @scanner.scan(/0[xX]([\d\w]+)/)
@@ -243,7 +243,8 @@ class ScopedBlock
     case ast[0]
     when :var
       ast[1].each do |v|
-        add_var Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :var )
+        var = add_var( Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :var ) )
+        compile_statement( [:exp, [:load, var.id, v[2]]] ) if v[2]
       end
       nil
 
@@ -366,7 +367,9 @@ class ScopedBlock
         func = @compiler.find_func( ast[1] )
         r = new_tmp( func.type )
         ast[2].each_with_index do |arg,i|
-          emit :load, func.args[i], rval(arg)
+          v = rval(arg)
+          pp func.args[i], v
+          emit :load, func.args[i], v
         end
         emit :call, r, func
       when :index
@@ -466,6 +469,7 @@ class ScopedBlock
   def add_var(var)
     raise CompileError.new("var #{var.id} already defined") if @vars[var.id]
     @vars[var.id] = var
+    var
   end
 
   def new_var(id,type,init,opt,temp=false)
@@ -510,14 +514,16 @@ class Compiler
     #puts '====AST===='
     #pp ast
 
-    @block = ScopedBlock.new( self, nil, '$root', [] )
+    @root = Function.new( self, :'', [], :int, [] )
+    @block = @root.block
+    @func[:''] = @root
 
     ast.each do |e|
       case e[0] 
       when :function
         @func[e[1]] = Function.new( self, e[1], e[2], e[3], e[4] )
       when :const, :var
-        block.ast << e
+        @root.block.ast << e
       when :options
         @options.merge!( e[1] )
       when :include_bin
@@ -532,9 +538,6 @@ class Compiler
       end
     end
 
-    # ルートブロックのコンパイル
-    @block.compile
-
     # interruptがない場合は、追加する
     unless @func[:interrupt]
       @func[:interrupt] = Function.new( self, :interrupt, [], :int, [] )
@@ -547,6 +550,7 @@ class Compiler
     func_asm = []
 
     @func.each do |id,f|
+      pp f.block
       f.block.compile
     end
 

@@ -1,16 +1,50 @@
 // comment
 /* comment */
-const CONST:int = 10+10;
-var PPU_CTRL1:int options (address:0x2000);
-
-function print(i:int):int {}
+// const CONST:int = 10+10;
+var PPU_CTRL1 :int options (address:0x2000);
+var PPU_CTRL2 :int options (address:0x2001);
+var PPU_STAT  :int options (address:0x2002);
+var PPU_SCROLL:int options (address:0x2005);
+var PPU_ADDR  :int options (address:0x2006);
+var PPU_DATA  :int options (address:0x2007);
 
 function main(): int
 {
+  /*
+  var a:int[2];
+  a[0] = 0x88;
+  a[1] = 0x99;
+  */
+  
   var x:int;
+  var x1:int, x2:int;
   var w:int16, w2:int16;
   var a:int[2];
+  a[0] = 65;
+  a[1] = 66;
 
+  PPU_CTRL1 = 0b00000000;
+  PPU_CTRL2 = 0b00000000; // 画面表示をOFF
+  
+  PPU_ADDR = 0x3F;
+  PPU_ADDR = 0x00;
+  PPU_DATA = 0x0F;
+  PPU_DATA = 0x11;
+  PPU_DATA = 0x12;
+  PPU_DATA = 0x13;
+
+  PPU_ADDR = 0x20;
+  PPU_ADDR = 0x80;
+  ppu_put( a, 2 );
+  ppu_fill( 32, 67 );
+
+  PPU_SCROLL = 0;
+  PPU_SCROLL = 0;
+  
+  PPU_CTRL1 = 0b10000000;
+  PPU_CTRL2 = 0b00011110; // 画面表示をON
+
+  
   /*
   w = x;
   w = w2;
@@ -42,7 +76,7 @@ function main(): int
   }
   */
 
-  x = add(1+2);
+  //x = add(1+2);
 
   //x = add( 1, 2 );
 
@@ -53,7 +87,27 @@ function main(): int
     x = x + 1;
   }
   */
-  return x;
+  return 0;
+}
+
+function ppu_put( addr:int*, size:int ):int
+{
+  var i:int = 0;
+  while( i < size ){
+    PPU_DATA = addr[i];
+    i += 1;
+  }
+  return 0;
+}
+
+function ppu_fill( size:int, num:int ):int
+{
+  var i:int = 0;
+  while( i < size ){
+    PPU_DATA = num;
+    i += 1;
+  }
+  return 0;
 }
 
 function add( a:int, b:int ): int  options ( reentrant: true )

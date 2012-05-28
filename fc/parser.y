@@ -50,6 +50,8 @@ exp: '(' exp ')' { result = val[1] }
    | exp '-'  exp { result = [:sub, val[0], val[2]] }
    | exp '*'  exp { result = [:mul, val[0], val[2]] }
    | exp '/'  exp { result = [:div, val[0], val[2]] }
+   | exp '+=' exp { result = [:load, val[0], [:add, val[0], val[2]]] }
+   | exp '-=' exp { result = [:load, val[1],[:sub, val[0], val[2]]] }
    | exp '==' exp { result = [:eq, val[0], val[2]] }
    | exp '!=' exp { result = [:ne, val[0], val[2]] }
    | exp '<'  exp { result = [:lt, val[0], val[2]] }
