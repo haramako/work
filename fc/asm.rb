@@ -237,7 +237,7 @@ class OpCompiler
   end
 
   def to_asm( v )
-    if Function === v
+    if Lambda === v
       "_#{v.id}"
     elsif ScopedBlock === v
       if v.base

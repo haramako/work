@@ -3,7 +3,7 @@
 all: parser.rb
 
 parser.rb: parser.y
-	racc -g parser.y -o parser.rb
+	racc parser.y -o parser.rb
 
 .PHONY: clean
 clean:

@@ -1,1 +1,1 @@
-{:""=><Function:>, :main=><Function:main>, :ppu_put=><Function:ppu_put>, :ppu_fill=><Function:ppu_fill>, :add=><Function:add>, :interrupt=><Function:interrupt>}
+{}

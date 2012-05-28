@@ -72,11 +72,12 @@ end
 ######################################################################
 class TypeDecl
 
-  attr_reader :type # 種類( :int, :pointer, :array のいずれか )
-  attr_reader :size # サイズ[byte]
-  attr_reader :length # 配列の要素数
+  attr_reader :type # 種類( :int, :pointer, :array, :lambda のいずれか )
+  attr_reader :size # サイズ(単位:byte)
   attr_reader :signed # signedかどうか(intの場合のみ)
   attr_reader :base # ベース型(pointerとarrayの場合のみ)
+  attr_reader :length # 配列の要素数(arrayのみ)
+  attr_reader :args # 引数クラスのリスト(lambdaの場合のみ)
 
   BASIC_TYPES = { int:[1,true], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
 
@@ -94,11 +95,16 @@ class TypeDecl
         @type = :pointer
         @base = TypeDecl[ ast[1] ]
         @size = 2
-      else Array === ast[0] and ast[0][0] == :array
+      elsif Array === ast[0] and ast[0][0] == :array
         @type = :array
         @base = TypeDecl[ ast[1] ]
         @length = ast[0][1]
         @size = @base.size * @length
+      elsif Array === ast[0] and ast[0][0] == :lambda
+        @type = :lambda
+        @base = TypeDecl[ ast[1] ]
+        @args = ast[0][1]
+        @length = ast[0][1]
       end
     end
 
@@ -109,6 +115,8 @@ class TypeDecl
       @str = "#{@base}*"
     when :array
       @str = "#{@base}[#{@length}]"
+    when :lambda
+      @str = "->(#{args}):#{@base}"
     else
       raise "invalid type declaration #{ast}"
     end
@@ -185,22 +193,16 @@ end
 ######################################################################
 # 関数
 ######################################################################
-class Function
-  attr_reader :id, :args, :ast, :type, :block
-  def initialize( compiler, id, args, type, ast )
-    @compiler = compiler
+class Lambda
+  attr_reader :id, :type, :block
+  def initialize( id, type, block )
     @id = id
-    @type = TypeDecl[type]
-    @arg_len = args.size
-    @block = ScopedBlock.new( compiler, compiler.block, id, ast )
-    @args = args.map do |v| 
-      @block.add_var Value.new(v[0],TypeDecl[v[1]],v[2],v[3],@block,:var) 
-    end
-    @block.add_var Value.new(:'0',@type,nil,nil,@block,:var) 
+    @type = type
+    @block = block
   end
 
   def to_s
-    "<Function:#{@id}>"
+    "<Lambda:#{@id}:#{@type}>"
   end
 end
 
@@ -208,11 +210,11 @@ end
 # スコープ月ブロック
 ######################################################################
 class ScopedBlock
-  attr_reader :base, :id, :ast, :vars, :ops
+  attr_reader :upper, :id, :ast, :vars, :ops
 
-  def initialize( compiler, base, id, ast )
+  def initialize( compiler, upper, id, ast )
     @compiler = compiler
-    @base = base
+    @upper = upper
     @id = id
     @ast = ast
     @vars = Hash.new
@@ -241,6 +243,27 @@ class ScopedBlock
   def compile_statement( ast )
     update_pos( ast )
     case ast[0]
+    when :options
+      @options.merge!( e[1] )
+
+    when :include_bin
+      @include_bin << e[1]
+      if e[1][:name]
+        var = Value.new( e[1][:name] )
+        var.include_bin = true
+        @vars[e[1]] = var
+      end
+
+    when :function
+      pp ast
+      lmd = Lambda.new( ast[1], type, block )
+      type = TypeDecl[ [[:lambda,args],ret_type] ]
+      @args = args.map do |v| 
+        block.add_var Value.new(v[0],TypeDecl[v[1]],v[2],v[3],@block,:var) 
+      end
+      @block.add_var Value.new(:'0',@type,nil,nil,@block,:var) 
+      add_var Value.new( v[0], lmd.type, lmd, nil, self, :const )
+
     when :var
       ast[1].each do |v|
         var = add_var( Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :var ) )
@@ -498,15 +521,14 @@ end
 # コンパイラ
 ######################################################################
 class Compiler
-  attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info, :block
+  attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info, :root
 
   def initialize
     @vars = Hash.new
-    @func = Hash.new
     @options = Hash.new
     @include_bin = []
+    @lambdas = []
     @pos_info = nil
-    @block = nil
   end
 
   def compile( src )
@@ -514,34 +536,13 @@ class Compiler
     #puts '====AST===='
     #pp ast
 
-    @root = Function.new( self, :'', [], :int, [] )
-    @block = @root.block
-    @func[:''] = @root
-
-    ast.each do |e|
-      case e[0] 
-      when :function
-        @func[e[1]] = Function.new( self, e[1], e[2], e[3], e[4] )
-      when :const, :var
-        @root.block.ast << e
-      when :options
-        @options.merge!( e[1] )
-      when :include_bin
-        @include_bin << e[1]
-        if e[1][:name]
-          var = Value.new( e[1][:name] )
-          var.include_bin = true
-          @vars[e[1]] = var
-        end
-      else
-        raise
-      end
-    end
+    block = ScopedBlock.new( self, nil, :'', ast )
+    @root = Lambda.new( :'', [:void], block )
 
     # interruptがない場合は、追加する
-    unless @func[:interrupt]
-      @func[:interrupt] = Function.new( self, :interrupt, [], :int, [] )
-    end
+    #unless @func[:interrupt]
+    #  @func[:interrupt] = Lambda.new( self, :interrupt, [], :int, [] )
+    #end
 
     # アセンブラコードの出力
     opt_asm = []
@@ -549,10 +550,8 @@ class Compiler
     var_asm = []
     func_asm = []
 
-    @func.each do |id,f|
-      pp f.block
-      f.block.compile
-    end
+    @root.block.compile
+    pp @root.block.ops
 
 =begin
     @func.each do |id,f|
