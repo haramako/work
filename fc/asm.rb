@@ -41,7 +41,6 @@ class OpCompiler
         if Array === v.val
           @code_asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
         end
-        # DO NOTHING
       else
         @data_asm << "#{to_asm(v)}: .ds #{v.type.size} ; $#{'%04x'%[@addr]}"
         @addr += v.type.size
