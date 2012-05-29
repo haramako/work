@@ -29,8 +29,9 @@ statement_i: statement { info(val[0]) }
 
 statement: options ';'
          | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if block { result = [:function, val[1], val[3], val[6], val[8]] }
-         | 'var' var_decl_list ';' { result = [:var, val[1]] }
-         | 'const' var_decl_list ';' { result = [:const, val[1]] }
+         | 'include' '(' STRING ')' ';'          { result = [:include, val[2]] }
+         | 'var' var_decl_list ';'               { result = [:var, val[1]] }
+         | 'const' var_decl_list ';'             { result = [:const, val[1]] }
          | 'include_bin' '(' option_list ')' ';' { result = [:include_bin, val[2]] }
 
          | 'if' '(' exp ')' block else_block { result = [:if, val[2], val[4], val[5]] }

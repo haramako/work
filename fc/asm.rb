@@ -1,9 +1,5 @@
 # coding: utf-8
 
-def mangle(str)
-  str.gsub(/\$|_/){|v| { '$'=>'_V', '_'=>'__' }[v] }
-end
-
 ######################################################################
 # 中間コードコンパイラ
 ######################################################################
@@ -37,14 +33,13 @@ class OpCompiler
         end
       else
         @asm << "#{to_asm(v)} = $#{'%04x'%[@addr]}"
+        v.address = @addr
         @addr += v.type.size
       end
     end
 
     # 関数のコードをコンパイル
-    @asm << "#{to_asm(block)}:" unless block.id == :''
     @asm << compile_block( block )
-
     @asm << ''
 
   end
@@ -52,6 +47,8 @@ class OpCompiler
   def compile_block( block )
     ops = block.ops
     r = []
+    r << "#{to_asm(block)}:" unless block.id == :''
+
     ops.each do |op| # op=オペランド
       r << "; #{op.inspect}"
       a = op.map{|x| if Value === x then to_asm(x) else x end } # アセンブラ表記に直したop, Value以外はそのまま
@@ -232,6 +229,8 @@ class OpCompiler
         "\t"+line
       end
     end
+
+    block.asm = r
 
     r
   end

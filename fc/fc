@@ -43,13 +43,16 @@ class Parser
       r = [:NUMBER, @scanner[0].to_i]
     elsif @scanner.scan(/\w+/)
       # 識別子/キーワード
-      if /^(function|const|var|options|if|else|while|return|break|continue|include_bin)$/ === @scanner[0]
+      if /^(include|function|const|var|options|if|else|while|return|break|continue|include_bin)$/ === @scanner[0]
         r = [@scanner[0], @scanner[0]]
       else
         r = [:IDENT, @scanner[0].to_sym ]
       end
     elsif @scanner.scan(/"([^\\"]|\\.)*"/)
-      # 文字列
+      # ""文字列
+      r = [:STRING, @scanner[0][1..-2]]
+    elsif @scanner.scan(/'([^\\']|\\.)*'/)
+      # ''文字列
       r = [:STRING, @scanner[0][1..-2]]
     else
       raise "invalid token at #{@line}"
@@ -148,6 +151,7 @@ class Value
   attr_reader :opt # オプション
   attr_reader :scope # スコープ(Function)
   attr_reader :temp # テンポラリ変数かどうか
+  attr_accessor :address # アドレス
 
   def self.literal( val )
     Value.new( nil, TypeDecl[:int], val, nil, nil, :literal )
@@ -217,6 +221,7 @@ end
 ######################################################################
 class ScopedBlock
   attr_reader :upper, :id, :ast, :vars, :ops
+  attr_accessor :asm
 
   def initialize( compiler, upper, id, ast )
     @compiler = compiler
@@ -227,6 +232,7 @@ class ScopedBlock
     @tmp_count = 1
     @label_count = 0
     @ops = []
+    @asm = []
     @loops = []
     @cur_line = 0
   end
@@ -274,6 +280,12 @@ class ScopedBlock
         var.include_bin = true
         @vars[e[1]] = var
       end
+
+    when :include
+      src = open(ast[1]){|f| f.read }
+      ast, pos_info = Parser.new(src).parse
+      @compiler.pos_info.merge!( pos_info )
+      compile_block( ast )
 
     when :function
       block = ScopedBlock.new( @compiler, self, ast[1], ast[4] )
@@ -561,8 +573,10 @@ class Compiler
 
   def compile( src )
     ast, @pos_info = Parser.new(src).parse
+
     @root = ScopedBlock.new( self, nil, :'', ast )
     @root.compile
+
     # interruptがなかったら足す
     unless @root.vars[:interrupt]
       blk = ScopedBlock.new(self,@root,:interrupt,[[:return,0]])
@@ -598,11 +612,12 @@ EOT
     template = <<EOT
 <h2>variables</h2>
 <table>
-  <tr><th>id</th><th>type</th><th>value</th><th>opt</th></tr>
+  <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th></tr>
   <%- block.vars.each do |id,v| -%>
     <tr>
       <td><%= id %></td>
       </td><td><%= v.type %></td>
+      </td><td><%= v.address and "0x%04x"%[v.address]  %></td>
       <td><%= if Lambda === v.val then '(lambda)' else  v.val end %></td>
       <td><%= v.opt %></td></p>
   <%- end -%>
@@ -614,8 +629,21 @@ EOT
 <h2>code</h2>
 <pre class="code">
 <%- block.ops.each_with_index do |op,i| -%>
-<%="%04d: %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
+<%= "<font color=\\"#aaa\\">%04d:</font> %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
 <%- end %></pre>
+
+<h2>asm</h2>
+<pre class="code">
+<%- block.asm.each do |line| -%>
+<%- if /^\\s+;/ === line -%>
+<font color="green"><%= line %></font>
+<%- elsif /^[.\\w]+:/ === line -%>
+<font color="#88f"><%= line %></font>
+<%- else -%>
+<%= line %>
+<%- end -%>
+<%- end -%>
+</pre>
 
 <%- block.vars.each do |id,v| -%>
   <%- if v.type.type == :lambda and v.val -%>
@@ -647,6 +675,7 @@ if __FILE__ == $0
   # ソースコードを中間コードのコンパイル
   com = Compiler.new
   com.compile( src )
+
   if $debug_info
     open( base+'.html', 'w' ) do |f|
       f.write com.to_html
@@ -665,6 +694,12 @@ if __FILE__ == $0
   require_relative 'asm'
   op_com = OpCompiler.new
   op_com.compile( com.root )
+
+  if $debug_info
+    open( base+'.html', 'w' ) do |f|
+      f.write com.to_html
+    end
+  end
 
   template = <<EOT
 @OPTIONS
