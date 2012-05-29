@@ -56,6 +56,8 @@ class OpCompiler
   def compile_block( block )
     ops = block.ops
     ops = optimize( ops )
+    block.ops[0..-1] = ops
+    alloc_register( block, ops )
     r = []
     if block.id == :''
       r << "__init:" 
@@ -330,6 +332,7 @@ class OpCompiler
     end
   end
 
+
   def optimize( ops )
     r = []
     ops = ops.clone
@@ -358,6 +361,46 @@ class OpCompiler
       r << op
     end
     r
+  end
+
+  def alloc_register( block, ops )
+    lr = calc_liverange( block, ops )
+    block.vars.each do |id,v|
+      if v.lr.nil?
+        v.reg = :none
+      elsif ( v.kind != :var and v.kind != :tmp ) or # 変数じゃないか
+          v.nonlocal or # ローカルじゃないか
+          v.type.size > 1 # サイズが2byte以上
+        v.reg = :mem
+      else
+        if v.lr[1] <= v.lr[0]+1
+          v.reg = :a
+        else
+          v.reg = :mem
+        end
+      end
+    end
+  end
+
+  def calc_liverange( block, ops )
+    ops.each_with_index do |op,i|
+      update_liverange( block, i, op[1..-1] )
+    end
+  end
+
+  def update_liverange( block, i, vars )
+    vars.each do |v|
+      next unless Value === v
+      if v.scope != block
+        v.nonlocal = true
+      else
+        if v.lr
+          v.lr[1] = i
+        else
+          v.lr = [i,i]
+        end
+      end
+    end
   end
 
 end

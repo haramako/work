@@ -148,24 +148,25 @@ end
 # 値を持つもの(変数、テンポラリ変数、リテラル、定数など）
 ######################################################################
 class Value
-  attr_reader :kind # 種類( :var, :temp, :const, :literal のいずれか）
+  attr_reader :kind # 種類( :var, :const, :literal のいずれか）
   attr_reader :id # 変数名( リテラルの場合は、nil )
   attr_reader :type # TypeDecl
   attr_reader :val # リテラルもしくは定数の場合は数値、変数の場合は初期化式のASTかnil
   attr_reader :opt # オプション
   attr_reader :scope # スコープ(Function)
-  attr_reader :temp # テンポラリ変数かどうか
+  attr_reader :var_type # varのときのみ( :var, :temp, :arg のいずれか )
+
+  # 以下は、アセンブラで使用
   attr_accessor :address # アドレス
+  attr_accessor :lr # 生存期間([from,to]という２要素の配列)
+  attr_accessor :nonlocal # クロージャから参照されているかどうか
+  attr_accessor :reg # 格納場所( :mem, :none, :a, :carry, :not_carry, :zero, :not_zero, :negative, :not_negative のいずれか )
 
   def self.literal( val )
-    Value.new( nil, TypeDecl[:int], val, nil, nil, :literal )
+    Value.new( nil, TypeDecl[:int], val, nil, nil, :literal, nil )
   end
 
-  def self.literal_string( val )
-    Value.new( nil, TypeDecl[[:array,val.size,:int]], [:array, val.unpack('a*')+[0]], nil, nil, :const )
-  end
-
-  def initialize( id, type, val, opt, scope, kind=:var )
+  def initialize( id, type, val, opt, scope, kind=:var, var_type )
     raise "invalid type, #{type}" unless TypeDecl === type
     @id = id
     @type = type
@@ -307,17 +308,16 @@ class ScopedBlock
     when :function
       block = ScopedBlock.new( @compiler, self, ast[1], ast[4] )
       args = ast[2].map do |v|
-        Value.new(v[0], TypeDecl[v[1]], v[2], v[3], block, :var)
+        block.new_arg( v[0], TypeDecl[v[1]] )
       end
       type = TypeDecl[ [:lambda,ast[3], args] ]
       lmd = Lambda.new( ast[1], type, args, block )
-      args.each { |arg| block.add_var(arg) }
-      block.add_var Value.new(:'0', type.base, nil, nil, block, :var) if type.base != TypeDecl[:void]
-      add_var Value.new( ast[1], lmd.type, lmd, nil, self, :const )
+      block.new_var( :'0', type.base ) if type.base != TypeDecl[:void]
+      new_const( ast[1], lmd.type, lmd, nil )
 
     when :var
       ast[1].each do |v|
-        var = add_var( Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :var ) )
+        var = new_var( v[0], TypeDecl[v[1]], v[2], v[3] )
         compile_statement( [:exp, [:load, var.id, v[2]]] ) if v[2]
       end
 
@@ -325,7 +325,7 @@ class ScopedBlock
       ast[1].each do |v|
         raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
         v[2] = const_eval( v[2] )
-        add_var Value.new( v[0], TypeDecl[v[1]], v[2], v[3], self, :const )
+        new_const( v[0], TypeDecl[v[1]], v[2], v[3] )
       end
 
     when :'if'
@@ -401,13 +401,13 @@ class ScopedBlock
     case ast
     when Symbol
       r = find_var( ast )
+
     when Numeric
       r = Value.literal( ast )
+
     when String
-      r = Value.new(@tmp_count.to_s.intern, TypeDecl[[:array,ast.length+1,:int]], ast.unpack('C*')+[0], nil, self, :const)
-      @tmp_count += 1
-      add_var r
-      # TODO
+      r = new_literal_string(ast)
+
     when Array
       case ast[0]
 
@@ -504,7 +504,6 @@ class ScopedBlock
       r = ast
     when String
       r = ast
-      # TODO
     when Array
       case ast[0]
       when :add, :sub, :mul, :div, :eq, :ne, :lt, :gt, :le, :ge
@@ -568,21 +567,35 @@ class ScopedBlock
     names.map { |n| '.'+n+'_'+@label_count.to_s }
   end
 
-  def new_tmp( type )
-    var = new_var("#{@tmp_count}".intern, type, nil, nil, true )
-    @tmp_count += 1
-    var
-  end
-
   def add_var(var)
     raise CompileError.new("var #{var.id} already defined") if @vars[var.id]
     @vars[var.id] = var
     var
   end
 
-  def new_var(id,type,init,opt,temp=false)
-    var = Value.new(id,type,init,opt,self, temp ? :temp : :var )
-    add_var(var)
+  def new_var(id,type,init,opt)
+    add_var Value.new(id,type,init,opt,self, :var, :var )
+  end
+
+  def new_const(id,type,init,opt)
+    add_var Value.new(id,type,init,opt,self, :const, nil )
+  end
+
+  def new_tmp( type )
+    var = add_var( Value.new("#{@tmp_count}".intern,type,nil,nil,self, :var, :temp) )
+    @tmp_count += 1
+    var
+  end
+
+  def new_arg(id,type)
+    add_var Value.new(id,type,nil,nil,self, :var, :arg)
+  end
+
+  def new_literal_string(str)
+    var = add_var( Value.new("#{@tmp_count}".intern, 
+                             TypeDecl[[:array,str.size+1,:int]], 
+                             [ str.unpack('c*').concat([0]) ], nil, self, :const, nil ) )
+    @tmp_count += 1
     var
   end
 
@@ -623,7 +636,7 @@ class Compiler
       blk = ScopedBlock.new(self,@root,:interrupt,[[:return,0]])
       blk.compile
       lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,:void,[]]],[],blk)
-      @root.add_var Value.new(:interrupt,lmd.type,lmd,nil,@root,:const)
+      @root.new_const(:interrupt,lmd.type,lmd,nil)
     end
   end
 
@@ -652,7 +665,7 @@ EOT
     template = <<EOT
 <h2>variables</h2>
 <table>
-  <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th></tr>
+  <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th><th>live</th><th>reg</th></tr>
   <%- block.vars.each do |id,v| -%>
     <tr>
       <td><%= id %></td>
@@ -660,6 +673,8 @@ EOT
       </td><td><%= v.address and "0x%04x"%[v.address]  %></td>
       <td><%= if Lambda === v.val then '(lambda)' else  v.val end %></td>
       <td><%= v.opt %></td></p>
+      <td><%= v.lr %></td></p>
+      <td><%= v.reg %></td></p>
   <%- end -%>
 </table>
 
