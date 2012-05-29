@@ -67,8 +67,9 @@ function ppu_fill( size:int, num:int ):void
 function ppu_print( str:int* ):void
 {
   var i:int = 0;
-  while( str[i] ){
-    PPU_DATA = str[i];
+  var c:int;
+  while( c = str[i] ){
+    PPU_DATA = c;
     i += 1;
   }
 }

@@ -10,6 +10,7 @@ class OpCompiler
     @label_count = 0
     @asm = []
     @address = 0x200
+    @address_zeropage = 0x010
   end
 
   def compile( block )
@@ -32,9 +33,17 @@ class OpCompiler
           @asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
         end
       else
-        @asm << "#{to_asm(v)} = $#{'%04x'%[@address]}"
-        v.address = @address
-        @address += v.type.size
+        if v.type.type == :pointer
+          # ポインターはzeropageに配置する
+          @asm << "#{to_asm(v)} = $#{'%04x'%[@address_zeropage]}"
+          v.address = @address_zeropage
+          @address_zeropage += v.type.size
+        else
+          # ポインター以外なら普通に配置
+          @asm << "#{to_asm(v)} = $#{'%04x'%[@address]}"
+          v.address = @address
+          @address += v.type.size
+        end
       end
     end
 
@@ -46,6 +55,7 @@ class OpCompiler
 
   def compile_block( block )
     ops = block.ops
+    ops = optimize( ops )
     r = []
     if block.id == :''
       r << "__init:" 
@@ -206,22 +216,39 @@ class OpCompiler
         end
 
       when :pget
-        r << "lda #{byte(op[2],0)}"
-        r << "sta __reg+0"
-        r << "lda #{byte(op[2],1)}"
-        r << "sta __reg+1"
         r << "ldy #0"
-        r << "lda [__reg+0],y"
+        r << "lda [#{to_asm(op[2])}],y"
         r << "sta #{a[1]}"
 
       when :pset
-        r << "lda #{byte(op[1],0)}"
-        r << "sta __reg+0"
-        r << "lda #{byte(op[1],1)}"
-        r << "sta __reg+1"
         r << "ldy #0"
         r << "lda #{a[2]}"
-        r << "sta [__reg+0],y"
+        r << "sta [#{to_asm(op[1])}],y"
+
+        # 最適化後のオペレータ
+      when :index_pget
+        if op[2].type.type == :array
+          r << "ldy #{byte(op[3],0)}"
+          r << "lda #{a[2]},y"
+          r << "sta #{a[1]}"
+        elsif op[2].type.type == :pointer
+          r << "ldy #{byte(op[3],0)}"
+          r << "lda [#{a[2]}],y"
+          r << "sta #{a[1]}"
+        else
+          raise
+        end
+
+      when :index_pset
+        if op[1].type.type == :array
+          r << "ldy #{byte(op[2],0)}"
+          r << "lda #{a[3]}"
+          r << "sta #{a[1]},y"
+        elsif op[1].type.type == :pointer
+          r << "ldy #{byte(op[2],0)}"
+          r << "lda #{a[3]}"
+          r << "sta [#{a[1]}],y"
+        end
 
       else
         raise "unknow op #{op}"
@@ -301,6 +328,36 @@ class OpCompiler
     else
       "#{to_asm(v)}+#{n}"
     end
+  end
+
+  def optimize( ops )
+    r = []
+    ops = ops.clone
+    # index + pget/pset の最適化
+    ops.each_with_index do |op,i|
+      next unless op
+      case op[0] 
+      when :index
+        next_op = ops[i+1]
+        if next_op
+          if next_op[0] == :pget 
+            if op[1] == next_op[2] and ( op[2].kind == :var or op[2].kind == :const ) and op[3].type.size == 1
+              r << [:index_pget, next_op[1], op[2], op[3]]
+              ops[i+1] = nil
+              next
+            end
+          elsif next_op[0] == :pset
+            if op[1] == next_op[1] and ( op[2].kind == :var or op[2].kind == :const ) and op[3].type.size == 1
+              r << [:index_pset, op[2], op[3], next_op[2]]
+              ops[i+1] = nil
+              next
+            end
+          end
+        end
+      end
+      r << op
+    end
+    r
   end
 
 end

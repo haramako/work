@@ -35,6 +35,7 @@ statement: options ';'
          | 'include_bin' '(' option_list ')' ';' { result = [:include_bin, val[2]] }
 
          | 'if' '(' exp ')' block else_block { result = [:if, val[2], val[4], val[5]] }
+         | 'loop' '(' ')' block { result = [:loop, val[3]] }
          | 'while' '(' exp ')' block { result = [:while, val[2], val[4]] }
          | 'break' ';' { result = [:break] }
          | 'continue' ';' { result = [:continue] }

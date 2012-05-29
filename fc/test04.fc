@@ -30,7 +30,7 @@ function main(): void
   //ppu_fill( 32, 256 );
 
   PPU_ADDR = 0x20;
-  PPU_ADDR = 0x20;
+  PPU_ADDR = 0x80;
   ppu_print( "HOGE.FUGA" );
   ppu_unlock();
 

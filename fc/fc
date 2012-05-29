@@ -44,7 +44,7 @@ class Parser
       r = [:NUMBER, @scanner[0].to_i]
     elsif @scanner.scan(/\w+/)
       # 識別子/キーワード
-      if /^(include|function|const|var|options|if|else|while|return|break|continue|include_bin)$/ === @scanner[0]
+      if /^(include|function|const|var|options|if|else|loop|while|return|break|continue|include_bin)$/ === @scanner[0]
         r = [@scanner[0], @scanner[0]]
       else
         r = [:IDENT, @scanner[0].to_sym ]
@@ -338,9 +338,18 @@ class ScopedBlock
       emit :label, else_label
       if ast[3]
         compile_block(ast[3])
-        emit :label, end_label
       end
+      emit :label, end_label
 
+    when :loop
+      begin_label, end_label = new_labels('begin', 'end')
+      @loops << end_label
+      emit :label, begin_label
+      compile_block ast[1]
+      emit :jump, begin_label
+      emit :label, end_label
+      @loops.pop
+      
     when :'while'
       begin_label, end_label = new_labels('begin', 'end')
       @loops << end_label
