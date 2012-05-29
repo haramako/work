@@ -78,7 +78,7 @@ options : 'options' '(' option_list ')' { result = [:options, val[2]] }
 
 option_list: option_list_sub { result = Hash[ *val[0] ] }
 option_list_sub: option_list_sub ',' option { result = val[0] + val[2] }
-           | option { result = val[0] }
+               | option { result = val[0] }
 option: IDENT ':' exp { result = [val[0],val[2]] }
     
 /****************************************************/
@@ -98,6 +98,6 @@ type_decl: type_decl type_modifier { result = val[1]+[val[0]]; }
          | IDENT { result = val[0] }
          
 type_modifier: '[' exp ']' { result = [:array, val[1]] }
-             | '*' { result = [:pointer] }
+             | '*'         { result = [:pointer] }
 
 end
