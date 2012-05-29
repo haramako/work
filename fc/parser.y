@@ -38,6 +38,7 @@ statement: options ';'
          | 'while' '(' exp ')' block { result = [:while, val[2], val[4]] }
          | 'break' ';' { result = [:break] }
          | 'continue' ';' { result = [:continue] }
+         | 'return' ';' { result = [:return] }
          | 'return' exp ';' { result = [:return, val[1]] }
 
          |  exp ';' { result = [:exp, val[0]] }

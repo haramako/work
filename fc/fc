@@ -16,16 +16,17 @@ require_relative 'parser'
 ######################################################################
 class Parser
 
-  def initialize( src )
+  def initialize( src, filename='(unknown)' )
+    @filename = filename
     @scanner = StringScanner.new(src)
-    @line = 1
+    @line_no = 1
     @pos_info = Hash.new
   end
 
   def next_token
     # コメントと空白を飛ばす
     while @scanner.scan(/ \s+ | \/\/.+?\n | \/\*.+?\*\/ /mx)
-      @scanner[0].gsub(/\n/){ @line += 1 }
+      @scanner[0].gsub(/\n/){ @line_no += 1 }
     end
     if @scanner.eos?
       r = nil
@@ -55,14 +56,14 @@ class Parser
       # ''文字列
       r = [:STRING, @scanner[0][1..-2]]
     else
-      raise "invalid token at #{@line}"
+      raise "invalid token at #{@line_no}"
     end
     # pp r
     r
   end
 
   def info( ast )
-    @pos_info[ast] = @line
+    @pos_info[ast] = [@filename,@line_no,@line_str]
   end
 
   def parse
@@ -76,7 +77,7 @@ end
 ######################################################################
 class TypeDecl
 
-  attr_reader :type # 種類( :int, :pointer, :array, :lambda のいずれか )
+  attr_reader :type # 種類( :void, :int, :pointer, :array, :lambda のいずれか )
   attr_reader :size # サイズ(単位:byte)
   attr_reader :signed # signedかどうか(intの場合のみ)
   attr_reader :base # ベース型(pointerとarrayの場合のみ)
@@ -86,7 +87,10 @@ class TypeDecl
   BASIC_TYPES = { int:[1,true], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
 
   def initialize( ast )
-    if Symbol === ast
+    if ast == :void
+      @type = :void
+      @size = 1
+    elsif Symbol === ast
       @type = :int
       if BASIC_TYPES[ast]
         @size = BASIC_TYPES[ast][0]
@@ -113,7 +117,7 @@ class TypeDecl
     end
 
     case @type
-    when :int
+    when :int, :void
       @str = "#{ast}"
     when :pointer
       @str = "#{@base}*"
@@ -234,13 +238,24 @@ class ScopedBlock
     @ops = []
     @asm = []
     @loops = []
+    @cur_filename = nil
     @cur_line = 0
+    @cur_line_str = nil
   end
 
   def compile
     begin
       # メインブロックのコンパイル
       compile_block( @ast )
+
+      # returnを追加する
+      if @ops[-1].nil? or @ops[-1][0] != :return
+        if @vars[:'0']
+          raise CompileError.new( "no return" )
+        else
+          emit :return
+        end
+      end
 
       # lambdaのコンパイル
       @vars.each do |id,v|
@@ -256,7 +271,8 @@ class ScopedBlock
 =end
 
     rescue CompileError
-      puts "hoge.fc:#{@cur_line}: #{$!}"
+      puts @cur_line_str if @cur_line_str
+      puts "#{@cur_filename}:#{@cur_line_no}: #{$!}"
       raise
     end
   end
@@ -282,8 +298,9 @@ class ScopedBlock
       end
 
     when :include
-      src = open(ast[1]){|f| f.read }
-      ast, pos_info = Parser.new(src).parse
+      filename = ast[1]
+      src = File.read(filename)
+      ast, pos_info = Parser.new(src,filename).parse
       @compiler.pos_info.merge!( pos_info )
       compile_block( ast )
 
@@ -295,7 +312,7 @@ class ScopedBlock
       type = TypeDecl[ [:lambda,ast[3], args] ]
       lmd = Lambda.new( ast[1], type, args, block )
       args.each { |arg| block.add_var(arg) }
-      block.add_var Value.new(:'0', type.base, nil, nil, block, :var) 
+      block.add_var Value.new(:'0', type.base, nil, nil, block, :var) if type.base != TypeDecl[:void]
       add_var Value.new( ast[1], lmd.type, lmd, nil, self, :const )
 
     when :var
@@ -340,7 +357,15 @@ class ScopedBlock
       emit :jump, @loops[-1]
 
     when :return
-      emit :return, rval(ast[1])
+      if @vars[:'0']
+        # 非void関数
+        raise CompileError.new("can't return without value") unless ast[1]
+        emit :return, rval(ast[1])
+      else
+        # void関数
+        raise CompileError.new("can't return from void function") if ast[1]
+        emit :return
+      end
 
     when :exp
       const_eval( ast[1] )
@@ -428,7 +453,11 @@ class ScopedBlock
 
       when :call
         func = find_var( ast[1] )
-        r = new_tmp( func.type.base )
+        if func.type.base.type != :void
+          r = new_tmp( func.type.base )
+        else
+          r = nil
+        end
         ast[2].each_with_index do |arg,i|
           v = rval(arg)
           compatible_type( func.val.args[i].type, v.type )
@@ -509,7 +538,8 @@ class ScopedBlock
 
   def update_pos( ast )
     if @compiler.pos_info[ast]
-      @cur_line = @compiler.pos_info[ast]
+      pos_info = @compiler.pos_info[ast]
+      @cur_filename, @cur_line_no, @cur_line_str = @compiler.pos_info[ast]
       # puts "compiling ... line #{@cur_line}"
     end
   end
@@ -571,8 +601,8 @@ class Compiler
     @pos_info = nil
   end
 
-  def compile( src )
-    ast, @pos_info = Parser.new(src).parse
+  def compile( src, filename=nil )
+    ast, @pos_info = Parser.new(src,filename).parse
 
     @root = ScopedBlock.new( self, nil, :'', ast )
     @root.compile
@@ -580,9 +610,8 @@ class Compiler
     # interruptがなかったら足す
     unless @root.vars[:interrupt]
       blk = ScopedBlock.new(self,@root,:interrupt,[[:return,0]])
-      blk.add_var Value.new(:'0', TypeDecl[:int], nil, nil, blk, :var) 
       blk.compile
-      lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,:int,[]]],[],blk)
+      lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,:void,[]]],[],blk)
       @root.add_var Value.new(:interrupt,lmd.type,lmd,nil,@root,:const)
     end
   end
@@ -670,11 +699,12 @@ if __FILE__ == $0
   opt.parse!
 
   base = File.basename($out,'.*')
-  src = ARGF.read
+  src_filename = ARGV[0]
+  src = File.read(src_filename)
 
   # ソースコードを中間コードのコンパイル
   com = Compiler.new
-  com.compile( src )
+  com.compile( src, src_filename )
 
   if $debug_info
     open( base+'.html', 'w' ) do |f|

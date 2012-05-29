@@ -9,7 +9,7 @@ class OpCompiler
   def initialize
     @label_count = 0
     @asm = []
-    @addr = 0x200
+    @address = 0x200
   end
 
   def compile( block )
@@ -32,9 +32,9 @@ class OpCompiler
           @asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
         end
       else
-        @asm << "#{to_asm(v)} = $#{'%04x'%[@addr]}"
-        v.address = @addr
-        @addr += v.type.size
+        @asm << "#{to_asm(v)} = $#{'%04x'%[@address]}"
+        v.address = @address
+        @address += v.type.size
       end
     end
 
@@ -70,12 +70,12 @@ class OpCompiler
         r << "jmp #{op[1]}"
 
       when :return
-        r.concat load( block.vars[:'0'], op[1] )
+        r.concat load( block.vars[:'0'], op[1] ) if op[1]
         r << "rts"
 
       when :call
         r << "jsr #{to_asm(op[2])}"
-        r.concat load( op[1], op[2].val.block.vars[:'0'] )
+        r.concat load( op[1], op[2].val.block.vars[:'0'] ) if op[1]
 
       when :load
         r.concat load( op[1], op[2] )
@@ -237,7 +237,8 @@ class OpCompiler
 
   def load( to, from )
     r = []
-    if to.type.type == :pointer and from.type.type == :array
+    if to.type.type == :pointer and from.type.type == :array 
+      raise "can't convert from #{from} to #{to}" unless from.type.base == to.type.base
       # 配列からポインタに変換
       r << "lda #LOW(#{to_asm(from)})"
       r << "sta #{byte(to,0)}"
@@ -245,6 +246,9 @@ class OpCompiler
       r << "sta #{byte(to,1)}"
     else
       # 通常の代入
+      if from.type.type != :int
+        raise "can't convert from #{from} to #{to}" unless from.type.base == to.type.base
+      end
       to.type.size.times do |i|
         if from.type.size > i
           r << "lda #{byte(from,i)}"

@@ -5,7 +5,7 @@
 include( "nes.fc" );
 var vsync_flag:int;
 
-function main(): int
+function main(): void
 {
 
   ppu_lock();
@@ -24,20 +24,17 @@ function main(): int
   ppu_print( "HOGE.FUGA" );
   wait_vsync();
   ppu_unlock();
-
-  return 0;
+  return;
 }
 
 
-function interrupt():int
+function interrupt():void
 {
   vsync_flag = 0;
-  return 0;
 }
 
-function wait_vsync():int
+function wait_vsync():void
 {
   vsync_flag = 1;
   while( vsync_flag ){}
-  return 0;
 }
