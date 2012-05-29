@@ -174,14 +174,15 @@ class Value
     @opt = opt
     @scope = scope
     @kind = kind
+    @var_type = var_type
   end
 
   def assignable?
-    ( @kind == :var or @type.type == :pointer )
+    ( ( @kind == :var and @var_type != :temp ) or @type.type == :pointer )
   end
 
   def const?
-    ( @kind == :literal or @kind == :const )
+    ( @kind != :var )
   end
 
   def to_s
@@ -324,8 +325,7 @@ class ScopedBlock
     when :const
       ast[1].each do |v|
         raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
-        v[2] = const_eval( v[2] )
-        new_const( v[0], TypeDecl[v[1]], v[2], v[3] )
+        new_const( v[0], TypeDecl[v[1]], const_eval( v[2] ), v[3] )
       end
 
     when :'if'
@@ -665,7 +665,7 @@ EOT
     template = <<EOT
 <h2>variables</h2>
 <table>
-  <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th><th>live</th><th>reg</th></tr>
+  <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th><th>kind</th><th>live</th><th>reg</th></tr>
   <%- block.vars.each do |id,v| -%>
     <tr>
       <td><%= id %></td>
@@ -673,6 +673,7 @@ EOT
       </td><td><%= v.address and "0x%04x"%[v.address]  %></td>
       <td><%= if Lambda === v.val then '(lambda)' else  v.val end %></td>
       <td><%= v.opt %></td></p>
+      <td><%= v.kind %></td></p>
       <td><%= v.lr %></td></p>
       <td><%= v.reg %></td></p>
   <%- end -%>
