@@ -47,7 +47,11 @@ class OpCompiler
   def compile_block( block )
     ops = block.ops
     r = []
-    r << "#{to_asm(block)}:" unless block.id == :''
+    if block.id == :''
+      r << "__init:" 
+    else
+      r << "#{to_asm(block)}:" 
+    end
 
     ops.each do |op| # op=オペランド
       r << "; #{op.inspect}"
@@ -74,6 +78,9 @@ class OpCompiler
         r << "rts"
 
       when :call
+        op[3..-1].each_with_index do |arg,i|
+          r.concat load( op[2].val.args[i], arg)
+        end
         r << "jsr #{to_asm(op[2])}"
         r.concat load( op[1], op[2].val.block.vars[:'0'] ) if op[1]
 
@@ -177,7 +184,7 @@ class OpCompiler
 
       when :index
         raise if op[3].type != TypeDecl[:int]
-        raise if op[2].kind != :var
+        # raise if op[2].kind != :var
         if op[2].type.type == :array
           r << "clc"
           r << "lda #LOW(#{a[2]})"

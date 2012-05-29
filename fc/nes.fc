@@ -1,9 +1,50 @@
-var PPU_CTRL1 :int options (address:0x2000);
-var PPU_CTRL2 :int options (address:0x2001);
-var PPU_STAT  :int options (address:0x2002);
-var PPU_SCROLL:int options (address:0x2005);
-var PPU_ADDR  :int options (address:0x2006);
-var PPU_DATA  :int options (address:0x2007);
+/*
+ * NES用の定義ファイル
+ */
+
+/** PPUレジスタ */
+var PPU_CTRL1   :int options (address:0x2000);
+var PPU_CTRL2   :int options (address:0x2001);
+var PPU_STAT    :int options (address:0x2002);
+var PPU_SPR_ADDR:int options (address:0x2003);
+var PPU_SPR_DATA:int options (address:0x2004);
+var PPU_SCROLL  :int options (address:0x2005);
+var PPU_ADDR    :int options (address:0x2006);
+var PPU_DATA    :int options (address:0x2007);
+var SPRITE_DMA  :int options (address:0x4014);
+
+/** */
+
+var ppu_ctrl1:int = 0b10000000;
+var ppu_ctrl2:int = 0b00011110;
+var ppu_scroll1:int = 0;
+var ppu_scroll2:int = 0;
+
+function ppu_init(ctrl1:int,ctrl2:int):void
+{
+  ppu_ctrl1 = ctrl1;
+  ppu_ctrl2 = ctrl2;
+}
+
+function ppu_scroll(s1:int, s2:int):void
+{
+  ppu_scroll1 = s1;
+  ppu_scroll2 = s2;
+}
+
+function ppu_lock():void
+{
+  PPU_CTRL1 = 0b00000000;
+  PPU_CTRL2 = 0b00000000;
+}
+
+function ppu_unlock():void
+{
+  PPU_SCROLL = ppu_scroll1;
+  PPU_SCROLL = ppu_scroll2;
+  PPU_CTRL1 = ppu_ctrl1;
+  PPU_CTRL2 = ppu_ctrl2;
+}
 
 function ppu_put( addr:int*, size:int ):void
 {
@@ -32,16 +73,3 @@ function ppu_print( str:int* ):void
   }
 }
 
-function ppu_lock():void
-{
-  PPU_CTRL1 = 0b10000000;
-  PPU_CTRL2 = 0b00000000; // 画面表示をOFF
-}
-
-function ppu_unlock():void
-{
-  PPU_SCROLL = 0;
-  PPU_SCROLL = 0;
-  PPU_CTRL1 = 0b10000000;
-  PPU_CTRL2 = 0b00011110; // 画面表示をON
-}

@@ -4,26 +4,44 @@
 
 include( "nes.fc" );
 var vsync_flag:int;
+var sprite_buf:int[256] options (address:0x0700);
 
 function main(): void
 {
-
   ppu_lock();
+  ppu_init(0b10000000,0b00011110);
+  ppu_scroll(0,0);
   
   PPU_ADDR = 0x3F;
   PPU_ADDR = 0x00;
-  PPU_DATA = 0x0F;
-  PPU_DATA = 0x11;
-  PPU_DATA = 0x12;
-  PPU_DATA = 0x13;
+  var n:int = 0;
+  while( n<8 ){
+    PPU_DATA = 0x0F;
+    PPU_DATA = 0x11+n;
+    PPU_DATA = 0x12+n;
+    PPU_DATA = 0x13+n;
+    n+=1;
+  }
+  sprite_buf[0] = 100;
+  sprite_buf[1] = 0x44;
+  sprite_buf[2] = 0b00000000;
+  sprite_buf[3] = 100;
 
   //ppu_fill( 32, 256 );
 
   PPU_ADDR = 0x20;
-  PPU_ADDR = 0x80;
+  PPU_ADDR = 0x20;
   ppu_print( "HOGE.FUGA" );
-  wait_vsync();
   ppu_unlock();
+
+  var x:int = 0;
+  while( x < 12 ){
+    PPU_ADDR = 0x21;
+    PPU_ADDR = x;
+    PPU_DATA = "HELLO, WORLD!"[x];
+    x += 1;
+    wait_vsync();
+  }
   return;
 }
 
@@ -35,6 +53,9 @@ function interrupt():void
 
 function wait_vsync():void
 {
+  PPU_SCROLL = ppu_scroll1;
+  PPU_SCROLL = ppu_scroll2;
+  SPRITE_DMA = 7;
   vsync_flag = 1;
   while( vsync_flag ){}
 }
