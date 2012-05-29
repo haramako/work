@@ -2,3 +2,5 @@ parser.rb
 parser.output
 *.asm
 *.nes
+*.html
+

@@ -8,12 +8,11 @@ end
 # 中間コードコンパイラ
 ######################################################################
 class OpCompiler
-  attr_reader :code_asm, :data_asm
+  attr_reader :asm
 
   def initialize
     @label_count = 0
-    @code_asm = []
-    @data_asm = []
+    @asm = []
     @addr = 0x200
   end
 
@@ -26,29 +25,27 @@ class OpCompiler
       end
     end
 
-    @data_asm << "; function #{block.id}"
-    @code_asm << "; function #{block.id}" 
-
-    # 関数のコードをコンパイル
-    @code_asm << "#{to_asm(block)}:" unless block.id == :''
-    @code_asm << compile_block( block )
+    @asm << "; function #{block.id}" 
 
     # 関数のデータをコンパイル
     block.vars.each do |id,v|
       if v.opt and v.opt[:address]
-        @data_asm << "#{to_asm(v)} = #{v.opt[:address]}"
+        @asm << "#{to_asm(v)} = #{v.opt[:address]}"
       elsif v.const?
         if Array === v.val
-          @code_asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
+          @asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
         end
       else
-        @data_asm << "#{to_asm(v)}: .ds #{v.type.size} ; $#{'%04x'%[@addr]}"
+        @asm << "#{to_asm(v)} = $#{'%04x'%[@addr]}"
         @addr += v.type.size
       end
     end
 
-    @code_asm << ''
-    @data_asm << ''
+    # 関数のコードをコンパイル
+    @asm << "#{to_asm(block)}:" unless block.id == :''
+    @asm << compile_block( block )
+
+    @asm << ''
 
   end
 

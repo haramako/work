@@ -8,6 +8,7 @@
 require 'pp'
 require 'optparse'
 require 'strscan'
+require 'erb'
 require_relative 'parser'
 
 ######################################################################
@@ -103,7 +104,7 @@ class TypeDecl
       elsif ast[0] == :lambda
         @type = :lambda
         @base = TypeDecl[ ast[1] ]
-        @args = args
+        @args = ast[2]
         @size = 2
       end
     end
@@ -116,7 +117,7 @@ class TypeDecl
     when :array
       @str = "#{@base}[#{@length}]"
     when :lambda
-      @str = "->(#{args}):#{@base}"
+      @str = "->(#{args.join(",")}):#{@base}"
     else
       raise "invalid type declaration #{ast}"
     end
@@ -212,7 +213,7 @@ class Lambda
 end
 
 ######################################################################
-# スコープ月ブロック
+# スコープ付きブロック
 ######################################################################
 class ScopedBlock
   attr_reader :upper, :id, :ast, :vars, :ops
@@ -282,7 +283,7 @@ class ScopedBlock
       type = TypeDecl[ [:lambda,ast[3], args] ]
       lmd = Lambda.new( ast[1], type, args, block )
       args.each { |arg| block.add_var(arg) }
-      block.add_var Value.new(:'0', type, nil, nil, block, :var) 
+      block.add_var Value.new(:'0', type.base, nil, nil, block, :var) 
       add_var Value.new( ast[1], lmd.type, lmd, nil, self, :const )
 
     when :var
@@ -562,6 +563,70 @@ class Compiler
     ast, @pos_info = Parser.new(src).parse
     @root = ScopedBlock.new( self, nil, :'', ast )
     @root.compile
+    # interruptがなかったら足す
+    unless @root.vars[:interrupt]
+      blk = ScopedBlock.new(self,@root,:interrupt,[[:return,0]])
+      blk.add_var Value.new(:'0', TypeDecl[:int], nil, nil, blk, :var) 
+      blk.compile
+      lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,:int,[]]],[],blk)
+      @root.add_var Value.new(:interrupt,lmd.type,lmd,nil,@root,:const)
+    end
+  end
+
+  def to_html
+    template = <<EOT
+<html>
+<head><title>hoge</title></head>
+<body>
+<style>
+table { border-collapse: collapse; }
+th { border: solid 1px #888; background-color: #ddd; }
+td { border: solid 1px #888; }
+.block { margin-left: 40px; }
+h1 { border-bottom: solid 1px #00f; }
+.code { font-family: 'Osaka-等幅', 'Osaka-Mono', monospace; border: solid 1px #ddd; }
+</style>
+<h1>(root block)</h1>
+<%= block_to_html(@root) %>
+</body>
+</html>
+EOT
+    ERB.new(template,nil,'-').result(binding)
+  end
+
+  def block_to_html(block)
+    template = <<EOT
+<h2>variables</h2>
+<table>
+  <tr><th>id</th><th>type</th><th>value</th><th>opt</th></tr>
+  <%- block.vars.each do |id,v| -%>
+    <tr>
+      <td><%= id %></td>
+      </td><td><%= v.type %></td>
+      <td><%= if Lambda === v.val then '(lambda)' else  v.val end %></td>
+      <td><%= v.opt %></td></p>
+  <%- end -%>
+</table>
+
+<h2>ast</h2>
+<pre class="code"><%= PP.pp(block.ast,'') %></pre>
+
+<h2>code</h2>
+<pre class="code">
+<%- block.ops.each_with_index do |op,i| -%>
+<%="%04d: %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
+<%- end %></pre>
+
+<%- block.vars.each do |id,v| -%>
+  <%- if v.type.type == :lambda and v.val -%>
+    <div class="block">
+      <h1>function <%= v.id %>(<%= v.val.args.map{|a| "\#{a.id}:\#{a.type}"}.join(", ") %>):<%= v.type.base %></h1>
+      <%= block_to_html(v.val.block) %>
+    </div>
+  <%- end -%>
+<%- end -%>
+EOT
+    ERB.new(template,nil,'-').result(binding)
   end
 
 end
@@ -576,13 +641,17 @@ if __FILE__ == $0
   opt.on( '-d', '--debug', 'show debug info' ){|v| $debug_info = true }
   opt.parse!
 
-  asm_file = ARGV[0].sub(/\..+$/){'.asm'}
+  base = File.basename($out,'.*')
   src = ARGF.read
 
   # ソースコードを中間コードのコンパイル
   com = Compiler.new
-  asm = com.compile( src )
-  open(asm_file,'w'){|f| f.write asm }
+  com.compile( src )
+  if $debug_info
+    open( base+'.html', 'w' ) do |f|
+      f.write com.to_html
+    end
+  end
 
   if $run
     require_relative 'runner'
@@ -618,9 +687,6 @@ if __FILE__ == $0
 	.org $0000
 __reg: .ds 8
 
-	.org $0200
-@DATA
-
 	.org $8000
 __start:
 	sei
@@ -636,7 +702,7 @@ __interrupt:
     pha
     tya
     pha
-    jsr interrupt
+    jsr _Vinterrupt
     pla
     tay
     pla
@@ -644,26 +710,20 @@ __interrupt:
     pla
     rti
 
-interrupt:
-    rts
-
 @CODE
 EOT
 
   str = template.gsub(/@OPTIONS/){''}
     .gsub(/@INCLUDES/){''}
-    .gsub(/@DATA/){op_com.data_asm.join("\n")}
-    .gsub(/@CODE/){op_com.code_asm.join("\n")}
+    .gsub(/@CODE/){op_com.asm.join("\n")}
 
-  asm_file = File.basename($out,'.*')+".asm"
-
-  open( asm_file, 'w' ) do |f|
+  open( base+'.asm', 'w' ) do |f|
     f.write str
   end
 
   unless $asm
     puts '====ASSEMBLE====' if $debug_info
-    if system( '/Users/makoto/bin/nesasm', asm_file ).nil?
+    if system( '/Users/makoto/bin/nesasm', base+'.asm' ).nil?
       raise 'cannot exec nesasm'
     end
   end

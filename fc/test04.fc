@@ -8,13 +8,12 @@ var PPU_SCROLL:int options (address:0x2005);
 var PPU_ADDR  :int options (address:0x2006);
 var PPU_DATA  :int options (address:0x2007);
 
+var vsync_flag:int;
+
 function main(): int
 {
-  
-  var x:int;
 
-  PPU_CTRL1 = 0b00000000;
-  PPU_CTRL2 = 0b00000000; // 画面表示をOFF
+  ppu_lock();
   
   PPU_ADDR = 0x3F;
   PPU_ADDR = 0x00;
@@ -23,17 +22,13 @@ function main(): int
   PPU_DATA = 0x12;
   PPU_DATA = 0x13;
 
-  PPU_ADDR = 0x20;
-  PPU_ADDR = 0x80;
   //ppu_fill( 32, 256 );
 
-  ppu_print( "HOGE.FUGA;\n" );
-
-  PPU_SCROLL = 0;
-  PPU_SCROLL = 0;
-  
-  PPU_CTRL1 = 0b10000000;
-  PPU_CTRL2 = 0b00011110; // 画面表示をON
+  PPU_ADDR = 0x20;
+  PPU_ADDR = 0x80;
+  ppu_print( "HOGE.FUGA" );
+  wait_vsync();
+  ppu_unlock();
 
   return 0;
 }
@@ -65,5 +60,34 @@ function ppu_print( str:int* ): int
     PPU_DATA = str[i];
     i += 1;
   }
+  return 0;
+}
+
+function ppu_lock():int
+{
+  PPU_CTRL1 = 0b10000000;
+  PPU_CTRL2 = 0b00000000; // 画面表示をOFF
+  return 0;
+}
+
+function ppu_unlock():int
+{
+  PPU_SCROLL = 0;
+  PPU_SCROLL = 0;
+  PPU_CTRL1 = 0b10000000;
+  PPU_CTRL2 = 0b00011110; // 画面表示をON
+  return 0;
+}
+
+function interrupt():int
+{
+  vsync_flag = 0;
+  return 0;
+}
+
+function wait_vsync():int
+{
+  vsync_flag = 1;
+  while( vsync_flag ){}
   return 0;
 }
