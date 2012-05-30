@@ -34,16 +34,20 @@ function exit( code:int ):void
 function assert_true( a:int, message:*int ):void
 {
   if( !a ){
+    puts( '' );
     print( "ERROR: " );
     puts( message );
     puts( "  expects true but false" );
     exit(1);
+  }else{
+    print('.');
   }
 }
 
 function assert_equal( a:int16, b:int16, message:*int ):void
 {
   if( a != b ){
+    puts( '' );
     print( "ERROR: " );
     puts( message );
     print( "  expects " );
@@ -52,5 +56,7 @@ function assert_equal( a:int16, b:int16, message:*int ):void
     print_int16( a );
     puts( '' );
     exit(1);
+  }else{
+    print('.');
   }
 }

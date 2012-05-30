@@ -1,0 +1,118 @@
+include( "emu.fc" );
+
+function test_const_operator():void
+{
+  print('test_const_operator:');
+  assert_equal( 1, 1, 'num');
+  assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
+  assert_true(  (1 < 2), "<");
+  assert_true( !(2 < 2), "!,<");
+  assert_true(  (2 > 1), ">");
+  assert_true( !(2 > 2), "!,>");
+  assert_true(  (2 <= 2), "<=");
+  assert_true( !(3 <= 2), "!,<=");
+  assert_true(  (3 >= 2), ">=");
+  assert_true( !(2 >= 3), "!,>=");
+  assert_true( 2 == 2, "==");
+  assert_true( 2 != 3, "!=");
+  puts('');
+}
+
+function test_int_operator():void
+{
+  print('test_int_operator:');
+
+  var i1:int = 1;
+  var i2:int = 2;
+  var i3:int = 3;
+  var i10:int = 10;
+
+  assert_equal( i1, i1, 'num');
+  //assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
+  assert_true(  (i1 < i2), "<");
+  assert_true( !(i2 < i2), "!,<");
+  assert_true(  (i2 > i1), ">");
+  assert_true( !(i2 > i2), "!,>");
+  assert_true(  (i2 <= i2), "<=");
+  assert_true( !(i3 <= i2), "!,<=");
+  assert_true(  (i3 >= i2), ">=");
+  assert_true( !(i2 >= i3), "!,>=");
+  assert_true( i2 == i2, "==");
+  assert_true( i2 != i3, "!=");
+  puts('');
+}
+
+function test_int16_operator():void
+{
+  print('test_int16_operator:');
+
+  var i1:int16 = 1;
+  var i2:int16 = 2;
+  var i3:int16 = 3;
+  var i10:int16 = 10;
+
+  assert_equal( i1, i1, 'num');
+  //assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
+  assert_true(  (i1 < i2), "<");
+  assert_true( !(i2 < i2), "!,<");
+  assert_true(  (i2 > i1), ">");
+  assert_true( !(i2 > i2), "!,>");
+  assert_true(  (i2 <= i2), "<=");
+  assert_true( !(i3 <= i2), "!,<=");
+  assert_true(  (i3 >= i2), ">=");
+  assert_true( !(i2 >= i3), "!,>=");
+  assert_true( i2 == i2, "==");
+  assert_true( i2 != i3, "!=");
+  puts('');
+}
+
+function test_int8_and_int16_operator():void
+{
+  print('test_int8_and_int16_operator:');
+
+  var i1:int = 1;
+  var i2:int = 2;
+  var i3:int = 3;
+  var i10:int16 = 10;
+  var w1:int16 = 1;
+  var w2:int16 = 2;
+  var w3:int16 = 3;
+  var w10:int16 = 10;
+
+  assert_equal( w1, i1, 'num');
+  //assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
+  assert_true(  (w1 < i2), "<");
+  assert_true( !(w2 < i2), "!,<");
+  assert_true(  (w2 > i1), ">");
+  assert_true( !(w2 > i2), "!,>");
+  assert_true(  (w2 <= i2), "<=");
+  assert_true( !(w3 <= i2), "!,<=");
+  assert_true(  (w3 >= i2), ">=");
+  assert_true( !(w2 >= i3), "!,>=");
+  assert_true( w2 == i2, "==");
+  assert_true( w2 != i3, "!=");
+  puts('');
+}
+
+function test_nesasm_limit():void
+{
+  // 長い識別子がエラーになる( NESASMの１行制限のため )
+  var toooooooooooooooooooooooooooooooooooooooo_long_id: int = 0;
+  toooooooooooooooooooooooooooooooooooooooo_long_id = toooooooooooooooooooooooooooooooooooooooo_long_id + 1;
+  // 長い文字列がエラーになる( NESASMの１行80文字制限のため )
+  var i:*int = "toooooooooooooooooooooooooooooooooooooooooooooooooo_long_string";
+}
+
+function test_optimize_bug():void
+{
+}
+
+test_const_operator();
+test_int_operator();
+test_int16_operator();
+test_int8_and_int16_operator();
+test_nesasm_limit();
+test_optimize_bug();
+
+exit(0);
+

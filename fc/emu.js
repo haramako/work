@@ -172,7 +172,7 @@ function jumpBranch( offset ) {
 }
 
 function doCompare( reg, val ) {
-  if( (reg+val) > 0xff ) regP |= 1; else regP &= 0xfe;
+  if( reg >= val ) regP |= 1; else regP &= 0xfe;
   val = (reg-val);
 //  if( reg+0x100-val > 0xff ) regP |= 1; else regP &= 0xfe;
 //  val = reg+0x100-val;
@@ -1228,7 +1228,7 @@ while( codeRunning ){
     var code = memory[0x1003];
     memory[0x1003] = -1;
     puts('');
-    if( code != 0 ) dump(0x000, 0x400);
+    if( code ) dump(0x000, 0x400);
     process.exit(code);
   }
   // 0x1002への書き込みで0x1000のポインタの文字列を表示する
@@ -1239,7 +1239,7 @@ while( codeRunning ){
       // 文字列の出力
       var addr = memory[0x1000] + memory[0x1001] * 256;
       var buf = '';
-      while( memory[addr] ){
+      while( memory[addr] != 0 ){
         buf = buf + String.fromCharCode(memory[addr]);
         addr++;
       }

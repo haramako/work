@@ -1,4 +1,5 @@
 # coding: utf-8
+require 'digest/md5'
 
 ######################################################################
 # 中間コードコンパイラ
@@ -34,7 +35,10 @@ class OpCompiler
         v.address = v.opt[:address]
       elsif v.const?
         if Array === v.val
-          @asm << "#{to_asm(v)}: .db #{v.val.join(',')}"
+          @asm << "#{to_asm(v)}:"
+          v.val.each_slice(16) do |slice|
+            @asm << "\t.db #{slice.join(',')}"
+          end
         end
       else
         if v.reg == :mem
@@ -341,19 +345,24 @@ class OpCompiler
   def to_asm( v )
     if ScopedBlock === v
       if v.upper
-        "#{to_asm(v.upper)}_V#{v.id}"
+        r = "#{to_asm(v.upper)}_V#{v.id}"
       else
-        "#{v.id}"
+        r = "#{v.id}"
       end
+      # 長すぎる場合は、だめっぽいので md5 でマングルする
+      r = '_'+Digest::MD5.hexdigest(r) if r.size >= 16
     elsif v.kind == :literal
       "##{v.val.to_s}"
     else
       if v.scope
-        "#{to_asm(v.scope)}_V#{v.id}"
+        r = "#{to_asm(v.scope)}_V#{v.id}"
       else
-        "#{v.id}"
+        r = "#{v.id}"
       end
+      # 長すぎる場合は、だめっぽいので md5 でマングルする
+      r = '_'+Digest::MD5.hexdigest(r) if r.size >= 16
     end
+    r
   end
 
   def byte( v, n )
@@ -381,6 +390,12 @@ class OpCompiler
     ops.each_with_index do |op,i|
       next unless op
       case op[0]
+      when :load
+        if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1] 
+          unless op[1].opt[:address]
+            next
+          end
+        end
       when :pget, :pset
         if Value === op[1] 
           if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
