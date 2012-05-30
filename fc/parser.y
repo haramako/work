@@ -66,6 +66,7 @@ exp: '(' exp ')' { result = val[1] }
    | '&' exp = UMINUS { result = [:ref, val[1]] }
    | exp '(' exp_list ')' { result = [:call, val[0], val[2]] }
    | exp '[' exp ']' { result = [:index, val[0], val[2]] }
+   | '[' exp_list ']' { result = [:array, val[1]] }
    | NUMBER
    | IDENT
    | STRING

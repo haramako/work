@@ -1,34 +1,32 @@
-// comment
-/* comment */
-// const CONST:int = 10+10;
+options ( inesprg: 1, // プログラムにいくつのバンクを使うか。今は１つ。
+          ineschr: 1, // グラフィックデータにいくつのバンクを使うか。今は１つ。
+          inesmir: 0, // 水平ミラーリング
+          inesmap: 0  // マッパー。０番にする。
+          );
 
 include( "nes.fc" );
+include( "nes_util.fc" );
+
 var vsync_flag:int;
 var sprite_buf:int[256] options (address:0x0700);
 
 function main(): void
 {
+  const PAL:int[32] = [0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
+                       0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
+  
   ppu_lock();
   ppu_init(0b10000000,0b00011110);
   ppu_scroll(0,0);
   
   PPU_ADDR = 0x3F;
   PPU_ADDR = 0x00;
-  var n:int = 0;
-  while( n<8 ){
-    PPU_DATA = 0x0F;
-    PPU_DATA = 0x11+n;
-    PPU_DATA = 0x12+n;
-    PPU_DATA = 0x13+n;
-    n+=1;
-  }
-  sprite_buf[0] = 100;
+  ppu_put( PAL, 32 );
+  
+  sprite_buf[0] = 30;
   sprite_buf[1] = 0x44;
   sprite_buf[2] = 0b00000000;
-  sprite_buf[3] = 100;
-
-  var a:int,b:int,c:int;
-  a = b + c + c;
+  sprite_buf[3] = 40;
 
   //ppu_fill( 32, 256 );
 
@@ -48,17 +46,4 @@ function main(): void
   return;
 }
 
-
-function interrupt():void
-{
-  vsync_flag = 0;
-}
-
-function wait_vsync():void
-{
-  PPU_SCROLL = ppu_scroll1;
-  PPU_SCROLL = ppu_scroll2;
-  SPRITE_DMA = 7;
-  vsync_flag = 1;
-  while( vsync_flag ){}
-}
+main();

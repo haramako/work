@@ -151,7 +151,7 @@ class Value
   attr_reader :kind # 種類( :var, :const, :literal のいずれか）
   attr_reader :id # 変数名( リテラルの場合は、nil )
   attr_reader :type # TypeDecl
-  attr_reader :val # リテラルもしくは定数の場合は数値、変数の場合は初期化式のASTかnil
+  attr_reader :val # リテラルもしくは定数の場合は数値
   attr_reader :opt # オプション
   attr_reader :scope # スコープ(Function)
   attr_reader :var_type # varのときのみ( :var, :temp, :arg のいずれか )
@@ -226,7 +226,7 @@ end
 # スコープ付きブロック
 ######################################################################
 class ScopedBlock
-  attr_reader :upper, :id, :ast, :vars, :ops
+  attr_reader :upper, :id, :ast, :vars, :ops, :options
   attr_accessor :asm
 
   def initialize( compiler, upper, id, ast )
@@ -238,6 +238,7 @@ class ScopedBlock
     @tmp_count = 1
     @label_count = 0
     @ops = []
+    @options = Hash.new
     @asm = []
     @loops = []
     @cur_filename = nil
@@ -289,7 +290,7 @@ class ScopedBlock
     update_pos( ast )
     case ast[0]
     when :options
-      @options.merge!( e[1] )
+      @options.merge!( ast[1] )
 
     when :include_bin
       @include_bin << e[1]
@@ -318,7 +319,7 @@ class ScopedBlock
 
     when :var
       ast[1].each do |v|
-        var = new_var( v[0], TypeDecl[v[1]], v[2], v[3] )
+        var = new_var( v[0], TypeDecl[v[1]], nil, v[3] )
         compile_statement( [:exp, [:load, var.id, v[2]]] ) if v[2]
       end
 
@@ -506,6 +507,8 @@ class ScopedBlock
       r = ast
     when Array
       case ast[0]
+      when :array
+        r = [:array, ast[1].map{|v| const_eval(v)} ]
       when :add, :sub, :mul, :div, :eq, :ne, :lt, :gt, :le, :ge
         ast[1] = const_eval( ast[1] )
         ast[2] = const_eval( ast[2] )
@@ -578,6 +581,19 @@ class ScopedBlock
   end
 
   def new_const(id,type,init,opt)
+    case init
+    when nil, Numeric, Lambda
+    when String
+      init = str.unpack('c*').concat([0])
+    when Array
+      if init[0] == :array
+        init = init[1]
+      else
+        raise "not constant value #{@init}"
+      end
+    else
+      raise "not constant value #{@init}"
+    end
     add_var Value.new(id,type,init,opt,self, :const, nil )
   end
 
@@ -594,7 +610,7 @@ class ScopedBlock
   def new_literal_string(str)
     var = add_var( Value.new("#{@tmp_count}".intern, 
                              TypeDecl[[:array,str.size+1,:int]], 
-                             [ str.unpack('c*').concat([0]) ], nil, self, :const, nil ) )
+                             str.unpack('c*').concat([0]), nil, self, :const, nil ) )
     @tmp_count += 1
     var
   end
@@ -761,11 +777,6 @@ if __FILE__ == $0
 
   template = <<EOT
 @OPTIONS
-	.inesprg 1 ;   - プログラムにいくつのバンクを使うか。今は１つ。
-	.ineschr 1 ;   - グラフィックデータにいくつのバンクを使うか。今は１つ。
-	.inesmir 0 ;   - 水平ミラーリング
-	.inesmap 0 ;   - マッパー。０番にする。
-@INCLUDES
 	.bank 2
 	.org $0000
 	.incbin "character.chr"
@@ -778,8 +789,7 @@ if __FILE__ == $0
 	.dw 0
 
 	.bank 0
-	.org $0000
-__reg: .ds 8
+__reg = 0 ; 汎用レジスタ
 
 	.org $8000
 __start:
@@ -787,7 +797,6 @@ __start:
 	ldx #255
 	txs
 	jsr __init
-	jsr _Vmain
 .loop:
     jmp .loop
 
@@ -808,7 +817,12 @@ __interrupt:
 @CODE
 EOT
 
-  str = template.gsub(/@OPTIONS/){''}
+  options = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
+  options.merge!( com.root.options )
+  options_asm = options.map{|k,v| "\t.#{k} #{v}" }
+
+  str = template
+    .gsub(/@OPTIONS/){options_asm.join("\n")}
     .gsub(/@INCLUDES/){''}
     .gsub(/@CODE/){op_com.asm.join("\n")}
 
