@@ -1205,8 +1205,21 @@ puts( 'start' );
 codeRunning = true;
 while( codeRunning ){
   execute();
-  if( memory[0xffff] != 0 ){
+  if( memory[0x1003] ){
     codeRunning = false;
+  }
+  if( memory[0x1002] ){
+    memory[0x1002] = 0;
+    puts( memory.slice(0x1000,0x1002));
+    var addr = memory[0x1000] + memory[0x1001] * 256;
+    var buf = '';
+    puts( addr2hex(addr) );
+    puts( memory.slice(addr,addr+16));
+    while( memory[addr] ){
+      buf = buf + memory[addr];
+      addr++;
+    }
+    puts( 'PRINT:', buf );
   }
 }
 show();
