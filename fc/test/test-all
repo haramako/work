@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
+require 'pp'
+require 'json'
+
+def parse_nes( file )
+  data = File.read( file )
+
+  # ヘッダの解析
+  head, _1a, prog_count, chr_count, ctrl1, ctrl2, _00, _00, pal_ntsc, _00x5 = data.unpack( 'A3C8A5' )
+  raise "invalid iNES file '#{file}'" if head != 'NES'
+
+  # ROMデータの読み出し
+  prog_bank = []
+  prog_count.times do |i|
+    prog_bank << data[16 + i*16*1024, 16*1024].unpack('C*')
+  end
+
+  chr_bank = []
+  chr_count.times do |i|
+    chr_bank << data[16 + prog_count*16*1024 + i*8*1024, 8*1024].unpack('C*')
+  end
+
+  # プログラムサイズを測る
+  prog_size = 0
+  prog_bank.each do |mem|
+    bank_size = nil
+    (mem.size-7).downto(0) do |i|
+      bank_size = i
+      break if mem[i] != 255
+    end
+    prog_size += bank_size
+  end
+
+  { prog_size: prog_size, prog_bank: prog_bank, chr_bank: chr_bank }
+end
+
+size_prev = JSON.parse( File.read('size_prev.txt') )
+size_cur = Hash.new
+
+err = false
+Dir.glob 'test_*.fc' do |file|
+  puts "=testing #{file}"
+  result = `cd .. && ./fc test/#{file} && node emu.js a.nes || echo __ERROR__`
+  if /__ERROR__/ === result
+    puts result
+    err = true
+  end
+  nes = parse_nes( '../a.nes' )
+  size_cur[file] = nes[:prog_size]
+end
+
+File.write( 'size_cur.txt', JSON.dump( size_cur ) )
+
+size_cur.each_key do |file|
+  if size_prev[file] and size_cur[file] >= size_prev[file] * 1.1 # 1.1倍は適当
+    puts "warning: code size increased, %s %d->%d"%[file, size_prev[file], size_cur[file]]
+  end
+end
+
+exit(1) if err
