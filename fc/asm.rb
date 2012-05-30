@@ -12,6 +12,7 @@ class OpCompiler
     @asm = []
     @address = 0x200
     @address_zeropage = 0x010
+    @trim_table = Hash.new
   end
 
   def compile( block )
@@ -64,8 +65,8 @@ class OpCompiler
 
   def compile_block( block )
     ops = block.ops
-    ops = optimize( block, ops )
-    block.ops[0..-1] = ops
+    # ops = optimize( block, ops )
+    # block.ops[0..-1] = ops
     alloc_register( block, ops )
 
     r = []
@@ -345,24 +346,36 @@ class OpCompiler
   def to_asm( v )
     if ScopedBlock === v
       if v.upper
-        r = "#{to_asm(v.upper)}_V#{v.id}"
+        trim_id "#{to_asm(v.upper)}_V#{v.id}"
       else
-        r = "#{v.id}"
+        trim_id "#{v.id}"
       end
-      # 長すぎる場合は、だめっぽいので md5 でマングルする
-      r = '_'+Digest::MD5.hexdigest(r) if r.size >= 16
     elsif v.kind == :literal
       "##{v.val.to_s}"
     else
       if v.scope
-        r = "#{to_asm(v.scope)}_V#{v.id}"
+        trim_id "#{to_asm(v.scope)}_V#{v.id}"
       else
-        r = "#{v.id}"
+        trim_id "#{v.id}"
       end
-      # 長すぎる場合は、だめっぽいので md5 でマングルする
-      r = '_'+Digest::MD5.hexdigest(r) if r.size >= 16
     end
-    r
+  end
+
+  # 長すぎる場合は、だめっぽいのでカットする
+  def trim_id(str)
+    return str if str.size < 16
+    n = 0
+    while true
+      trimed = str[0,14]+n.to_s
+      if @trim_table[trimed] == str
+        return trimed
+      elsif @trim_table[trimed].nil?
+        @trim_table[trimed] = str
+        return trimed
+      end
+      n += 1
+    end
+    raise
   end
 
   def byte( v, n )
@@ -389,22 +402,26 @@ class OpCompiler
     calc_liverange( block, ops )
     ops.each_with_index do |op,i|
       next unless op
+      next if Value === op[1] and op[1].nonlocal
       case op[0]
       when :load
         if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1] 
           unless op[1].opt[:address]
-            next
+            #puts "omit #{op}"
+            #next
           end
         end
       when :pget, :pset
         if Value === op[1] 
           if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
-            next
+            # puts "omit #{op}"
+            #next
           end
         end
       when :call
         r << [op[0]]+[nil]+op[2..-1]
-        next
+        # puts "omit #{op}"
+        #next
       end
       r << op
     end
@@ -428,6 +445,7 @@ class OpCompiler
                 op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and 
                 op[3].type.size == 1 # サイズが１なら
+              puts "omit #{op}"
               r << [:index_pget, next_op[1], op[2], op[3]]
               ops[i+1] = nil
               next
@@ -438,6 +456,7 @@ class OpCompiler
 #                op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and # 
                 op[3].type.size == 1 # サイズが１なら
+              puts "omit #{op}"
               r << [:index_pset, op[2], op[3], next_op[2]]
               ops[i+1] = nil
               next
@@ -453,6 +472,8 @@ class OpCompiler
   def alloc_register( block, ops )
     calc_liverange( block, ops )
     block.vars.each do |id,v|
+      v.reg = :mem
+      next
       if v.kind != :var or # 変数じゃないか
           v.nonlocal or # ローカルじゃないか
           v.var_type == :arg or # 引数か

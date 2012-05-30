@@ -106,6 +106,15 @@ function test_nesasm_limit():void
 
 function test_optimize_bug():void
 {
+  print('test_optimize_bug:');
+  // uppperの変数が unuse として判断されてしまうバグ
+  var t1_local:int = 0;
+  function t1():void {
+    t1_local = 1;
+  }
+  t1();
+  assert_equal( t1_local, 1, 'local unuse');
+  puts('');
 }
 
 test_const_operator();

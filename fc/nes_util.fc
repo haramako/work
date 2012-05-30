@@ -1,12 +1,12 @@
-var ppu_ctrl1:int = 0b10000000;
-var ppu_ctrl2:int = 0b00011110;
+var ppu_ctrl1_bak:int = 0b10000000;
+var ppu_ctrl2_bak:int = 0b00011110;
 var ppu_scroll1:int = 0;
 var ppu_scroll2:int = 0;
 
 function ppu_init(ctrl1:int,ctrl2:int):void
 {
-  ppu_ctrl1 = ctrl1;
-  ppu_ctrl2 = ctrl2;
+  ppu_ctrl1_bak = ctrl1;
+  ppu_ctrl2_bak = ctrl2;
 }
 
 function ppu_scroll(s1:int, s2:int):void
@@ -25,8 +25,8 @@ function ppu_unlock():void
 {
   PPU_SCROLL = ppu_scroll1;
   PPU_SCROLL = ppu_scroll2;
-  PPU_CTRL1 = ppu_ctrl1;
-  PPU_CTRL2 = ppu_ctrl2;
+  PPU_CTRL1 = ppu_ctrl1_bak;
+  PPU_CTRL2 = ppu_ctrl2_bak;
 }
 
 function ppu_put( addr:*int, size:int ):void

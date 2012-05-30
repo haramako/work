@@ -650,7 +650,7 @@ end
 # コンパイラ
 ######################################################################
 class Compiler
-  attr_reader :ast, :func ,:vars, :options, :include_bin, :pos_info, :root
+  attr_reader :ast, :pos_info, :root
 
   def initialize
     @pos_info = nil
