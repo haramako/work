@@ -841,9 +841,11 @@ EOT
   end
 
   unless $asm
-    puts '====ASSEMBLE====' if $debug_info
-    if system( '/Users/makoto/bin/nesasm', base+'.asm' ).nil?
-      raise 'cannot exec nesasm'
+    # puts '====ASSEMBLE====' if $debug_info
+    result = `/Users/makoto/bin/nesasm #{base+'.asm'}`
+    if /error/ === result
+      puts result
+      exit(1)
     end
   end
 

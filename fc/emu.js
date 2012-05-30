@@ -1145,7 +1145,7 @@ function message(){
 
 var fs = require('fs');
 
-function loadNes(filename){
+function loadNesFile(filename){
   var buf = fs.readFileSync(filename);
   var pos = 0;
   var nes = {};
@@ -1192,37 +1192,63 @@ function show(){
   console.log( 'pc=0x%s code=0x%s', addr2hex(regPC), num2hex(memory[regPC]) );
 }
 
-puts( 'loading...' );
+function dump(from,size){
+  puts( '====DUMP====' );
+  puts( '      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F' );
+  puts( '-----------------------------------------------------' );
+  for( var i = from; i<from+size; i+=16 ){
+    var str = addr2hex(i) + ': ';
+    for( var j = 0; j < 16; j++ ){
+      str += num2hex(memory[i+j]) + ' ';
+    }
+    puts( str );
+  }
+}
+
 defaultCodePC = 0x8000;
-var nes = loadNes( 'a.nes' );
+var nes = loadNesFile( process.argv[2] );
 var rom = nes.progRom[0];
+if( !nes ){
+  puts( 'invalid NES file '+process.argv[2] );
+  process.exit(1);
+}
 for( var i=0; i<rom.length; i++ ){
   memory[0x8000+i] = rom[i];
 }
 regPC = 0x8000;
 
-puts( 'start' );
+// 実行！
 codeRunning = true;
+memory[0x1002] = -1;
+memory[0x1003] = -1;
 while( codeRunning ){
   execute();
-  if( memory[0x1003] ){
-    codeRunning = false;
+  // 0x1003への書き込みで終了する
+  if( memory[0x1003] != -1 ){
+    var code = memory[0x1003];
+    memory[0x1003] = -1;
+    puts('');
+    if( code != 0 ) dump(0x000, 0x400);
+    process.exit(code);
   }
-  if( memory[0x1002] ){
+  // 0x1002への書き込みで0x1000のポインタの文字列を表示する
+  if( memory[0x1002] != -1 ){
+    var type = memory[0x1002];
     memory[0x1002] = 0;
-    puts( memory.slice(0x1000,0x1002));
-    var addr = memory[0x1000] + memory[0x1001] * 256;
-    var buf = '';
-    puts( addr2hex(addr) );
-    puts( memory.slice(addr,addr+16));
-    while( memory[addr] ){
-      buf = buf + memory[addr];
-      addr++;
+    if( type == 1 ){
+      // 文字列の出力
+      var addr = memory[0x1000] + memory[0x1001] * 256;
+      var buf = '';
+      while( memory[addr] ){
+        buf = buf + String.fromCharCode(memory[addr]);
+        addr++;
+      }
+      process.stdout.write( buf );
+    }else if( type == 2 ){
+      // 数値の出力
+      process.stdout.write( ''+(memory[0x1000] + memory[0x1001] * 256) );
     }
-    puts( 'PRINT:', buf );
   }
 }
-show();
 
 execute();
-

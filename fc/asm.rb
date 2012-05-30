@@ -130,8 +130,8 @@ class OpCompiler
         end
 
       when :eq
-        true_label, end_label = new_labels(2)
-        ([op[2].type.size,op[3].type.size].max-1).downto(0) do |i|
+        false_label, end_label = new_labels(2)
+        [ op[2].type.size, op[3].type.size ].max.times do |i|
           if op[2].type.size > i
             r << load_a( op[2],i)
           elsif op[2].type.size == i
@@ -142,15 +142,15 @@ class OpCompiler
           else
             r << "cmp #0" 
           end
-          r << "beq #{true_label}"
+          r << "bne #{false_label}"
         end
         # falseのとき
-        r << "lda #0"
+        r << "lda #1"
         r << store_a(op[1],0)
         r << "jmp #{end_label}"
         # trueのとき
-        r << "#{true_label}:"
-        r << "lda #1"
+        r << "#{false_label}:"
+        r << "lda #0"
         r << store_a(op[1],0)
         r << "#{end_label}:"
 
@@ -443,19 +443,15 @@ class OpCompiler
           v.var_type == :arg or # 引数か
           v.var_type == :return_val # 帰り値
         v.reg = :mem
-      elsif v.opt and v.opt[:address] 
+      elsif v.opt and v.opt[:address] # address指定なら mem
         v.reg = :mem
-      elsif v.lr.nil? 
+      elsif v.lr.nil? # 使われてないなら none
         v.reg = :none
-      elsif v.type.size > 1 # サイズが2byte以上
+      elsif v.type.size > 1 # サイズが2byte以上なら mem
         v.reg = :mem
       else
-        if v.lr[1] <= v.lr[0]
-          if v.var_type == :temp
-            v.reg = :none
-          else
-            v.reg = :mem
-          end
+        if v.lr[1] <= v.lr[0] # 寿命が1ならそれは使ってないよね
+          v.reg = :none
         elsif v.lr[1] == v.lr[0]+1
           # pp '*',v,ops[v.lr[0]], ops[v.lr[1]]
           op1 = ops[v.lr[0]]
@@ -463,28 +459,17 @@ class OpCompiler
           if op1[1] == v
             case op2[0]
             when :load
-              if op2[2] == v
-                v.reg = :a
-              else
-                v.reg = :mem
-              end
+              v.reg = :a if op2[2] == v
             when :add, :sub, :lt, :eq
-              if op2[2] == v
-                v.reg = :a
-              else
-                v.reg == :mem
-              end
-            else
-              v.reg = :mem
+              v.reg = :a if op2[2] == v
             end
-          else
-            v.reg = :mem
           end
         elsif v.var_type == :temp
           v.reg = :stack
-        else
-          v.reg = :mem
         end
+      end
+      unless v.reg
+        v.reg = :mem
       end
     end
   end
