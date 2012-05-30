@@ -234,6 +234,7 @@ end
 class ScopedBlock
   attr_reader :upper, :id, :ast, :vars, :ops, :options
   attr_accessor :asm
+  attr_accessor :optimized_ops
 
   def initialize( compiler, upper, id, ast )
     @compiler = compiler
@@ -678,7 +679,12 @@ class Compiler
   end
 
   def block_to_html(block)
+    require 'differ'
     @template_block ||= File.read( File.dirname(__FILE__)+'/share/block.html.erb' )
+    if block.optimized_ops
+      diff = Differ.diff_by_line(block.optimized_ops.map{|l|l.to_s}.join("\n"), block.ops.map{|l|l.to_s}.join("\n"))
+      optimized_ops = diff.format_as(:html)
+    end
     ERB.new(@template_block,nil,'-').result(binding)
   end
 

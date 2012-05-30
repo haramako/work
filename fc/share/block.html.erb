@@ -27,6 +27,17 @@
 <%= "<font color='#aaa'>%04d:</font> %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
 <%- end %></pre>
 
+<h2>code(optimized)</h2>
+<pre class="code">
+<%- if block.optimized_ops -%>
+  <%- block.optimized_ops.each_with_index do |op,i| -%>
+<%= "<font color='#aaa'>%04d:</font> %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
+  <%- end %>
+<%- end %></pre>
+
+<h2>optimize diff</h2>
+<pre class="code"><%= optimized_ops %></pre>
+
 <h2>asm</h2>
 <pre class="code">
 <%- block.asm.each do |line| -%>

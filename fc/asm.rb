@@ -65,8 +65,9 @@ class OpCompiler
 
   def compile_block( block )
     ops = block.ops
-    # ops = optimize( block, ops )
-    # block.ops[0..-1] = ops
+    block.optimized_ops = Marshal.load(Marshal.dump(ops))
+    ops = optimize( block, ops )
+    block.optimized_ops = ops
     alloc_register( block, ops )
 
     r = []
@@ -402,26 +403,27 @@ class OpCompiler
     calc_liverange( block, ops )
     ops.each_with_index do |op,i|
       next unless op
-      next if Value === op[1] and op[1].nonlocal
       case op[0]
       when :load
         if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1] 
-          unless op[1].opt[:address]
-            #puts "omit #{op}"
-            #next
+          unless op[1].opt[:address] or op[1].nonlocal
+            puts "omit #{op}"
+            next
           end
         end
       when :pget, :pset
         if Value === op[1] 
           if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
-            # puts "omit #{op}"
-            #next
+            puts "omit #{op}"
+            next
           end
         end
       when :call
-        r << [op[0]]+[nil]+op[2..-1]
-        # puts "omit #{op}"
-        #next
+        if op[1] 
+          puts "omit #{op}"
+          r << [op[0]]+[nil]+op[2..-1]
+          next
+        end
       end
       r << op
     end
@@ -451,9 +453,8 @@ class OpCompiler
               next
             end
           elsif next_op[0] == :pset
-#            pp op[1].lr
             if op[1] == next_op[1] and # 同じ変数を連続で使っていて
-#                op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
+                op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and # 
                 op[3].type.size == 1 # サイズが１なら
               puts "omit #{op}"
@@ -512,7 +513,11 @@ class OpCompiler
 
   def calc_liverange( block, ops )
     block.vars.each do |id,v|
-      v.lr = nil
+      if v.var_type == :arg or v.var_type == :return_val
+        v.lr = [0, ops.size-1]
+      else
+        v.lr = nil
+      end
     end
     ops.each_with_index do |op,i|
       update_liverange( block, i, op[1..-1] )
