@@ -30,7 +30,7 @@ class Parser
     end
     if @scanner.eos?
       r = nil
-    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|=|,|@|!/)
+    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|->|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|=|,|@|!/)
       # 記号
       r = [@scanner[0], @scanner[0]]
     elsif @scanner.scan(/0[xX]([\d\w]+)/)
@@ -69,6 +69,12 @@ class Parser
   def parse
     ast = do_parse
     [ast, @pos_info]
+  end
+
+  def on_error( token_id, err_val, stack )
+    puts "#{@filename}:#{@line_no}: error with #{token_id}"
+    # pp token_id, err_val, stack
+    super
   end
 end
 
@@ -110,8 +116,8 @@ class TypeDecl
         @size = @base.size * @length
       elsif ast[0] == :lambda
         @type = :lambda
-        @base = TypeDecl[ ast[1] ]
-        @args = ast[2]
+        @base = TypeDecl[ ast[2] ]
+        @args = ast[1]
         @size = 2
       end
     end
@@ -120,11 +126,11 @@ class TypeDecl
     when :int, :void
       @str = "#{ast}"
     when :pointer
-      @str = "#{@base}*"
+      @str = "*#{@base}"
     when :array
-      @str = "#{@base}[#{@length}]"
+      @str = "[#{@length}]#{@base}"
     when :lambda
-      @str = "->(#{args.join(",")}):#{@base}"
+      @str = "(#{args.join(",")}):#{@base}"
     else
       raise "invalid type declaration #{ast}"
     end
@@ -154,7 +160,7 @@ class Value
   attr_reader :val # リテラルもしくは定数の場合は数値
   attr_reader :opt # オプション
   attr_reader :scope # スコープ(Function)
-  attr_reader :var_type # varのときのみ( :var, :temp, :arg のいずれか )
+  attr_reader :var_type # varのときのみ( :var, :temp, :arg, :reterun_val のいずれか )
 
   # 以下は、アセンブラで使用
   attr_accessor :address # アドレス
@@ -218,7 +224,7 @@ class Lambda
   end
 
   def to_s
-    "<Lambda:#{@id}:#{@type}>"
+    "<Lambda:#{@id}#{@type}>"
   end
 end
 
@@ -312,9 +318,9 @@ class ScopedBlock
       args = ast[2].map do |v|
         block.new_arg( v[0], TypeDecl[v[1]] )
       end
-      type = TypeDecl[ [:lambda,ast[3], args] ]
+      type = TypeDecl[ [:lambda, args, ast[3]] ]
       lmd = Lambda.new( ast[1], type, args, block )
-      block.new_var( :'0', type.base ) if type.base != TypeDecl[:void]
+      block.new_return_val(type.base) if type.base != TypeDecl[:void]
       new_const( ast[1], lmd.type, lmd, nil )
 
     when :var
@@ -546,7 +552,7 @@ class ScopedBlock
     elsif a.type == :pointer and b.type == :array and a.base == b.base
       return a
     end
-    raise "cant convert type #{a} and #{b}"
+    raise CompileError.new("cant convert type #{a} and #{b}")
   end
 
   def update_pos( ast )
@@ -607,6 +613,10 @@ class ScopedBlock
     add_var Value.new(id,type,nil,nil,self, :var, :arg)
   end
 
+  def new_return_val(type)
+    add_var Value.new(:'0',type,nil,nil,self, :var, :return_val )
+  end
+
   def new_literal_string(str)
     var = add_var( Value.new("#{@tmp_count}".intern, 
                              TypeDecl[[:array,str.size+1,:int]], 
@@ -649,9 +659,9 @@ class Compiler
 
     # interruptがなかったら足す
     unless @root.vars[:interrupt]
-      blk = ScopedBlock.new(self,@root,:interrupt,[[:return,0]])
+      blk = ScopedBlock.new(self,@root,:interrupt,[])
       blk.compile
-      lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,:void,[]]],[],blk)
+      lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,[],:void]],[],blk)
       @root.new_const(:interrupt,lmd.type,lmd,nil)
     end
   end

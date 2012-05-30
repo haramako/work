@@ -440,7 +440,8 @@ class OpCompiler
     block.vars.each do |id,v|
       if v.kind != :var or # 変数じゃないか
           v.nonlocal or # ローカルじゃないか
-          v.var_type == :arg # 引数か
+          v.var_type == :arg or # 引数か
+          v.var_type == :return_val # 帰り値
         v.reg = :mem
       elsif v.opt and v.opt[:address] 
         v.reg = :mem

@@ -98,10 +98,15 @@ var_option: | 'options' '(' option_list ')' { result = val[2] }
 
 /****************************************************/
 /* type declaration */
-type_decl: type_decl type_modifier { result = val[1]+[val[0]]; }
+type_decl: type_modifier type_decl { result = val[0]+[val[1]]; }
          | IDENT { result = val[0] }
-         
-type_modifier: '[' exp ']' { result = [:array, val[1]] }
-             | '*'         { result = [:pointer] }
 
+type_modifier: '[' exp ']'            { result = [:array, val[1]] }
+             | '*'                    { result = [:pointer] }
+             | '(' type_decl_list ')' ':' { result = [:lambda, val[1] ] }
+
+type_decl_list: type_decl ',' type_decl { result = val[0] + [val[2]] }
+              | type_decl { result = [val[0]] }
+              | { result = [] }
+               
 end

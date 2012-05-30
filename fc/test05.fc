@@ -1,0 +1,15 @@
+options ( inesprg: 1, // プログラムにいくつのバンクを使うか。今は１つ。
+          ineschr: 1, // グラフィックデータにいくつのバンクを使うか。今は１つ。
+          inesmir: 0, // 水平ミラーリング
+          inesmap: 0  // マッパー。０番にする。
+          );
+
+//include( "nes.fc" );
+//include( "nes_util.fc" );
+
+function main():int
+{
+  return 0;
+}
+
+main();
