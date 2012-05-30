@@ -667,77 +667,13 @@ class Compiler
   end
 
   def to_html
-    template = <<EOT
-<html>
-<head><title>hoge</title></head>
-<body>
-<style>
-table { border-collapse: collapse; }
-th { border: solid 1px #888; background-color: #ddd; }
-td { border: solid 1px #888; }
-.block { margin-left: 40px; }
-h1 { border-bottom: solid 1px #00f; }
-.code { font-family: 'Osaka-等幅', 'Osaka-Mono', monospace; border: solid 1px #ddd; }
-</style>
-<h1>(root block)</h1>
-<%= block_to_html(@root) %>
-</body>
-</html>
-EOT
-    ERB.new(template,nil,'-').result(binding)
+    @template_main ||= File.read( File.dirname(__FILE__)+'/share/main.html.erb' )
+    ERB.new(@template_main,nil,'-').result(binding)
   end
 
   def block_to_html(block)
-    template = <<EOT
-<h2>variables</h2>
-<table>
-  <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th><th>kind</th><th>live</th><th>reg</th></tr>
-  <%- block.vars.each do |id,v| -%>
-    <tr>
-      <td><%= id %></td>
-      </td><td><%= v.type %></td>
-      </td><td><%= v.address and "0x%04x"%[v.address]  %></td>
-      <td><%= if Lambda === v.val then '(lambda)' else  v.val end %></td>
-      <td><%= v.opt %></td></p>
-      <td><%= v.kind %></td></p>
-      <td><%= v.lr %></td></p>
-      <td><%= v.reg %></td></p>
-  <%- end -%>
-</table>
-
-<h2>ast</h2>
-<pre class="code"><%= PP.pp(block.ast,'') %></pre>
-
-<h2>code</h2>
-<pre class="code">
-<%- block.ops.each_with_index do |op,i| -%>
-<%= "<font color=\\"#aaa\\">%04d:</font> %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
-<%- end %></pre>
-
-<h2>asm</h2>
-<pre class="code">
-<%- block.asm.each do |line| -%>
-<%- if /^\\s+;/ === line -%>
-<font color="green"><%= line %></font>
-<%- elsif /^[.\\w]+:/ === line -%>
-<font color="#88f"><%= line %></font>
-<%- else -%>
-<%= line %>
-<%- end -%>
-<%- end -%>
-</pre>
-
-<%- block.vars.each do |id,v| -%>
-  <%- if v.type.type == :lambda and v.val -%>
-    <div class="block">
-      <a name="<%=id%>"></a>
-      <h1>function <%= v.id %>(<%= v.val.args.map{|a| "\#{a.id}:\#{a.type}"}.join(", ") %>):<%= v.type.base %></h1>
-      <%= block_to_html(v.val.block) %>
-    </div>
-  <%- end -%>
-<%- end -%>
-EOT
-    ERB.new(template,nil,'-').result(binding)
+    @template_block ||= File.read( File.dirname(__FILE__)+'/share/block.html.erb' )
+    ERB.new(@template_block,nil,'-').result(binding)
   end
 
 end
@@ -785,47 +721,7 @@ if __FILE__ == $0
     end
   end
 
-  template = <<EOT
-@OPTIONS
-	.bank 2
-	.org $0000
-	.incbin "character.chr"
-	.incbin "character.chr"
-
-	.bank 1
-	.org $FFFA
-	.dw __interrupt
-	.dw __start
-	.dw 0
-
-	.bank 0
-__reg = 0 ; 汎用レジスタ
-
-	.org $8000
-__start:
-	sei
-	ldx #255
-	txs
-	jsr __init
-.loop:
-    jmp .loop
-
-__interrupt:
-    pha
-    txa
-    pha
-    tya
-    pha
-    jsr _Vinterrupt
-    pla
-    tay
-    pla
-    tax
-    pla
-    rti
-
-@CODE
-EOT
+  template = File.read( File.dirname(__FILE__) + '/share/nes.asm' ) 
 
   options = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
   options.merge!( com.root.options )

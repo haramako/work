@@ -1,13 +1,21 @@
 include( "emu.fc" );
 
-var a:int, b:int;
+function test():void
+{
+  var a:int, b:int;
+  a = 10;
+  b = 20;
 
-assert_equal( 0, 0, "0 == 0");
-assert_equal( 1, 1, "0 != 1");
-assert_true( 0 == 0, "0 == 0");
-assert_true( 1 == 1, "1 == 1");
-assert_true( (a=1) < (b=2), "1 < 2");
-assert_true( 2 > 1, "2 > 1");
-puts( 'hoge' );
+  assert_equal( a+10, b, "+");
+  assert_equal( a+10, b-10, "+");
+  //assert_equal( a* 2, b, "*");
+  assert_true( 0 == 0, "0 == 0");
+  assert_true( 1 == 1, "1 == 1");
+  assert_true( (a=1) < (b=2), "1 < 2");
+  assert_true( 2 > 1, "2 > 1");
+}
+
+test();
+
 exit(0);
 

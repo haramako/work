@@ -1,0 +1,15 @@
+<html>
+<head><title>hoge</title></head>
+<body>
+<style>
+table { border-collapse: collapse; }
+th { border: solid 1px #888; background-color: #ddd; }
+td { border: solid 1px #888; }
+.block { margin-left: 40px; }
+h1 { border-bottom: solid 1px #00f; }
+.code { font-family: 'Osaka-等幅', 'Osaka-Mono', monospace; border: solid 1px #ddd; }
+</style>
+<h1>(root block)</h1>
+<%= block_to_html(@root) %>
+</body>
+</html>
