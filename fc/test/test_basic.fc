@@ -94,6 +94,7 @@ function test_int8_and_int16_operator():void
   puts('');
 }
 
+// NESの制限によるエラーをテスト、主にコンパイル時エラーになる
 function test_nesasm_limit():void
 {
   // 長い識別子がエラーになる( NESASMの１行制限のため )

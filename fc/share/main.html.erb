@@ -8,8 +8,15 @@ td { border: solid 1px #888; }
 .block { margin-left: 40px; }
 h1 { border-bottom: solid 1px #00f; }
 .code { font-family: 'Osaka-等幅', 'Osaka-Mono', monospace; border: solid 1px #ddd; }
+.content { margin-left: 160px; float: left; }
+.left_bar { width: 160px; position: fixed; }
 </style>
-<h1>(root block)</h1>
-<%= block_to_html(@root) %>
+
+<div class="left_bar">
+  <%= left_bar %>
+</div>
+<div class="content">
+  <%= block_to_html(@root) %>
+</div>
 </body>
 </html>

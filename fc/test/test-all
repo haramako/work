@@ -42,7 +42,7 @@ size_cur = Hash.new
 err = false
 Dir.glob 'test_*.fc' do |file|
   puts "=testing #{file}"
-  result = `cd .. && ./fc test/#{file} && node emu.js a.nes || echo __ERROR__`
+  result = `cd .. && ./fc -d test/#{file} && node emu.js a.nes || echo __ERROR__`
   if /__ERROR__/ === result
     puts result
     err = true

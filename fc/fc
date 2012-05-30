@@ -673,6 +673,7 @@ class Compiler
 
   def to_html
     @template_main ||= File.read( File.dirname(__FILE__)+'/share/main.html.erb' )
+    left_bar = make_left_bar(@root)
     ERB.new(@template_main,nil,'-').result(binding)
   end
 
@@ -681,6 +682,16 @@ class Compiler
     ERB.new(@template_block,nil,'-').result(binding)
   end
 
+  def make_left_bar(block)
+    id = block.id 
+    id = '(root block)' if block.id == :''
+    r = "<li><a href='##{id}'>#{id}</a><ul>"
+    block.vars.each do |id,v|
+      r += make_left_bar(v.val.block) if v.val and Lambda === v.val and v.val.type.type == :lambda
+    end
+    r += '</ul></li>'
+    r
+  end
 end
 
 if __FILE__ == $0

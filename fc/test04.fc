@@ -29,6 +29,9 @@ function main(): void
   sprite_buf[3] = 40;
 
   //ppu_fill( 32, 256 );
+  ppu_unlock();
+  wait_vsync();
+  return;
 
   PPU_ADDR = 0x20;
   PPU_ADDR = 0x80;

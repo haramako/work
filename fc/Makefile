@@ -4,9 +4,7 @@ all: parser.rb
 
 .PHONY: test
 test: all
-	for i in `ls test/test_*.fc` ; do \
-	  echo ./fc $$i && node emu.js a.nes ; \
-	done
+	cd test ; ./test-all
 
 parser.rb: parser.y
 	racc parser.y -o parser.rb

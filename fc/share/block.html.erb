@@ -1,3 +1,7 @@
+<%- if block.id == :'' then id = '(root block)' else id = block.id end -%>
+<a name="<%=id%>"></a>
+<h1>function <%= id %></h1>
+
 <h2>variables</h2>
 <table>
   <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th><th>kind</th><th>live</th><th>reg</th></tr>
@@ -39,8 +43,6 @@
 <%- block.vars.each do |id,v| -%>
   <%- if v.type.type == :lambda and v.val -%>
     <div class="block">
-      <a name="<%=id%>"></a>
-      <h1>function <%= v.id %>(<%= v.val.args.map{|a| "#{a.id}:#{a.type}"}.join(", ") %>):<%= v.type.base %></h1>
       <%= block_to_html(v.val.block) %>
     </div>
   <%- end -%>
