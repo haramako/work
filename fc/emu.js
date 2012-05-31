@@ -1149,6 +1149,7 @@ function loadNesFile(filename){
   var buf = fs.readFileSync(filename);
   var pos = 0;
   var nes = {};
+  puts( buf.length );
   
   function read(n){
     var r, i;
@@ -1181,9 +1182,9 @@ function loadNesFile(filename){
   read(5);
 
   nes.progRom = [];
-  nes.chrRom = [];
+  // nes.chrRom = [];
   nes.progRom[0] = read(0x4000);
-  nes.chrRom[0] = read(0x2000);
+  // nes.chrRom[0] = read(0x2000);
   
   return nes;
 }

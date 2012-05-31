@@ -101,7 +101,7 @@ function test_nesasm_limit():void
   var toooooooooooooooooooooooooooooooooooooooo_long_id: int = 0;
   toooooooooooooooooooooooooooooooooooooooo_long_id = toooooooooooooooooooooooooooooooooooooooo_long_id + 1;
   // 長い文字列がエラーになる( NESASMの１行80文字制限のため )
-  var i:*int = "toooooooooooooooooooooooooooooooooooooooooooooooooo_long_string";
+  var i:int* = "toooooooooooooooooooooooooooooooooooooooooooooooooo_long_string";
 }
 
 function test_optimize_bug():void

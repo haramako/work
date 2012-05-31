@@ -126,11 +126,11 @@ class TypeDecl
     when :int, :void
       @str = "#{ast}"
     when :pointer
-      @str = "*#{@base}"
+      @str = "#{@base}*"
     when :array
-      @str = "[#{@length}]#{@base}"
+      @str = "#{@base}[#{@length}]"
     when :lambda
-      @str = "(#{args.join(",")}):#{@base}"
+      @str = "#{@base}(#{args.join(",")})"
     else
       raise "invalid type declaration #{ast}"
     end

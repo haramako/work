@@ -2,7 +2,7 @@
  * コマンドラインエミュレータ用の定義ファイル
  */
 
-var EMU_ADDR    :*int options (address:0x1000);
+var EMU_ADDR    :int* options (address:0x1000);
 var EMU_DATA    :int16 options (address:0x1000);
 var EMU_PRINT   :int  options (address:0x1002);
 var EMU_EXIT    :int  options (address:0x1003);
@@ -13,15 +13,15 @@ function print_int16( n:int16 ):void
   EMU_PRINT = 2;
 }
 
-function print( str:*int ):void
+function print( str:int* ):void
 {
   EMU_ADDR = str;
   EMU_PRINT = 1;
 }
 
-function puts( str:*int ):void
+function puts( str:int* ):void
 {
-  const LF:[2]int = [10,0];
+  const LF:int[2] = [10,0];
   print( str );
   print( LF );
 }
@@ -31,7 +31,7 @@ function exit( code:int ):void
   EMU_EXIT = code;
 }
 
-function assert_true( a:int, message:*int ):void
+function assert_true( a:int, message:int* ):void
 {
   if( !a ){
     puts( '' );
@@ -44,7 +44,7 @@ function assert_true( a:int, message:*int ):void
   }
 }
 
-function assert_equal( a:int16, b:int16, message:*int ):void
+function assert_equal( a:int16, b:int16, message:int* ):void
 {
   if( a != b ){
     puts( '' );
