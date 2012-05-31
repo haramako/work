@@ -5,7 +5,7 @@ require 'digest/md5'
 # 中間コードコンパイラ
 ######################################################################
 class OpCompiler
-  attr_reader :asm
+  attr_reader :asm, :char_banks
 
   def initialize
     @label_count = 0
@@ -13,6 +13,7 @@ class OpCompiler
     @address = 0x200
     @address_zeropage = 0x010
     @trim_table = Hash.new
+    @char_banks = Hash.new {|h,k| h[k] = [] } # バンクごとのアセンブラ
   end
 
   def compile( block )
@@ -35,11 +36,19 @@ class OpCompiler
         @asm << "#{to_asm(v)} = #{v.opt[:address]}"
         v.address = v.opt[:address]
       elsif v.const?
-        if Array === v.val
+        # constの場合
+        if v.opt[:file]
+          raise "invalid const #{v}" unless v.opt[:char_bank] and Numeric === v.opt[:char_bank]
+          @char_banks[v.opt[:char_bank]] << "\t.incbin \"#{v.opt[:file]}\""
+        elsif Array === v.val
           @asm << "#{to_asm(v)}:"
           v.val.each_slice(16) do |slice|
             @asm << "\t.db #{slice.join(',')}"
           end
+        elsif Numeric === v.val or Lambda === v.val
+          # function, 数値定数
+        else
+          raise "invalid const #{v}"
         end
       else
         if v.reg == :mem

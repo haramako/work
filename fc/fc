@@ -332,7 +332,7 @@ class ScopedBlock
 
     when :const
       ast[1].each do |v|
-        raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
+        # raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
         new_const( v[0], TypeDecl[v[1]], const_eval( v[2] ), v[3] )
       end
 
@@ -748,11 +748,17 @@ if __FILE__ == $0
   options = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
   options.merge!( com.root.options )
   options_asm = options.map{|k,v| "\t.#{k} #{v}" }
+  chr_asm = []
+  op_com.char_banks.each do |bank,asm|
+    chr_asm << "\t.bank #{2+bank}"
+    chr_asm << "\t.org $0000"
+    chr_asm.concat asm
+  end
 
-  str = template
-    .gsub(/@OPTIONS/){options_asm.join("\n")}
-    .gsub(/@INCLUDES/){''}
-    .gsub(/@CODE/){op_com.asm.join("\n")}
+  options_asm = options_asm.join("\n");
+  chr_asm = chr_asm.join("\n");
+  code_asm = op_com.asm.join("\n")
+  str = ERB.new(template,nil,'-').result(binding)
 
   open( base+'.asm', 'w' ) do |f|
     f.write str
