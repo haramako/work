@@ -320,12 +320,17 @@ class OpCompiler
       when :index_pget
         if op[2].type.type == :array
           r << "ldy #{byte(op[3],0)}"
-          r << "lda #{a[2]},y"
-          r << store_a(op[1],0)
+          op[1].type.size.times do |i|
+            r << "lda #{a[2]}+#{i},y"
+            r << store_a(op[1],i)
+          end
         elsif op[2].type.type == :pointer
           r << "ldy #{byte(op[3],0)}"
-          r << "lda [#{a[2]}],y"
-          r << store_a(op[1],0)
+          op[1].type.size.times do |i|
+            r << "iny" if i != 0
+            r << "lda [#{a[2]}],y"
+            r << store_a(op[1],i)
+          end
         else
           raise
         end
@@ -333,12 +338,17 @@ class OpCompiler
       when :index_pset
         if op[1].type.type == :array
           r << "ldy #{byte(op[2],0)}"
-          r << load_a( op[3],0)
-          r << "sta #{a[1]},y"
+          op[3].type.size.times do |i|
+            r << load_a( op[3],i)
+            r << "sta #{a[1]}+#{i},y"
+          end
         elsif op[1].type.type == :pointer
           r << "ldy #{byte(op[2],0)}"
-          r << load_a( op[3],0)
-          r << "sta [#{a[1]}],y"
+          op[3].type.size.times do |i|
+            r << "iny" if i != 0
+            r << load_a( op[3],i)
+            r << "sta [#{a[1]}],y"
+          end
         end
 
       else
@@ -524,7 +534,7 @@ class OpCompiler
                 op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and 
                 op[3].type.size == 1 # サイズが１なら
-              puts "omit #{op}"
+              puts "replace #{op}"
               r << [:index_pget, next_op[1], op[2], op[3]]
               ops[i+1] = nil
               next
@@ -534,7 +544,7 @@ class OpCompiler
                 op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and # 
                 op[3].type.size == 1 # サイズが１なら
-              puts "omit #{op}"
+              puts "replace #{op}"
               r << [:index_pset, op[2], op[3], next_op[2]]
               ops[i+1] = nil
               next

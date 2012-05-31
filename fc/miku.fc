@@ -32,7 +32,8 @@ function interrupt():void
 
   var i:int = 0;
   while( i < gr_idx ){
-    ppu_put( gr_to_buf[i], gr_from_buf[i], gr_size_buf[i] );
+    ppu_put( gr_to_buf[i*2], gr_from_buf[i*2], gr_size_buf[i] );
+    i += 1;
   }
   gr_idx = 0;
   
@@ -61,9 +62,10 @@ function ppu_put( to:int16, from:int*, size:int ):void options ( extern:true ) {
 
 function gr_add( to:int16, from:int*, size:int):void
 {
-  gr_from_buf[gr_idx] = from;
-  gr_to_buf[gr_idx] = to;
+  gr_from_buf[gr_idx*2] = from;
+  gr_to_buf[gr_idx*2] = to;
   gr_size_buf[gr_idx] = size;
+  gr_idx += 1;
 }
 
 function main(): void
@@ -79,6 +81,7 @@ function main(): void
   ppu_unlock();
 
   gr_add( 0x2080, "FUGA", 4 );
+  gr_add( 0x2081, "PIYO", 5 );
 
   
 }
