@@ -24,20 +24,24 @@ var gr_size_buf:int[4];
 
 function interrupt():void
 {
+  // 描画の更新を行う
+  if( vsync_flag ){
+    SPRITE_DMA = 7;
+    
+    var i:int = 0;
+    while( i < gr_idx ){
+      ppu_put( gr_to_buf[i], gr_from_buf[i], gr_size_buf[i] );
+      i += 1;
+    }
+    gr_idx = 0;
+    vsync_flag = 0;
+  }
+  
   PPU_SCROLL = ppu_scroll1;
   PPU_SCROLL = ppu_scroll2;
-  SPRITE_DMA = 7;
   PPU_CTRL1 = ppu_ctrl1_bak;
   PPU_CTRL2 = ppu_ctrl2_bak;
 
-  var i:int = 0;
-  while( i < gr_idx ){
-    ppu_put( gr_to_buf[i], gr_from_buf[i], gr_size_buf[i] );
-    i += 1;
-  }
-  gr_idx = 0;
-  
-  vsync_flag = 0;
 }
 
 function wait_vsync():void
@@ -83,6 +87,7 @@ function main(): void
   gr_add( 0x2080, "FUGA", 4 );
   gr_add( 0x20A0, "PIYO", 5 );
 
+  wait_vsync();
   
 }
 
