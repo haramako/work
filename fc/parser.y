@@ -42,6 +42,7 @@ statement: options ';'
          | 'continue' ';' { result = [:continue] }
          | 'return' ';' { result = [:return] }
          | 'return' exp ';' { result = [:return, val[1]] }
+         | 'asm' '(' STRING ')' ';' { result = [:asm, val[2]] }
 
          |  exp ';' { result = [:exp, val[0]] }
          

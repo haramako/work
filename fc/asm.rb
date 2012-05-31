@@ -279,9 +279,7 @@ class OpCompiler
         r << "#{end_label}:"
 
       when :asm
-        op[1].each do |line|
-          r << "#{line[0]} " + line[1..-1].map{|o|to_asm(o)}.join(",")
-        end
+        r << op[1]
 
       when :index
         raise if op[3].type != TypeDecl[:int]
@@ -319,13 +317,13 @@ class OpCompiler
         # 最適化後のオペレータ
       when :index_pget
         if op[2].type.type == :array
-          r << "ldy #{byte(op[3],0)}"
+          r.concat load_y_idx(op[3],op[2])
           op[1].type.size.times do |i|
             r << "lda #{a[2]}+#{i},y"
             r << store_a(op[1],i)
           end
         elsif op[2].type.type == :pointer
-          r << "ldy #{byte(op[3],0)}"
+          r.concat load_y_idx(op[3],op[2])
           op[1].type.size.times do |i|
             r << "iny" if i != 0
             r << "lda [#{a[2]}],y"
@@ -337,13 +335,13 @@ class OpCompiler
 
       when :index_pset
         if op[1].type.type == :array
-          r << "ldy #{byte(op[2],0)}"
+          r.concat load_y_idx(op[2],op[1])
           op[3].type.size.times do |i|
             r << load_a( op[3],i)
             r << "sta #{a[1]}+#{i},y"
           end
         elsif op[1].type.type == :pointer
-          r << "ldy #{byte(op[2],0)}"
+          r.concat load_y_idx(op[2],op[1])
           op[3].type.size.times do |i|
             r << "iny" if i != 0
             r << load_a( op[3],i)
@@ -369,6 +367,18 @@ class OpCompiler
 
     block.asm = r
 
+    r
+  end
+
+  def load_y_idx( idx, ptr )
+    r = []
+    if ptr.type.base.size == 1
+      r << "ldy #{byte(idx,0)}"
+    else
+      r << "lda #{byte(idx,0)}"
+      (ptr.type.base.size-1).times { r << 'asl a'}
+      r << "tay"
+    end
     r
   end
 

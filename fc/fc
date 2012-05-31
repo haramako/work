@@ -44,7 +44,7 @@ class Parser
       r = [:NUMBER, @scanner[0].to_i]
     elsif @scanner.scan(/\w+/)
       # 識別子/キーワード
-      if /^(include|function|const|var|options|if|else|loop|while|return|break|continue|include_bin)$/ === @scanner[0]
+      if /^(include|function|const|var|options|if|else|loop|while|return|break|continue|asm)$/ === @scanner[0]
         r = [@scanner[0], @scanner[0]]
       else
         r = [:IDENT, @scanner[0].to_sym ]
@@ -397,6 +397,9 @@ class ScopedBlock
     when :exp
       const_eval( ast[1] )
       rval( ast[1] )
+
+    when :asm
+      emit *ast
 
     else
       raise "unknow op #{ast}"
