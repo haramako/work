@@ -12,6 +12,5 @@ var PPU_SCROLL  :int options (address:0x2005);
 var PPU_ADDR    :int options (address:0x2006);
 var PPU_DATA    :int options (address:0x2007);
 var SPRITE_DMA  :int options (address:0x4014);
-
-
-
+var PAD_CTRL    :int options (address:0x4016);
+var PAD_DATA    :int options (address:0x4017);

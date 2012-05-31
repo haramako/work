@@ -433,6 +433,7 @@ class ScopedBlock
       case ast[0]
 
       when :load
+        pp ast
         left, left_value = lval(ast[1])
         right = rval(ast[2])
         if left_value

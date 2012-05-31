@@ -9,7 +9,6 @@ include( "nes.fc" );
 
 const BG:int[1] options ( file:'character.chr', char_bank: 0 );
 
-var sprite_buf:int[256] options (address:0x0700);
 
 var vsync_flag:int;
 var ppu_ctrl1_bak:int = 0b10000000;
@@ -21,12 +20,25 @@ var gr_idx:int = 0;
 var gr_to_buf:int16[4];
 var gr_from_buf:int*[4];
 var gr_size_buf:int[4];
+var gr_spr_idx:int = 0;
+var gr_sprite_buf:int[256] options (address:0x0700);
+
+var pad_a:int;
+var pad_b:int;
+var pad_select:int;
+var pad_start:int;
+var pad_up:int;
+var pad_down:int;
+var pad_left:int;
+var pad_right:int;
 
 function interrupt():void
 {
   // 描画の更新を行う
   if( vsync_flag ){
+    
     SPRITE_DMA = 7;
+    gr_spr_idx = 0;
     
     var i:int = 0;
     while( i < gr_idx ){
@@ -72,6 +84,28 @@ function gr_add( to:int16, from:int*, size:int):void
   gr_idx += 1;
 }
 
+function gr_sprite( x:int, y:int, pat:int, mode:int ):void {
+  var p:int;
+  gr_sprite_buf[p] = y;
+  gr_sprite_buf[p+1] = pat;
+  gr_sprite_buf[p+2] = mode;
+  gr_sprite_buf[p+3] = x;
+}
+
+function pad_update():void
+{
+  PAD_CTRL = 1;
+  PAD_CTRL = 0;
+  pad_a = PAD_CTRL % 2;
+  pad_b = PAD_CTRL;
+  pad_select = PAD_CTRL;
+  pad_start = PAD_CTRL;
+  pad_up = PAD_CTRL;
+  pad_down = PAD_CTRL;
+  pad_left = PAD_CTRL;
+  pad_right = PAD_CTRL;
+}
+
 function main(): void
 {
   const PAL:int[32] = [0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
@@ -80,14 +114,24 @@ function main(): void
   ppu_lock();
   
   ppu_put( 0x3f00, PAL, 32 );
-
+  
   ppu_unlock();
 
-  asm( "clc" );
   gr_add( 0x2080, "FUGA", 4 );
   gr_add( 0x20A0, "PIYO", 5 );
 
-  wait_vsync();
+  var x:int = 100;
+  var y:int = 100;
+  
+  while( 1 ){
+    pad_update();
+    if( pad_up ){ y -= 1; }
+    if( pad_down ){ y += 1; }
+    if( pad_left ){ x -= 1; }
+    if( pad_right ){ x += 1; }
+    gr_sprite( x, y, 0x41, 0 );
+    wait_vsync();    
+  }
   
 }
 
