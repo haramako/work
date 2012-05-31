@@ -145,20 +145,62 @@ class OpCompiler
         end
 
       when :mul, :div, :mod
-        op[1].type.size.times do |i|
-          r << "lda #{byte(op[2],i)}"
-          r << "sta __reg+0+#{i}"
-          r << "lda #{byte(op[3],i)}"
-          r << "sta __reg+2+#{i}"
-        end
-        if op[1].type.size == 1
-          r << "jsr __#{op[0]}_8"
+        # 定数で２の累乗の場合の最適化
+        if Numeric === op[3].val and [0,1,2,4,8,16,32,64,128].include?(op[3].val) and op[1].type.size == 1
+          n = Math.log(op[3].val,2).to_i
+          r << load_a( op[2], 0 )
+          case op[0]
+           when :mul
+            n.times { r << "asl a" }
+          when :div
+            n.times { r << "lsr a" }
+          when :mod
+            r << "and ##{op[3].val-1}"
+          end
+          r << store_a( op[1], 0 )
+        elsif Numeric === op[3].val and [0,1,2,4,8,16,32,64,128].include?(op[3].val) and op[1].type.size > 1
+          n = Math.log(op[3].val,2).to_i
+          size = op[1].type.size
+          case op[0]
+          when :mul
+            r.concat load( op[1], op[2] )
+            n.times do 
+              size.times do |i| 
+                rot = ( i == 0 ? 'asl' : 'rol' )
+                r << "#{rot} #{byte(op[1],i)}" 
+              end
+            end
+          when :div
+            r.concat load( op[1], op[2] )
+            n.times do 
+              size.downto(0) do |i| 
+                rot = ( i == size-1 ? 'lsr' : 'ror' )
+                r << "#{rot} #{byte(op[1],i)}"
+              end
+            end
+          when :mod
+            size.times do |i| 
+              r << load_a( op[2], i )
+              r << "and ##{((op[3].val-1)>>(i*8))%256}"
+              r << store_a( op[1], i )
+            end
+          end
         else
-          r << "jsr __#{op[0]}_16"
-        end
-        op[1].type.size.times do |i|
-          r << "lda __reg+4+#{i}"
-          r << "sta #{byte(op[1],i)}"
+          op[1].type.size.times do |i|
+            r << "lda #{byte(op[2],i)}"
+            r << "sta __reg+0+#{i}"
+            r << "lda #{byte(op[3],i)}"
+            r << "sta __reg+2+#{i}"
+          end
+          if op[1].type.size == 1
+            r << "jsr __#{op[0]}_8"
+          else
+            r << "jsr __#{op[0]}_16"
+          end
+          op[1].type.size.times do |i|
+            r << "lda __reg+4+#{i}"
+            r << "sta #{byte(op[1],i)}"
+          end
         end
 
       when :eq
@@ -373,23 +415,23 @@ class OpCompiler
   def to_asm( v )
     if ScopedBlock === v
       if v.upper
-        trim_id "#{to_asm(v.upper)}_V#{v.id}"
+        mangle "#{to_asm(v.upper)}_V#{v.id}"
       else
-        trim_id "#{v.id}"
+        mangle "#{v.id}"
       end
     elsif v.kind == :literal
       "##{v.val.to_s}"
     else
       if v.scope
-        trim_id "#{to_asm(v.scope)}_V#{v.id}"
+        mangle "#{to_asm(v.scope)}_V#{v.id}"
       else
-        trim_id "#{v.id}"
+        mangle "#{v.id}"
       end
     end
   end
 
   # 長すぎる場合は、だめっぽいのでカットする
-  def trim_id(str)
+  def mangle(str)
     return str if str.size < 16
     n = 0
     while true

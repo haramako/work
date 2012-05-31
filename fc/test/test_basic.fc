@@ -46,6 +46,12 @@ function test_int_operator():void
   assert_true( !(i2 >= i3), "!,>=");
   assert_true( i2 == i2, "==");
   assert_true( i2 != i3, "!=");
+
+  // 定数の最適化
+  assert_equal( i10*16, 160, '*const' );
+  assert_equal( i10/4, 2, '/const' );
+  assert_equal( i10%8, 2, '%const' );
+  
   puts('');
 }
 
@@ -70,6 +76,12 @@ function test_int16_operator():void
   assert_true( !(i2 >= i3), "!,>=");
   assert_true( i2 == i2, "==");
   assert_true( i2 != i3, "!=");
+
+  // 定数の最適化
+  assert_equal( i10*16, 160, '*const' );
+  assert_equal( i10/4, 2, '/const' );
+  assert_equal( i10%8, 2, '%const' );
+  
   puts('');
 }
 
