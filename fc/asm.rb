@@ -5,7 +5,7 @@ require 'digest/md5'
 # 中間コードコンパイラ
 ######################################################################
 class OpCompiler
-  attr_reader :asm, :char_banks
+  attr_reader :asm, :char_banks, :includes
 
   def initialize
     @label_count = 0
@@ -16,16 +16,21 @@ class OpCompiler
     @char_banks = Hash.new {|h,k| h[k] = [] } # バンクごとのアセンブラ
   end
 
-  def compile( block )
+  def compile( block, extern = false )
 
     # lambdaのコンパイル
     block.vars.each do |id,v|
-      if Lambda === v.val
-        compile v.val.block
+      if Lambda === v.val 
+        compile v.val.block, v.val.opt[:extern]
       end
     end
 
     @asm << "; function #{block.id}" 
+
+    # include(.asm)の処理
+    block.includes.each do |file|
+      @asm << "\t.include \"#{file}\""
+    end
 
     # 関数のコードをコンパイル
     code_asm = compile_block( block )
@@ -67,7 +72,11 @@ class OpCompiler
       end
     end
 
-    @asm.concat code_asm
+    if extern
+      # DO NOTHING
+    else
+      @asm.concat code_asm
+    end
     @asm << ''
 
   end
@@ -146,7 +155,7 @@ class OpCompiler
 
       when :mul, :div, :mod
         # 定数で２の累乗の場合の最適化
-        if Numeric === op[3].val and [0,1,2,4,8,16,32,64,128].include?(op[3].val) and op[1].type.size == 1
+        if Numeric === op[3].val and [0,1,2,4,8,16,32,64,128,256].include?(op[3].val) and op[1].type.size == 1
           n = Math.log(op[3].val,2).to_i
           r << load_a( op[2], 0 )
           case op[0]
@@ -158,7 +167,7 @@ class OpCompiler
             r << "and ##{op[3].val-1}"
           end
           r << store_a( op[1], 0 )
-        elsif Numeric === op[3].val and [0,1,2,4,8,16,32,64,128].include?(op[3].val) and op[1].type.size > 1
+        elsif Numeric === op[3].val and [0,1,2,4,8,16,32,64,128,256].include?(op[3].val) and op[1].type.size > 1
           n = Math.log(op[3].val,2).to_i
           size = op[1].type.size
           case op[0]
@@ -173,7 +182,7 @@ class OpCompiler
           when :div
             r.concat load( op[1], op[2] )
             n.times do 
-              size.downto(0) do |i| 
+              (size-1).downto(0) do |i| 
                 rot = ( i == size-1 ? 'lsr' : 'ror' )
                 r << "#{rot} #{byte(op[1],i)}"
               end
@@ -449,7 +458,7 @@ class OpCompiler
 
   def byte( v, n )
     if v.const? and Numeric === v.val
-      "##{v.val >> (n*8) % 256}"
+      "##{(v.val >> (n*8)) % 256}"
     else
       "#{to_asm(v)}+#{n}"
     end

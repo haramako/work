@@ -1,0 +1,86 @@
+options ( inesprg: 1, // プログラムにいくつのバンクを使うか。今は１つ。
+          ineschr: 1, // グラフィックデータにいくつのバンクを使うか。今は１つ。
+          inesmir: 0, // 水平ミラーリング
+          inesmap: 0  // マッパー。０番にする。
+          );
+
+include( "miku.asm" );
+include( "nes.fc" );
+
+const BG:int[1] options ( file:'character.chr', char_bank: 0 );
+
+var sprite_buf:int[256] options (address:0x0700);
+
+var vsync_flag:int;
+var ppu_ctrl1_bak:int = 0b10000000;
+var ppu_ctrl2_bak:int = 0b00011110;
+var ppu_scroll1:int = 0;
+var ppu_scroll2:int = 0;
+
+var gr_idx:int = 0;
+var gr_to_buf:int16[4];
+var gr_from_buf:int*[4];
+var gr_size_buf:int[4];
+
+function interrupt():void
+{
+  PPU_SCROLL = ppu_scroll1;
+  PPU_SCROLL = ppu_scroll2;
+  SPRITE_DMA = 7;
+  PPU_CTRL1 = ppu_ctrl1_bak;
+  PPU_CTRL2 = ppu_ctrl2_bak;
+
+  var i:int = 0;
+  while( i < gr_idx ){
+    ppu_put( gr_to_buf[i], gr_from_buf[i], gr_size_buf[i] );
+  }
+  gr_idx = 0;
+  
+  vsync_flag = 0;
+}
+
+function wait_vsync():void
+{
+  vsync_flag = 1;
+  while( vsync_flag ){}
+}
+
+function ppu_lock():void
+{
+  PPU_CTRL1 = 0b00000000;
+  PPU_CTRL2 = 0b00000000;
+}
+
+function ppu_unlock():void
+{
+  PPU_CTRL1 = 0b10000000;
+  wait_vsync();
+}
+
+function ppu_put( to:int16, from:int*, size:int ):void options ( extern:true ) {}
+
+function gr_add( to:int16, from:int*, size:int):void
+{
+  gr_from_buf[gr_idx] = from;
+  gr_to_buf[gr_idx] = to;
+  gr_size_buf[gr_idx] = size;
+}
+
+function main(): void
+{
+  const PAL:int[32] = [0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
+                       0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
+
+  ppu_lock();
+  
+  ppu_put( 0x3f00, PAL, 32 );
+  ppu_put( 0x2080, "HOGE", 4 );
+
+  ppu_unlock();
+
+  gr_add( 0x2080, "FUGA", 4 );
+
+  
+}
+
+main();

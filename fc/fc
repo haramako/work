@@ -169,7 +169,11 @@ class Value
   attr_accessor :reg # 格納場所( :mem, :none, :a, :carry, :not_carry, :zero, :not_zero, :negative, :not_negative のいずれか )
 
   def self.literal( val )
-    Value.new( nil, TypeDecl[:int], val, nil, nil, :literal, nil )
+    if val >= 256
+      Value.new( nil, TypeDecl[:int16], val, nil, nil, :literal, nil )
+    else
+      Value.new( nil, TypeDecl[:int], val, nil, nil, :literal, nil )
+    end
   end
 
   def initialize( id, type, val, opt, scope, kind=:var, var_type )
@@ -215,11 +219,12 @@ end
 # 関数
 ######################################################################
 class Lambda
-  attr_reader :id, :type, :args, :block
-  def initialize( id, type, args, block )
+  attr_reader :id, :type, :args, :block, :opt
+  def initialize( id, type, args, opt, block )
     @id = id
     @type = type
     @args = args
+    @opt = opt || Hash.new
     @block = block
   end
 
@@ -232,7 +237,7 @@ end
 # スコープ付きブロック
 ######################################################################
 class ScopedBlock
-  attr_reader :upper, :id, :ast, :vars, :ops, :options
+  attr_reader :upper, :id, :ast, :vars, :ops, :options, :includes
   attr_accessor :asm
   attr_accessor :optimized_ops
 
@@ -251,6 +256,7 @@ class ScopedBlock
     @cur_filename = nil
     @cur_line = 0
     @cur_line_str = nil
+    @includes = []
   end
 
   def compile
@@ -309,18 +315,22 @@ class ScopedBlock
 
     when :include
       filename = ast[1]
-      src = File.read(filename)
-      ast, pos_info = Parser.new(src,filename).parse
-      @compiler.pos_info.merge!( pos_info )
-      compile_block( ast )
+      if File.extname(filename) == '.asm'
+        @includes << filename
+      else
+        src = File.read(filename)
+        ast, pos_info = Parser.new(src,filename).parse
+        @compiler.pos_info.merge!( pos_info )
+        compile_block( ast )
+      end
 
     when :function
-      block = ScopedBlock.new( @compiler, self, ast[1], ast[4] )
+      block = ScopedBlock.new( @compiler, self, ast[1], ast[5] )
       args = ast[2].map do |v|
         block.new_arg( v[0], TypeDecl[v[1]] )
       end
       type = TypeDecl[ [:lambda, args, ast[3]] ]
-      lmd = Lambda.new( ast[1], type, args, block )
+      lmd = Lambda.new( ast[1], type, args, ast[4], block )
       block.new_return_val(type.base) if type.base != TypeDecl[:void]
       new_const( ast[1], lmd.type, lmd, nil )
 

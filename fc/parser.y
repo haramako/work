@@ -28,7 +28,8 @@ statement_list: statement_list statement_i { result = val[0] + [val[1]] }
 statement_i: statement { info(val[0]) }
 
 statement: options ';'
-         | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if block { result = [:function, val[1], val[3], val[6], val[8]] }
+         | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if block
+              { result = [:function, val[1], val[3], val[6], val[7] && val[7][1], val[8]] }
          | 'include' '(' STRING ')' ';'          { result = [:include, val[2]] }
          | 'var' var_decl_list ';'               { result = [:var, val[1]] }
          | 'const' var_decl_list ';'             { result = [:const, val[1]] }
