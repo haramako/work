@@ -2,7 +2,7 @@ class Parser
   prechigh
     nonassoc UMINUS
     left '(' '['
-    left '*' '/'
+    left '*' '/' '%'
     left '+' '-'
     left '<' '>' '<=' '>=' '==' '!='
     right '=' '+=' '-='
