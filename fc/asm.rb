@@ -144,6 +144,23 @@ class OpCompiler
           r << store_a(op[1],i)
         end
 
+      when :mul, :div, :mod
+        op[1].type.size.times do |i|
+          r << "lda #{byte(op[2],i)}"
+          r << "sta __reg+0+#{i}"
+          r << "lda #{byte(op[3],i)}"
+          r << "sta __reg+2+#{i}"
+        end
+        if op[1].type.size == 1
+          r << "jsr __#{op[0]}_8"
+        else
+          r << "jsr __#{op[0]}_16"
+        end
+        op[1].type.size.times do |i|
+          r << "lda __reg+4+#{i}"
+          r << "sta #{byte(op[1],i)}"
+        end
+
       when :eq
         false_label, end_label = new_labels(2)
         [ op[2].type.size, op[3].type.size ].max.times do |i|

@@ -37,5 +37,57 @@ __interrupt:
     pla
     rti
 
+        ; __reg4 = __reg0 * __reg2
+__mul_8:                        
+        ldx #8
+.loop:
+        clc
+        rol __reg+4
+        rol __reg+2
+        bcc .end
+        lda __reg+4
+        clc
+        adc __reg+0
+        sta __reg+4
+.end:   
+        dex
+        bne .loop
+        rts 
+
+__mul_16:
+        rts
+        
+        ;;  __reg4 = __reg0 / __reg2
+__div_8:
+        ldx #8
+        lda #0
+        sta __reg+5
+.loop:
+        rol __reg+0
+        rol __reg+5
+        
+        lda __reg+5
+        sec
+        sbc __reg+2
+        bcc .end
+        sta __reg+5
+.end:   
+        rol __reg+4
+        dex
+        bne .loop
+        rts
+        
+__div_16:
+        rts
+        
+__mod_8:
+        jsr __div_8
+        lda __reg+5
+        sta __reg+4
+        rts
+        
+__mod_16:
+        rts 
+        
 <%= code_asm %>
 <%= chr_asm %>

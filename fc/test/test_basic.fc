@@ -25,10 +25,17 @@ function test_int_operator():void
   var i1:int = 1;
   var i2:int = 2;
   var i3:int = 3;
+  var i5:int = 5;
   var i10:int = 10;
 
   assert_equal( i1, i1, 'num');
-  //assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
+  assert_equal( i2*i3, 6, '+,-,*,/,%');
+  assert_equal( i5*i5, 25, '+,-,*,/,%');
+  assert_equal( i5*60, 44, '+,-,*,/,%');
+  assert_equal( i10/i3, 3, '/');
+  assert_equal( 255/i10, 25, '/');
+  assert_equal( 255%i10, 5, '%');
+  assert_equal( (18%((i2*((i10+i10)-i5))/i3)), 8, '+,-,*,/,%');
   assert_true(  (i1 < i2), "<");
   assert_true( !(i2 < i2), "!,<");
   assert_true(  (i2 > i1), ">");
@@ -52,7 +59,7 @@ function test_int16_operator():void
   var i10:int16 = 10;
 
   assert_equal( i1, i1, 'num');
-  //assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
+  // assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
   assert_true(  (i1 < i2), "<");
   assert_true( !(i2 < i2), "!,<");
   assert_true(  (i2 > i1), ">");
