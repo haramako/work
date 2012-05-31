@@ -20,7 +20,7 @@ var gr_idx:int = 0;
 var gr_to_buf:int16[4];
 var gr_from_buf:int*[4];
 var gr_size_buf:int[4];
-var gr_spr_idx:int = 0;
+var gr_sprite_idx:int = 0;
 var gr_sprite_buf:int[256] options (address:0x0700);
 
 var pad_a:int;
@@ -38,7 +38,7 @@ function interrupt():void
   if( vsync_flag ){
     
     SPRITE_DMA = 7;
-    gr_spr_idx = 0;
+    gr_sprite_idx = 0;
     
     var i:int = 0;
     while( i < gr_idx ){
@@ -84,12 +84,14 @@ function gr_add( to:int16, from:int*, size:int):void
   gr_idx += 1;
 }
 
-function gr_sprite( x:int, y:int, pat:int, mode:int ):void {
-  var p:int;
+function gr_sprite( x:int, y:int, pat:int, mode:int ):void
+{
+  var p:int = gr_sprite_idx;
   gr_sprite_buf[p] = y;
   gr_sprite_buf[p+1] = pat;
   gr_sprite_buf[p+2] = mode;
   gr_sprite_buf[p+3] = x;
+  gr_sprite_idx += 4;
 }
 
 function pad_update():void
@@ -97,14 +99,19 @@ function pad_update():void
   PAD_CTRL = 1;
   PAD_CTRL = 0;
   pad_a = PAD_CTRL % 2;
-  pad_b = PAD_CTRL;
-  pad_select = PAD_CTRL;
-  pad_start = PAD_CTRL;
-  pad_up = PAD_CTRL;
-  pad_down = PAD_CTRL;
-  pad_left = PAD_CTRL;
-  pad_right = PAD_CTRL;
+  pad_b = PAD_CTRL % 2;
+  pad_select = PAD_CTRL % 2;
+  pad_start = PAD_CTRL % 2;
+  pad_up = PAD_CTRL % 2;
+  pad_down = PAD_CTRL % 2;
+  pad_left = PAD_CTRL % 2;
+  pad_right = PAD_CTRL % 2;
 }
+
+const BUL_MAX:int = 32;
+var bul_x:int[BUL_MAX];
+var bul_y:int[BUL_MAX];
+var bul_idx:int = 0;
 
 function main(): void
 {
@@ -125,12 +132,27 @@ function main(): void
   
   while( 1 ){
     pad_update();
-    if( pad_up ){ y -= 1; }
-    if( pad_down ){ y += 1; }
-    if( pad_left ){ x -= 1; }
-    if( pad_right ){ x += 1; }
+    if( pad_up ){ y -= 2; }
+    if( pad_down ){ y += 2; }
+    if( pad_left ){ x -= 2; }
+    if( pad_right ){ x += 2; }
     gr_sprite( x, y, 0x41, 0 );
-    wait_vsync();    
+
+    if( pad_a ){
+      bul_x[bul_idx] = x;
+      bul_y[bul_idx] = y;
+      bul_idx = ( bul_idx + 1 ) % BUL_MAX;
+    }
+
+    var i:int = 0;
+    while( i<8 ){
+      if( bul_y[i] > BUL_MAX ){
+        bul_y[i] -= 6;
+        gr_sprite( bul_x[i], bul_y[i], 0x49, 0 );
+      }
+      i += 1;
+    }
+    wait_vsync();
   }
   
 }

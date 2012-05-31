@@ -336,7 +336,7 @@ class ScopedBlock
 
     when :var
       ast[1].each do |v|
-        var = new_var( v[0], TypeDecl[v[1]], nil, v[3] )
+        var = new_var( v[0], const_type_eval( v[1] ), nil, v[3] )
         compile_statement( [:exp, [:load, var.id, v[2]]] ) if v[2]
       end
 
@@ -563,6 +563,16 @@ class ScopedBlock
       end
     end
     r
+  end
+
+  def const_type_eval( ast )
+    if Array === ast and ast[0] === :array
+      size = const_eval(ast[1])
+      size = size.val if Value === size
+      TypeDecl[ [ast[0], size, ast[2]] ]
+    else
+      TypeDecl[ast]
+    end
   end
 
   def compatible_type( a, b )
