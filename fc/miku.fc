@@ -7,7 +7,7 @@ options ( inesprg: 1, // プログラムにいくつのバンクを使うか。�
 include( "miku.asm" );
 include( "nes.fc" );
 
-const BG:int[1] options ( file:'character.chr', char_bank: 0 );
+const BG:int[1] options ( file:'miku.chr', char_bank: 0 );
 
 
 var vsync_flag:int;
@@ -98,6 +98,31 @@ function gr_sprite( x:int, y:int, pat:int, mode:int ):void
   gr_sprite_idx += 4;
 }
 
+function gr_sprite2x2( x:int, y:int, pat:int, mode:int ):void
+{
+  var p:int = gr_sprite_idx;
+  gr_sprite_buf[p] = y;
+  gr_sprite_buf[p+1] = pat;
+  gr_sprite_buf[p+2] = mode;
+  gr_sprite_buf[p+3] = x;
+  
+  gr_sprite_buf[p+4] = y;
+  gr_sprite_buf[p+5] = pat+1;
+  gr_sprite_buf[p+6] = mode;
+  gr_sprite_buf[p+7] = x+8;
+  
+  gr_sprite_buf[p+8] = y+8;
+  gr_sprite_buf[p+9] = pat+16;
+  gr_sprite_buf[p+10] = mode;
+  gr_sprite_buf[p+11] = x;
+  
+  gr_sprite_buf[p+12] = y+8;
+  gr_sprite_buf[p+13] = pat+17;
+  gr_sprite_buf[p+14] = mode;
+  gr_sprite_buf[p+15] = x+8;
+  gr_sprite_idx += 16;
+}
+
 function pad_update():void
 {
   PAD_CTRL = 1;
@@ -111,19 +136,6 @@ function pad_update():void
   pad_left = PAD_CTRL % 2;
   pad_right = PAD_CTRL % 2;
 }
-
-const BUL_MAX:int = 16;
-var bul_x:int[BUL_MAX];
-var bul_y:int[BUL_MAX];
-var bul_idx:int = 0;
-var bul_wait:int;
-
-const EN_MAX = 16;
-var en_type:int[EN_MAX];
-var en_x:int[EN_MAX];
-var en_y:int[EN_MAX];
-var en_p1:int[EN_MAX];
-var en_p2:int[EN_MAX];
 
 function wait(n:int):void
 {
@@ -140,10 +152,51 @@ function wait(n:int):void
   }
 }
 
+const BUL_MAX = 16;
+var bul_x:int[BUL_MAX];
+var bul_y:int[BUL_MAX];
+var bul_idx:int = 0;
+var bul_wait:int;
+
+const EN_MAX = 16;
+var en_type:int[EN_MAX];
+var en_x:int[EN_MAX];
+var en_y:int[EN_MAX];
+var en_p1:int[EN_MAX];
+var en_p2:int[EN_MAX];
+var en_wait:int = 0;
+var en_now = 0;
+
+const SPR_MIKU = 0x80;
+const SPR_NEGI = 0x82;
+
+function en_process(idx:int):void
+{
+  if( en_type[idx] ){
+    en_y[idx] += 2;
+
+    var i = 0;
+    while( i < BUL_MAX ){
+      if( bul_y[i] != 0 && en_x[idx] + 8 - bul_x[i] < 16 && en_y[idx] + 8 - bul_y[i] < 16 ){
+        en_type[idx] = 0;
+        bul_y[i] = 0;
+      }
+      i += 1;
+    }
+
+    // 死亡判定
+    if( en_y[idx] > 240 ){
+      en_type[idx] = 0;
+    }else{
+      gr_sprite2x2( en_x[idx]-8, en_y[idx]-8, 0x56, 0 );
+    }
+  }
+}
+
 function main(): void
 {
-  const PAL:int[32] = [0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
-                       0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
+  const PAL:int[32] = [0x0f,0x19,0x29,0x30, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
+                       0x0f,0x19,0x29,0x30, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
 
   ppu_lock();
   
@@ -154,21 +207,20 @@ function main(): void
   gr_add( 0x2080, "FUGA", 4 );
   gr_add( 0x20A0, "PIYO", 5 );
 
-  var x:int = 100;
-  var y:int = 100;
+  var x = 100, y = 100;
   
   while( 1 ){
+    // 自機の移動
     pad_update();
     if( pad_up ){ y -= 2; }
     if( pad_down ){ y += 2; }
     if( pad_left ){ x -= 2; }
     if( pad_right ){ x += 2; }
-    gr_sprite( x, y, 0x41, 0 );
 
     if( bul_wait == 0 ){
       if( pad_a ){
         bul_x[bul_idx] = x;
-        bul_y[bul_idx] = y;
+        bul_y[bul_idx] = y-8;
         bul_idx = ( bul_idx + 1 ) % BUL_MAX;
         bul_wait = 4;
       }
@@ -176,12 +228,37 @@ function main(): void
       bul_wait -= 1;
     }
 
-    var i:int = 0;
+    gr_sprite2x2( x-8, y-8, SPR_MIKU, 0 );
+    
+    // 自機の弾の処理
+    var i = 0;
     while( i<BUL_MAX ){
-      if( bul_y[i] > 8 ){
-        bul_y[i] -= 6;
-        gr_sprite( bul_x[i], bul_y[i], 0x49, 0 );
+      if( bul_y[i] ){
+        if( bul_y[i] > 8 ){
+          bul_y[i] -= 6;
+          gr_sprite( bul_x[i]-4, bul_y[i]-4, SPR_NEGI, 0 );
+          gr_sprite( bul_x[i]-4, bul_y[i]+4, SPR_NEGI+16, 0 );
+        }else{
+          bul_y[i] = 0;
+        }
       }
+      i += 1;
+    }
+
+    // 敵の出現
+    if( en_wait == 0 ){
+      en_type[en_now] = 1;
+      en_x[en_now] = 100+en_now*16;
+      en_y[en_now] = 0;
+      en_now = (en_now+1)%EN_MAX;
+      en_wait = 60;
+    }else{
+      en_wait -= 1;
+    }
+    
+    i = 0;
+    while( i<EN_MAX ){
+      en_process(i);
       i += 1;
     }
     wait_vsync();

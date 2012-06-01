@@ -480,7 +480,7 @@ class OpCompiler
     return str if str.size < 16
     n = 0
     while true
-      trimed = str[0,14]+n.to_s
+      trimed = str[0,14]+'_'+n.to_s
       if @trim_table[trimed] == str
         return trimed
       elsif @trim_table[trimed].nil?

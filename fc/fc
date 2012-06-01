@@ -660,7 +660,6 @@ class ScopedBlock
     else
       raise "not constant value #{@init}"
     end
-    pp type, init_type
     if type and init_type
       compatible_type( init_type, type ) 
     end
