@@ -5,7 +5,7 @@ require 'digest/md5'
 # 中間コードコンパイラ
 ######################################################################
 class OpCompiler
-  attr_reader :asm, :char_banks, :includes
+  attr_reader :asm, :char_banks, :includes, :address, :address_zeropage
 
   def initialize
     @label_count = 0

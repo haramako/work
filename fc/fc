@@ -10,6 +10,7 @@ require 'optparse'
 require 'strscan'
 require 'erb'
 require_relative 'parser'
+require_relative 'nes'
 
 ######################################################################
 # パーサー
@@ -820,6 +821,11 @@ if __FILE__ == $0
       exit(1)
     end
   end
+
+
+  
+  size = parse_nes( base+'.nes' )[:prog_size] unless $asm
+  puts "code=#{size}, var=#{op_com.address-0x200}, zeropage=#{op_com.address_zeropage-0x10}"
 
 end
 
