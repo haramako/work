@@ -1,8 +1,8 @@
 include( "emu.fc" );
 
-function test_const_operator():void
+function test_const_op():void
 {
-  print('test_const_operator:');
+  print('test_const_op:');
   assert_equal( 1, 1, 'num');
   assert_equal( (18%((2*((10+10)-5))/3)), 8, '+,-,*,/,%');
   assert_true(  (1 < 2), "<");
@@ -18,9 +18,9 @@ function test_const_operator():void
   puts('');
 }
 
-function test_int_operator():void
+function test_int_op():void
 {
-  print('test_int_operator:');
+  print('test_int_op:');
 
   var i1 = 1;
   var i2 = 2;
@@ -60,9 +60,55 @@ function test_int_operator():void
   puts('');
 }
 
-function test_int16_operator():void
+function test_int8_op():void
 {
-  print('test_int16_operator:');
+  print('test_int8_op:');
+
+  var i1:int8 = -1;
+  var i2:int8 = -2;
+  var i3:int8 = -3;
+  var i5:int8  = -5;
+  var i10:int8 = -10;
+
+  assert_equal( i1, i1, 'num');
+  assert_equal( i10/2, -5, '+,-,*,/,%');
+  /*
+  assert_equal( i5*i5, 25, '+,-,*,/,%');
+  assert_equal( i5*60, 44, '+,-,*,/,%');
+  assert_equal( i10/i3, 3, '/');
+  assert_equal( 255/i10, 25, '/');
+  assert_equal( 255%i10, 5, '%');
+  */
+  /*
+  assert_equal( (18%((i2*((i10+i10)-i5))/i3)), 8, '+,-,*,/,%');
+
+  assert_equal( i3 & i2, 2, '&' );
+  assert_equal( i1 | i2, 3, '|' );
+  assert_equal( i3 ^ i2, 1, '^' );
+  
+  assert_true(  (i1 < i2), "<");
+  assert_true( !(i2 < i2), "!,<");
+  assert_true(  (i2 > i1), ">");
+  assert_true( !(i2 > i2), "!,>");
+  assert_true(  (i2 <= i2), "<=");
+  assert_true( !(i3 <= i2), "!,<=");
+  assert_true(  (i3 >= i2), ">=");
+  assert_true( !(i2 >= i3), "!,>=");
+  assert_true( i2 == i2, "==");
+  assert_true( i2 != i3, "!=");
+
+  // 定数の最適化
+  assert_equal( i10*16, 160, '*const' );
+  assert_equal( i10/4, 2, '/const' );
+  assert_equal( i10%8, 2, '%const' );
+  */
+  
+  puts('');
+}
+
+function test_int16_op():void
+{
+  print('test_int16_op:');
 
   var i1:int16 = 1;
   var i2:int16 = 2;
@@ -95,9 +141,9 @@ function test_int16_operator():void
   puts('');
 }
 
-function test_int8_and_int16_operator():void
+function test_int8x16_op():void
 {
-  print('test_int8_and_int16_operator:');
+  print('test_int8x16_op:');
 
   var i1:int = 1;
   var i2:int = 2;
@@ -164,10 +210,11 @@ function test_optimize_bug():void
   puts('');
 }
 
-test_const_operator();
-test_int_operator();
-test_int16_operator();
-test_int8_and_int16_operator();
+test_const_op();
+test_int_op();
+test_int8_op();
+test_int16_op();
+test_int8x16_op();
 test_logical_op();
 test_var();
 

@@ -174,7 +174,18 @@ class OpCompiler
            when :mul
             n.times { r << "asl a" }
           when :div
-            n.times { r << "lsr a" }
+            if op[2].type.signed
+              negative_label, end_label = new_labels(2)
+              r << "bmi #{negative_label}"
+              n.times { r << "lsr a" }
+              r << "jmp #{end_label}"
+              r << "#{negative_label}:"
+              n.times { r << "lsr a" }
+              r << "ora ##{256-2**(8-n)}"
+              r << "#{end_label}:"
+            else
+              n.times { r << "lsr a" }
+            end
           when :mod
             r << "and ##{op[3].val-1}"
           end
@@ -529,21 +540,21 @@ class OpCompiler
       when :load
         if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1] 
           unless op[1].opt[:address] or op[1].nonlocal
-            puts "omit #{op}"
+            #puts "omit #{op}"
             next
           end
         end
       when :pget, :pset
         if Value === op[1] 
           if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
-            puts "omit #{op}"
+            #puts "omit #{op}"
             next
           end
         end
       when :call
         if Value === op[1] 
           if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
-            puts "omit #{op}"
+            #puts "omit #{op}"
             r << [op[0]]+[nil]+op[2..-1]
             next
           end
@@ -571,7 +582,7 @@ class OpCompiler
                 op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and 
                 op[3].type.size == 1 # サイズが１なら
-              puts "replace #{op}"
+              # puts "replace #{op}"
               r << [:index_pget, next_op[1], op[2], op[3]]
               ops[i+1] = nil
               next
@@ -581,7 +592,7 @@ class OpCompiler
                 op[1].lr[1] <= op[1].lr[0]+1 and # その変数をそこでしか使ってなくて
                 ( op[2].kind == :var or op[2].kind == :const ) and # 
                 op[3].type.size == 1 # サイズが１なら
-              puts "replace #{op}"
+              # puts "replace #{op}"
               r << [:index_pset, op[2], op[3], next_op[2]]
               ops[i+1] = nil
               next

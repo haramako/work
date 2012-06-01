@@ -91,7 +91,7 @@ class TypeDecl
   attr_reader :length # 配列の要素数(arrayのみ)
   attr_reader :args # 引数クラスのリスト(lambdaの場合のみ)
 
-  BASIC_TYPES = { int:[1,true], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
+  BASIC_TYPES = { int:[1,false], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
 
   def initialize( ast )
     if ast == :void
@@ -337,7 +337,7 @@ class ScopedBlock
 
     when :var
       ast[1].each do |v|
-        init = v[2] && rval(v[2])
+        init = v[2] && rval(const_eval(v[2]))
         type = ( v[1] && const_type_eval(v[1]) ) || init.type
         compatible_type( type, init.type ) if type and init
         var = new_var( v[0], type, v[3] )

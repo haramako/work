@@ -4,138 +4,13 @@ options ( inesprg: 1, // プログラムにいくつのバンクを使うか。�
           inesmap: 0  // マッパー。０番にする。
           );
 
-include( "miku.asm" );
 include( "nes.fc" );
+include( "math.fc" );
+include( "util.fc" );
+
+include( "miku.asm" );
 
 const BG:int[1] options ( file:'miku.chr', char_bank: 0 );
-
-
-var vsync_flag:int;
-var ppu_ctrl1_bak:int = 0b10000000;
-var ppu_ctrl2_bak:int = 0b00011110;
-var ppu_scroll1:int = 0;
-var ppu_scroll2:int = 0;
-
-var gr_idx:int = 0;
-var gr_to_buf:int16[4];
-var gr_from_buf:int*[4];
-var gr_size_buf:int[4];
-var gr_sprite_idx:int = 0;
-var gr_sprite_buf:int[256] options (address:0x0700);
-
-var pad_a:int;
-var pad_b:int;
-var pad_select:int;
-var pad_start:int;
-var pad_up:int;
-var pad_down:int;
-var pad_left:int;
-var pad_right:int;
-
-function interrupt():void
-{
-  // 描画の更新を行う
-  if( vsync_flag ){
-    
-    SPRITE_DMA = 7;
-    gr_sprite_idx = 0;
-    
-    var i:int = 0;
-    while( i < gr_idx ){
-      ppu_put( gr_to_buf[i], gr_from_buf[i], gr_size_buf[i] );
-      i += 1;
-    }
-    gr_idx = 0;
-    vsync_flag = 0;
-  }
-  
-  PPU_SCROLL = ppu_scroll1;
-  PPU_SCROLL = ppu_scroll2;
-  PPU_CTRL1 = ppu_ctrl1_bak;
-  PPU_CTRL2 = ppu_ctrl2_bak;
-
-}
-
-function wait_vsync():void
-{
-  while( gr_sprite_idx < 255 ){
-    gr_sprite_buf[gr_sprite_idx] = 0;
-    gr_sprite_idx += 1;
-  }
-  vsync_flag = 1;
-  while( vsync_flag ){}
-}
-
-function ppu_lock():void
-{
-  PPU_CTRL1 = 0b00000000;
-  PPU_CTRL2 = 0b00000000;
-}
-
-function ppu_unlock():void
-{
-  PPU_CTRL1 = 0b10000000;
-  wait_vsync();
-}
-
-function ppu_put( to:int16, from:int*, size:int ):void options ( extern:true ) {}
-
-function gr_add( to:int16, from:int*, size:int):void
-{
-  gr_from_buf[gr_idx] = from;
-  gr_to_buf[gr_idx] = to;
-  gr_size_buf[gr_idx] = size;
-  gr_idx += 1;
-}
-
-function gr_sprite( x:int, y:int, pat:int, mode:int ):void
-{
-  var p:int = gr_sprite_idx;
-  gr_sprite_buf[p] = y;
-  gr_sprite_buf[p+1] = pat;
-  gr_sprite_buf[p+2] = mode;
-  gr_sprite_buf[p+3] = x;
-  gr_sprite_idx += 4;
-}
-
-function gr_sprite2x2( x:int, y:int, pat:int, mode:int ):void
-{
-  var p:int = gr_sprite_idx;
-  gr_sprite_buf[p] = y;
-  gr_sprite_buf[p+1] = pat;
-  gr_sprite_buf[p+2] = mode;
-  gr_sprite_buf[p+3] = x;
-  
-  gr_sprite_buf[p+4] = y;
-  gr_sprite_buf[p+5] = pat+1;
-  gr_sprite_buf[p+6] = mode;
-  gr_sprite_buf[p+7] = x+8;
-  
-  gr_sprite_buf[p+8] = y+8;
-  gr_sprite_buf[p+9] = pat+16;
-  gr_sprite_buf[p+10] = mode;
-  gr_sprite_buf[p+11] = x;
-  
-  gr_sprite_buf[p+12] = y+8;
-  gr_sprite_buf[p+13] = pat+17;
-  gr_sprite_buf[p+14] = mode;
-  gr_sprite_buf[p+15] = x+8;
-  gr_sprite_idx += 16;
-}
-
-function pad_update():void
-{
-  PAD_CTRL = 1;
-  PAD_CTRL = 0;
-  pad_a = PAD_CTRL % 2;
-  pad_b = PAD_CTRL % 2;
-  pad_select = PAD_CTRL % 2;
-  pad_start = PAD_CTRL % 2;
-  pad_up = PAD_CTRL % 2;
-  pad_down = PAD_CTRL % 2;
-  pad_left = PAD_CTRL % 2;
-  pad_right = PAD_CTRL % 2;
-}
 
 function wait(n:int):void
 {
@@ -153,13 +28,15 @@ function wait(n:int):void
 }
 
 var anim:int = 0;
-var anim_wait:int = 0;
+var anim_count:int = 0;
+var giff:int8;
 
 var my_x:int = 100;
 var my_y:int = 100;
+var my_bang_count:int = 0;
 var my_wait:int;
 
-const MY_BUL_MAX = 16;
+const MY_BUL_MAX = 8;
 var my_bul_x:int[MY_BUL_MAX];
 var my_bul_y:int[MY_BUL_MAX];
 var my_bul_idx:int = 0;
@@ -173,8 +50,21 @@ var en_p2:int[EN_MAX];
 var en_wait:int = 0;
 var en_now = 0;
 
+const EN_BUL_MAX = 32;
+var en_bul_type:int[EN_BUL_MAX];
+var en_bul_x:int[EN_BUL_MAX];
+var en_bul_y:int[EN_BUL_MAX];
+var en_bul_vx:int8[EN_BUL_MAX];
+var en_bul_vy:int8[EN_BUL_MAX];
+var en_bul_idx = 0;
+
+const PALLET:int[32] = [0x0f,0x19,0x29,0x30, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
+                        0x0f,0x1B,0x2B,0x30, 0x0f,0x04,0x26,0x36, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
+
 const SPR_MIKU = 0x80;
 const SPR_NEGI = 0xa0;
+const SPR_ENEMY = 0xc0;
+const SPR_EN_BUL = 0xe0;
 
 function my_process():void
 {
@@ -185,6 +75,18 @@ function my_process():void
   if( pad_left ){ my_x -= 2; }
   if( pad_right ){ my_x += 2; }
 
+  // 弾との当たり判定
+  var i = 0;
+  while( i < EN_BUL_MAX ){
+    if( en_bul_y[i] != 0 && my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
+      my_bang_count = 64;
+      en_bul_y[i] = 0;
+    }
+    i += 1;
+  }
+  if( my_bang_count ){ my_bang_count -= 1; }
+
+  // 弾を打つ
   if( my_wait == 0 ){
     if( pad_a ){
       my_bul_x[my_bul_idx] = my_x;
@@ -196,7 +98,7 @@ function my_process():void
     my_wait -= 1;
   }
 
-  gr_sprite2x2( my_x-8, my_y-8, SPR_MIKU+anim*2, 0 );
+  gr_sprite2x2( my_x-8, my_y-8, SPR_MIKU+anim*2, my_bang_count % 2 );
     
 }
 
@@ -221,48 +123,79 @@ function my_bul_process():void
 function en_process(idx:int):void
 {
   if( en_type[idx] ){
-    en_y[idx] += 2;
+    // 移動
+    en_y[idx] += 1;
 
+    // 自機の弾との当たり判定
     var i = 0;
     while( i < MY_BUL_MAX ){
-      if( my_bul_y[i] != 0 && en_x[idx] + 8 - my_bul_x[i] < 16 && en_y[idx] + 8 - my_bul_y[i] < 16 ){
+      if( my_bul_y[i] != 0 && en_x[idx] + 12 - my_bul_x[i] < 24 && en_y[idx] + 12 - my_bul_y[i] < 24 ){
         en_type[idx] = 0;
         my_bul_y[i] = 0;
       }
       i += 1;
     }
 
+    // 弾を打つ
+    if( (anim_count%16) == 0 ){
+      var n = en_bul_new();
+      en_bul_type[n] = 1;
+      en_bul_x[n] = en_x[idx];
+      en_bul_y[n] = en_y[idx];
+      var angle = atan( -(my_y/16 - en_y[idx]/16), my_x/16 - en_x[idx]/16 );
+      en_bul_vx[n] = cos(angle)/16;
+      en_bul_vy[n] = -sin(angle)/16;
+    }
+
     // 死亡判定
     if( en_y[idx] > 240 ){
       en_type[idx] = 0;
     }else{
-      gr_sprite2x2( en_x[idx]-8, en_y[idx]-8, 0x56, 0 );
+      gr_sprite2x2( en_x[idx]-8, en_y[idx]-8, SPR_ENEMY, 1 );
     }
   }
 }
 
+// 敵の弾の処理
+function en_bul_process():void
+{
+  var i = 0;
+  while( i<EN_BUL_MAX ){
+    if( en_bul_y[i] ){
+      en_bul_y[i] += (en_bul_vy[i]+giff) / 4;
+      en_bul_x[i] += (en_bul_vx[i]+giff) / 4;
+      gr_sprite( en_bul_x[i]-4, en_bul_y[i]-4, SPR_EN_BUL+anim, 1 );
+      // 死亡判定
+      if( en_bul_y[i] < 8 || en_bul_y[i] > 248 || en_bul_x[i] < 8 || en_bul_x[i] > 248 ){
+          en_bul_y[i] = 0;
+      }
+    }
+    i += 1;
+  }
+}
+
+function en_bul_new():int
+{
+  var n = en_bul_idx;
+  en_bul_idx = (en_bul_idx+1)%EN_BUL_MAX;
+  return n;
+}
+
 function main(): void
 {
-  const PAL:int[32] = [0x0f,0x19,0x29,0x30, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
-                       0x0f,0x19,0x29,0x30, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
-
   ppu_lock();
   
-  ppu_put( 0x3f00, PAL, 32 );
+  ppu_put( 0x3f00, PALLET, 32 );
   
   ppu_unlock();
 
-  gr_add( 0x2080, "FUGA", 4 );
-  gr_add( 0x20A0, "PIYO", 5 );
-
-  var x = 100, y = 100;
-  
   while( 1 ){
-    anim_wait += 1;
-    anim = anim_wait / 8 % 4;
+    anim_count += 1;
+    anim = anim_count / 8 % 4;
+    giff = anim_count % 4;
     
+    en_bul_process();
     my_process();
-    my_bul_process();
 
     // 敵の出現
     if( en_wait == 0 ){
@@ -280,6 +213,9 @@ function main(): void
       en_process(i);
       i += 1;
     }
+
+    my_bul_process();
+    
     wait_vsync();
   }
   
