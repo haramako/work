@@ -196,9 +196,9 @@ class OpCompiler
           end
         else
           op[1].type.size.times do |i|
-            r << "lda #{byte(op[2],i)}"
+            r << load_a(op[2],i)
             r << "sta __reg+0+#{i}"
-            r << "lda #{byte(op[3],i)}"
+            r << load_a(op[3],i)
             r << "sta __reg+2+#{i}"
           end
           if op[1].type.size == 1
@@ -208,7 +208,7 @@ class OpCompiler
           end
           op[1].type.size.times do |i|
             r << "lda __reg+4+#{i}"
-            r << "sta #{byte(op[1],i)}"
+            r << store_a(op[1],i)
           end
         end
 
@@ -412,6 +412,8 @@ class OpCompiler
     case v.reg
     when :mem
       "lda #{byte(v,n)}"
+    when :stack
+      "pla"
     when :a
       # DO NOTHING
       nil
@@ -424,6 +426,8 @@ class OpCompiler
     case v.reg
     when :mem
       "sta #{byte(v,n)}"
+    when :stack
+      "pha"
     when :a
       # DO NOTHING
       nil
@@ -570,12 +574,10 @@ class OpCompiler
   def alloc_register( block, ops )
     calc_liverange( block, ops )
     block.vars.each do |id,v|
-      v.reg = :mem
-      next
       if v.kind != :var or # 変数じゃないか
           v.nonlocal or # ローカルじゃないか
           v.var_type == :arg or # 引数か
-          v.var_type == :return_val # 帰り値
+          v.var_type == :return_val # 返り値
         v.reg = :mem
       elsif v.opt and v.opt[:address] # address指定なら mem
         v.reg = :mem
@@ -584,7 +586,7 @@ class OpCompiler
       elsif v.type.size > 1 # サイズが2byte以上なら mem
         v.reg = :mem
       else
-        if v.lr[1] <= v.lr[0] # 寿命が1ならそれは使ってないよね
+        if v.lr[1] <= v.lr[0] # 寿命が0ならそれは使ってないよね
           v.reg = :none
         elsif v.lr[1] == v.lr[0]+1
           # pp '*',v,ops[v.lr[0]], ops[v.lr[1]]
@@ -594,7 +596,7 @@ class OpCompiler
             case op2[0]
             when :load
               v.reg = :a if op2[2] == v
-            when :add, :sub, :lt, :eq
+            when :add, :sub, :lt, :eq, :mul, :div, :mod
               v.reg = :a if op2[2] == v
             end
           end

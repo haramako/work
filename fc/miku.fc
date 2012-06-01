@@ -58,6 +58,10 @@ function interrupt():void
 
 function wait_vsync():void
 {
+  while( gr_sprite_idx < 255 ){
+    gr_sprite_buf[gr_sprite_idx] = 0;
+    gr_sprite_idx += 1;
+  }
   vsync_flag = 1;
   while( vsync_flag ){}
 }
@@ -112,6 +116,22 @@ const BUL_MAX:int = 32;
 var bul_x:int[BUL_MAX];
 var bul_y:int[BUL_MAX];
 var bul_idx:int = 0;
+var bul_wait:int;
+
+function wait(n:int):void
+{
+  while( n ){
+    var i:int = 55;
+    while( i ){
+      var j:int = 255;
+      while( j ){
+        j -= 1;
+      }
+      i -= i;
+    }
+    n -= 1;
+  }
+}
 
 function main(): void
 {
@@ -138,15 +158,20 @@ function main(): void
     if( pad_right ){ x += 2; }
     gr_sprite( x, y, 0x41, 0 );
 
-    if( pad_a ){
-      bul_x[bul_idx] = x;
-      bul_y[bul_idx] = y;
-      bul_idx = ( bul_idx + 1 ) % BUL_MAX;
+    if( bul_wait == 0 ){
+      if( pad_a ){
+        bul_x[bul_idx] = x;
+        bul_y[bul_idx] = y;
+        bul_idx = ( bul_idx + 1 ) % BUL_MAX;
+        bul_wait = 4;
+      }
+    }else{
+      bul_wait -= 1;
     }
 
     var i:int = 0;
-    while( i<8 ){
-      if( bul_y[i] > BUL_MAX ){
+    while( i<BUL_MAX ){
+      if( bul_y[i] > 8 ){
         bul_y[i] -= 6;
         gr_sprite( bul_x[i], bul_y[i], 0x49, 0 );
       }
