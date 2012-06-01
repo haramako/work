@@ -153,6 +153,18 @@ class OpCompiler
           r << store_a(op[1],i)
         end
 
+      when :and, :or, :xor
+        op[1].type.size.times do |i|
+          if op[2].type.size > i
+            r << load_a( op[2],i)
+          elsif op[2].type.size == i
+            r << "lda #0"
+          end
+          as = {and:'and', or:'ora', xor:'eor'}[op[0]]
+          r << "#{as} #{byte(op[3],i)}"
+          r << store_a(op[1],i)
+        end
+
       when :mul, :div, :mod
         # 定数で２の累乗の場合の最適化
         if Numeric === op[3].val and [0,1,2,4,8,16,32,64,128,256].include?(op[3].val) and op[1].type.size == 1
@@ -601,7 +613,8 @@ class OpCompiler
             end
           end
         elsif v.var_type == :temp
-          v.reg = :stack
+          v.reg = :mem
+          #v.reg = :stack
         end
       end
       unless v.reg

@@ -30,7 +30,7 @@ class Parser
     end
     if @scanner.eos?
       r = nil
-    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|->|&&|\|\||\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|%|&|\||=|,|@|!/)
+    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|->|&&|\|\||\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|%|&|\||\^|=|,|@|!/)
       # 記号
       r = [@scanner[0], @scanner[0]]
     elsif @scanner.scan(/0[xX]([\d\w]+)/)
@@ -128,7 +128,7 @@ class TypeDecl
     when :pointer
       @str = "#{@base}*"
     when :array
-      @str = "#{@base}[#{@length}]"
+      @str = "#{@base}[#{@length||''}]"
     when :lambda
       @str = "#{@base}(#{args.join(",")})"
     else
@@ -336,8 +336,11 @@ class ScopedBlock
 
     when :var
       ast[1].each do |v|
-        var = new_var( v[0], const_type_eval( v[1] ), nil, v[3] )
-        compile_statement( [:exp, [:load, var.id, v[2]]] ) if v[2]
+        init = v[2] && rval(v[2])
+        type = ( v[1] && const_type_eval(v[1]) ) || init.type
+        compatible_type( type, init.type ) if type and init
+        var = new_var( v[0], type, v[3] )
+        emit :load, var, init if init
       end
 
     when :const
@@ -433,7 +436,6 @@ class ScopedBlock
       case ast[0]
 
       when :load
-        pp ast
         left, left_value = lval(ast[1])
         right = rval(ast[2])
         if left_value
@@ -454,7 +456,7 @@ class ScopedBlock
         r = new_tmp( left.type )
         emit ast[0], r, left
 
-      when :add, :sub, :mul, :div, :mod
+      when :add, :sub, :mul, :div, :mod, :and, :or, :xor
         left = rval(ast[1])
         right = rval(ast[2])
         r = new_tmp( compatible_type( left.type, right.type ) )
@@ -483,7 +485,6 @@ class ScopedBlock
         end
 
       when :land
-        pp ast
         end_label = new_label('end')
         r = new_tmp( TypeDecl[:int] )
         left = rval(ast[1])
@@ -494,7 +495,16 @@ class ScopedBlock
         emit :label, end_label
 
       when :lor
-        r = rval([:land, [:not, ast[1]], ast[2]])
+        end_label = new_label('end')
+        r = new_tmp( TypeDecl[:int] )
+        r2 = new_tmp( TypeDecl[:int] )
+        left = rval(ast[1])
+        emit :load, r, left
+        emit :not, r2, r
+        emit :if, r2, end_label
+        right = rval(ast[2])
+        emit :load, r, right
+        emit :label, end_label
 
       when :call
         func = find_var( ast[1] )
@@ -626,8 +636,8 @@ class ScopedBlock
     var
   end
 
-  def new_var(id,type,init,opt)
-    add_var Value.new(id,type,init,opt,self, :var, :var )
+  def new_var(id,type,opt)
+    add_var Value.new(id,type,nil,opt,self, :var, :var )
   end
 
   def new_const(id,type,init,opt)
