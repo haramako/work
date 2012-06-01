@@ -112,11 +112,18 @@ function pad_update():void
   pad_right = PAD_CTRL % 2;
 }
 
-const BUL_MAX:int = 32;
+const BUL_MAX:int = 16;
 var bul_x:int[BUL_MAX];
 var bul_y:int[BUL_MAX];
 var bul_idx:int = 0;
 var bul_wait:int;
+
+const EN_MAX:int = 16;
+var en_type:int[EN_MAX];
+var en_x:int[EN_MAX];
+var en_y:int[EN_MAX];
+var en_p1:int[EN_MAX];
+var en_p2:int[EN_MAX];
 
 function wait(n:int):void
 {
