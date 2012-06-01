@@ -14,28 +14,24 @@ class Parser
     left '||'
     right '=' '+=' '-='
   preclow
-  expect 0 /* must has no conflict */
+  expect 1 /* if-else-else has 1 shift/reduce conflict,  */
 rule
 
 /****************************************************/
 /* program */
 program: statement_list
        
-block: '{' statement_list '}' { result = val[1] }
-     | '{' '}'                { result = [] }
-/*     | statement_i            { result = [val[0]] } */
-/*     | ';'                    { result = [] } */
-
-statement_list: statement_list statement_i { result = val[0] + [val[1]] }
-              | statement_i { result = [val[0]] }
 
 /****************************************************/
 /* statement */
 
+statement_list: statement_list statement_i { result = val[0] + [val[1]] }
+              | statement_i { result = [val[0]] }
+              
 statement_i: statement { info(val[0]) }
 
 statement: options ';' { result = [:options, val[0]] }
-         | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if block
+         | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if function_block
               { result = [:function, val[1], val[3], val[6], val[7], val[8]] }
          | 'include' '(' STRING ')' ';'          { result = [:include, val[2]] }
          | 'var' var_decl_list ';'               { result = [:var, val[1]] }
@@ -45,6 +41,7 @@ statement: options ';' { result = [:options, val[0]] }
          | 'if' '(' exp ')' block else_block { result = [:if, val[2], val[4], val[5]] }
          | 'loop' '(' ')' block { result = [:loop, val[3]] }
          | 'while' '(' exp ')' block { result = [:while, val[2], val[4]] }
+         | 'for' '(' IDENT ',' exp ',' exp ')' block { result = [:for, val[2], val[4], val[6], val[8]] }
          | 'break' ';' { result = [:break] }
          | 'continue' ';' { result = [:continue] }
          | 'return' ';' { result = [:return] }
@@ -52,6 +49,15 @@ statement: options ';' { result = [:options, val[0]] }
          | 'asm' '(' STRING ')' ';' { result = [:asm, val[2]] }
 
          |  exp ';' { result = [:exp, val[0]] }
+         
+function_block: '{' '}' { result = [] }
+              | '{' statement_list '}' { result = val[1] }
+              | ';' { result = nil }
+              
+block: '{' statement_list '}' { result = val[1] }
+     | '{' '}'                { result = [] }
+     | statement_i            { result = [val[0]] } 
+     | ';'                    { result = [] } 
          
 else_block: | 'else' block { result = val[1] }
 

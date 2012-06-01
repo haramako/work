@@ -77,8 +77,10 @@ function gr_add( to:int16, from:int*, size:int):void
   gr_idx += 1;
 }
 
-function gr_sprite( x:int, y:int, pat:int, mode:int ):void
+function gr_sprite( x:int, y:int, pat:int, mode:int ):void options (extern:true) {}
+/*
 {
+  if( gr_sprite_idx >= 252 ){ return; }
   var p:int = gr_sprite_idx;
   gr_sprite_buf[p] = y;
   gr_sprite_buf[p+1] = pat;
@@ -86,30 +88,14 @@ function gr_sprite( x:int, y:int, pat:int, mode:int ):void
   gr_sprite_buf[p+3] = x;
   gr_sprite_idx += 4;
 }
+*/
 
 function gr_sprite2x2( x:int, y:int, pat:int, mode:int ):void
 {
-  var p:int = gr_sprite_idx;
-  gr_sprite_buf[p] = y;
-  gr_sprite_buf[p+1] = pat;
-  gr_sprite_buf[p+2] = mode;
-  gr_sprite_buf[p+3] = x;
-  
-  gr_sprite_buf[p+4] = y;
-  gr_sprite_buf[p+5] = pat+1;
-  gr_sprite_buf[p+6] = mode;
-  gr_sprite_buf[p+7] = x+8;
-  
-  gr_sprite_buf[p+8] = y+8;
-  gr_sprite_buf[p+9] = pat+16;
-  gr_sprite_buf[p+10] = mode;
-  gr_sprite_buf[p+11] = x;
-  
-  gr_sprite_buf[p+12] = y+8;
-  gr_sprite_buf[p+13] = pat+17;
-  gr_sprite_buf[p+14] = mode;
-  gr_sprite_buf[p+15] = x+8;
-  gr_sprite_idx += 16;
+  gr_sprite(x  ,y  ,pat  ,mode);
+  gr_sprite(x+8,y  ,pat+ 1,mode);
+  gr_sprite(x  ,y+8,pat+16,mode);
+  gr_sprite(x+8,y+8,pat+17,mode);
 }
 
 function pad_update():void
@@ -126,3 +112,16 @@ function pad_update():void
   pad_right = PAD_CTRL % 2;
 }
 
+function memset(p:int*, c:int, size:int):void options (extern:true) {}
+/*
+{
+  var i = 0;
+  while( i < size ){
+    p[i] = c;
+    i += 1;
+  }
+}
+*/
+
+function memzero(p:int*, size:int):void options (extern:true) {}
+function memcpy(from:int*, to:int*, size:int):void options (extern:true) {}
