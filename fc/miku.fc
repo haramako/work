@@ -152,11 +152,17 @@ function wait(n:int):void
   }
 }
 
-const BUL_MAX = 16;
-var bul_x:int[BUL_MAX];
-var bul_y:int[BUL_MAX];
-var bul_idx:int = 0;
-var bul_wait:int;
+var anim:int = 0;
+var anim_wait:int = 0;
+
+var my_x:int = 100;
+var my_y:int = 100;
+var my_wait:int;
+
+const MY_BUL_MAX = 16;
+var my_bul_x:int[MY_BUL_MAX];
+var my_bul_y:int[MY_BUL_MAX];
+var my_bul_idx:int = 0;
 
 const EN_MAX = 16;
 var en_type:int[EN_MAX];
@@ -168,7 +174,49 @@ var en_wait:int = 0;
 var en_now = 0;
 
 const SPR_MIKU = 0x80;
-const SPR_NEGI = 0x82;
+const SPR_NEGI = 0xa0;
+
+function my_process():void
+{
+  // 自機の移動
+  pad_update();
+  if( pad_up ){ my_y -= 2; }
+  if( pad_down ){ my_y += 2; }
+  if( pad_left ){ my_x -= 2; }
+  if( pad_right ){ my_x += 2; }
+
+  if( my_wait == 0 ){
+    if( pad_a ){
+      my_bul_x[my_bul_idx] = my_x;
+      my_bul_y[my_bul_idx] = my_y-8;
+      my_bul_idx = ( my_bul_idx + 1 ) % MY_BUL_MAX;
+      my_wait = 4;
+    }
+  }else{
+    my_wait -= 1;
+  }
+
+  gr_sprite2x2( my_x-8, my_y-8, SPR_MIKU+anim*2, 0 );
+    
+}
+
+function my_bul_process():void
+{
+  // 自機の弾の処理
+  var i = 0;
+  while( i<MY_BUL_MAX ){
+    if( my_bul_y[i] ){
+      if( my_bul_y[i] > 8 ){
+        my_bul_y[i] -= 6;
+        gr_sprite( my_bul_x[i]-4, my_bul_y[i]-4, SPR_NEGI+anim, 0 );
+        gr_sprite( my_bul_x[i]-4, my_bul_y[i]+4, SPR_NEGI+anim+16, 0 );
+      }else{
+        my_bul_y[i] = 0;
+      }
+    }
+    i += 1;
+  }
+}
 
 function en_process(idx:int):void
 {
@@ -176,10 +224,10 @@ function en_process(idx:int):void
     en_y[idx] += 2;
 
     var i = 0;
-    while( i < BUL_MAX ){
-      if( bul_y[i] != 0 && en_x[idx] + 8 - bul_x[i] < 16 && en_y[idx] + 8 - bul_y[i] < 16 ){
+    while( i < MY_BUL_MAX ){
+      if( my_bul_y[i] != 0 && en_x[idx] + 8 - my_bul_x[i] < 16 && en_y[idx] + 8 - my_bul_y[i] < 16 ){
         en_type[idx] = 0;
-        bul_y[i] = 0;
+        my_bul_y[i] = 0;
       }
       i += 1;
     }
@@ -210,40 +258,11 @@ function main(): void
   var x = 100, y = 100;
   
   while( 1 ){
-    // 自機の移動
-    pad_update();
-    if( pad_up ){ y -= 2; }
-    if( pad_down ){ y += 2; }
-    if( pad_left ){ x -= 2; }
-    if( pad_right ){ x += 2; }
-
-    if( bul_wait == 0 ){
-      if( pad_a ){
-        bul_x[bul_idx] = x;
-        bul_y[bul_idx] = y-8;
-        bul_idx = ( bul_idx + 1 ) % BUL_MAX;
-        bul_wait = 4;
-      }
-    }else{
-      bul_wait -= 1;
-    }
-
-    gr_sprite2x2( x-8, y-8, SPR_MIKU, 0 );
+    anim_wait += 1;
+    anim = anim_wait / 8 % 4;
     
-    // 自機の弾の処理
-    var i = 0;
-    while( i<BUL_MAX ){
-      if( bul_y[i] ){
-        if( bul_y[i] > 8 ){
-          bul_y[i] -= 6;
-          gr_sprite( bul_x[i]-4, bul_y[i]-4, SPR_NEGI, 0 );
-          gr_sprite( bul_x[i]-4, bul_y[i]+4, SPR_NEGI+16, 0 );
-        }else{
-          bul_y[i] = 0;
-        }
-      }
-      i += 1;
-    }
+    my_process();
+    my_bul_process();
 
     // 敵の出現
     if( en_wait == 0 ){
@@ -256,7 +275,7 @@ function main(): void
       en_wait -= 1;
     }
     
-    i = 0;
+    var i = 0;
     while( i<EN_MAX ){
       en_process(i);
       i += 1;

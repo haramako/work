@@ -1,7 +1,7 @@
 class Parser
   prechigh
-    nonassoc UMINUS
     left '(' '['
+    nonassoc UMINUS
     left '*' '/' '%'
     left '+' '-'
     left '<<' '>>'

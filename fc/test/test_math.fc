@@ -1,0 +1,31 @@
+include( "emu.fc" );
+include( "math.fc" );
+
+function test_sin():void
+{
+  assert_equal( sin(  0),   0, 'sin(0)' );
+  assert_equal( sin( 63), 127, 'sin(63)' );
+  assert_equal( sin( 64), 127, 'sin(64)' );
+  assert_equal( sin(127),   0, 'sin(127)' );
+  assert_equal( sin(128),   0, 'sin(128)' );
+  assert_equal( sin(191), 129, 'sin(191)' );
+  assert_equal( sin(192), 129, 'sin(192)' );
+  assert_equal( sin(255),   0, 'sin(255)' );
+}
+
+function test_atan():void
+{
+  assert_equal( atan( 0, 1),   0, 'atan(0)');
+  assert_equal( atan( 1, 1),  32, 'atan(32)');
+  assert_equal( atan( 1, 0),  63, 'atan(63)');
+  assert_equal( atan( 1,-1),  96, 'atan(96)');
+  assert_equal( atan( 0,-1), 128, 'atan(128)');
+  assert_equal( atan(-1,-1), 160, 'atan(160)');
+  assert_equal( atan(-1, 0), 193, 'atan(193)');
+  assert_equal( atan(-1, 1), 224, 'atan(224)');
+}
+
+test_sin();
+test_atan();
+
+exit(0);

@@ -1125,6 +1125,7 @@ function execute() {
     default:
       message( "Address $" + addr2hex(regPC) + " - unknown opcode " + opcode );
       codeRunning = false;
+      process.exit(1);
       break;
   }
 
@@ -1149,7 +1150,6 @@ function loadNesFile(filename){
   var buf = fs.readFileSync(filename);
   var pos = 0;
   var nes = {};
-  puts( buf.length );
   
   function read(n){
     var r, i;

@@ -695,7 +695,7 @@ class ScopedBlock
     elsif @upper 
       @upper.find_var(id)
     else
-      raise " #{id} not defined"
+      raise CompileError.new(" #{id} not defined")
     end
   end
 

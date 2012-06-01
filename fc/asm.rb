@@ -224,6 +224,15 @@ class OpCompiler
           end
         end
 
+      when :uminus
+        raise if op[1].type.type != :int
+        op[1].type.size.times do |i|
+          r << "sec" if i == 0
+          r << "lda #0"
+          r << "sbc #{byte(op[2],i)}" if op[2].type.size > i
+          r << store_a(op[1],i)
+        end
+
       when :eq
         false_label, end_label = new_labels(2)
         [ op[2].type.size, op[3].type.size ].max.times do |i|
@@ -532,10 +541,12 @@ class OpCompiler
           end
         end
       when :call
-        if op[1] 
-          puts "omit #{op}"
-          r << [op[0]]+[nil]+op[2..-1]
-          next
+        if Value === op[1] 
+          if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
+            puts "omit #{op}"
+            r << [op[0]]+[nil]+op[2..-1]
+            next
+          end
         end
       end
       r << op
