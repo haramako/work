@@ -347,7 +347,8 @@ class ScopedBlock
     when :const
       ast[1].each do |v|
         # raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
-        new_const( v[0], TypeDecl[v[1]], v[2], v[3] )
+        type = TypeDecl[v[1]] if v[1]
+        new_const( v[0], type, v[2], v[3] )
       end
 
     when :'if'
@@ -643,7 +644,9 @@ class ScopedBlock
 
   def new_const(id,type,init,opt)
     case init
-    when nil, Numeric, Lambda
+    when nil, Lambda
+    when Numeric
+      init_type = Value.literal(init).type
     when String
       init = str.unpack('c*').concat([0])
       init_type = TypeDecl[ [:array, init.size, :int] ]
@@ -657,8 +660,8 @@ class ScopedBlock
     else
       raise "not constant value #{@init}"
     end
+    pp type, init_type
     if type and init_type
-      pp type, init_type
       compatible_type( init_type, type ) 
     end
     type = init_type unless type
