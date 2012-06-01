@@ -1,6 +1,6 @@
 parser.rb
 parser.output
-*.asm
+a.asm
 *.nes
 *.html
 
