@@ -30,7 +30,7 @@ class Parser
     end
     if @scanner.eos?
       r = nil
-    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|->|\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|%|=|,|@|!/)
+    elsif @scanner.scan(/<=|>=|==|\+=|-=|!=|->|&&|\|\||\(|\)|\{|\}|;|:|<|>|\[|\]|\+|-|\*|\/|%|&|\||=|,|@|!/)
       # 記号
       r = [@scanner[0], @scanner[0]]
     elsif @scanner.scan(/0[xX]([\d\w]+)/)
@@ -482,6 +482,20 @@ class ScopedBlock
           r = rval([:not, [:lt, left, right]])
         end
 
+      when :land
+        pp ast
+        end_label = new_label('end')
+        r = new_tmp( TypeDecl[:int] )
+        left = rval(ast[1])
+        emit :load, r, left
+        emit :if, r, end_label
+        right = rval(ast[2])
+        emit :load, r, right
+        emit :label, end_label
+
+      when :lor
+        r = rval([:land, [:not, ast[1]], ast[2]])
+
       when :call
         func = find_var( ast[1] )
         if func.type.base.type != :void
@@ -598,7 +612,7 @@ class ScopedBlock
   end
 
   def new_label( name )
-    new_labels( [name] )[0]
+    new_labels( name )[0]
   end
 
   def new_labels( *names )

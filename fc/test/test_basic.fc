@@ -113,6 +113,20 @@ function test_int8_and_int16_operator():void
   puts('');
 }
 
+function test_logical_op():void
+{
+  var T:int = 1;
+  var F:int = 0;
+  assert_true(    T && T , "&&");
+  assert_true(  !(T && F), "&&");
+  assert_true(  !(F && T), "&&");
+  assert_true(  !(F && F), "&&");
+  assert_true(    T || F , "||");
+  assert_true(    T || F , "||");
+  assert_true(    F || T , "||");
+  assert_true(  !(F || F), "||");
+}
+
 // NESの制限によるエラーをテスト、主にコンパイル時エラーになる
 function test_nesasm_limit():void
 {

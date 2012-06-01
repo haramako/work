@@ -5,6 +5,7 @@ class Parser
     left '*' '/' '%'
     left '+' '-'
     left '<' '>' '<=' '>=' '==' '!='
+    left '&&' '||'
     right '=' '+=' '-='
   preclow
   expect 0 /* must has no conflict */
@@ -55,6 +56,10 @@ exp: '(' exp ')' { result = val[1] }
    | exp '*'  exp { result = [:mul, val[0], val[2]] }
    | exp '/'  exp { result = [:div, val[0], val[2]] }
    | exp '%'  exp { result = [:mod, val[0], val[2]] }
+   | exp '&'  exp { result = [:and, val[0], val[2]] }
+   | exp '|'  exp { result = [:or, val[0], val[2]] }
+   | exp '&&'  exp { result = [:land, val[0], val[2]] }
+   | exp '||'  exp { result = [:lor, val[0], val[2]] }
    | exp '+=' exp { result = [:load, val[0], [:add, val[0], val[2]]] }
    | exp '-=' exp { result = [:load, val[0], [:sub, val[0], val[2]]] }
    | exp '==' exp { result = [:eq, val[0], val[2]] }
