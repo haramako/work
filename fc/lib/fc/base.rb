@@ -7,18 +7,21 @@ module Fc
   FC_HOME = Pathname(File.dirname( __FILE__ )) + '../..'
   LIB_PATH = [FC_HOME]
 
+  # share以下のファイルを検索する
   def self.find_share( path )
     FC_HOME + 'share' + path
   end
 
+  # fclib以下のファイルを検索する
   def self.find_lib( path )
     FC_HOME + 'fclib' + path
   end
 
   ######################################################################
   # 型
+  # Type.new() ではなく Type[] で生成すること
   ######################################################################
-  class TypeDecl
+  class Type
 
     attr_reader :type # 種類( :void, :int, :pointer, :array, :lambda のいずれか )
     attr_reader :size # サイズ(単位:byte)
@@ -29,9 +32,14 @@ module Fc
 
     BASIC_TYPES = { int:[1,false], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
 
+    private_class_method :new
+
     def initialize( ast )
       if ast == :void
         @type = :void
+        @size = 1
+      elsif ast == :bool
+        @type = :bool
         @size = 1
       elsif Symbol === ast
         @type = :int
@@ -41,26 +49,26 @@ module Fc
         else
           raise
         end
-      elsif Array === ast 
+      elsif Array === ast
         if ast[0] == :pointer
           @type = :pointer
-          @base = TypeDecl[ ast[1] ]
+          @base = Type[ ast[1] ]
           @size = 2
         elsif ast[0] == :array
           @type = :array
-          @base = TypeDecl[ ast[2] ]
+          @base = Type[ ast[2] ]
           @length = ast[1]
           @size = @base.size * @length
         elsif ast[0] == :lambda
           @type = :lambda
-          @base = TypeDecl[ ast[2] ]
+          @base = Type[ ast[2] ]
           @args = ast[1]
           @size = 2
         end
       end
 
       case @type
-      when :int, :void
+      when :int, :void, :bool
         @str = "#{ast}"
       when :pointer
         @str = "#{@base}*"
@@ -78,9 +86,9 @@ module Fc
     end
 
     def self.[]( ast_or_type )
-      return ast_or_type if TypeDecl === ast_or_type
+      return ast_or_type if Type === ast_or_type
       @@cache = Hash.new unless defined?(@@cache)
-      type = TypeDecl.new( ast_or_type )
+      type = new( ast_or_type )
       @@cache[type.to_s] = type unless @@cache[type.to_s]
       @@cache[type.to_s]
     end
@@ -93,7 +101,7 @@ module Fc
   class Value
     attr_reader :kind # 種類( :var, :const, :literal のいずれか）
     attr_reader :id # 変数名( リテラルの場合は、nil )
-    attr_reader :type # TypeDecl
+    attr_reader :type # Type
     attr_reader :val # リテラルもしくは定数の場合は数値
     attr_reader :opt # オプション
     attr_reader :scope # スコープ(Function)
@@ -107,14 +115,14 @@ module Fc
 
     def self.literal( val )
       if val >= 256
-        Value.new( nil, TypeDecl[:int16], val, nil, nil, :literal, nil )
+        Value.new( nil, Type[:int16], val, nil, nil, :literal, nil )
       else
-        Value.new( nil, TypeDecl[:int], val, nil, nil, :literal, nil )
+        Value.new( nil, Type[:int], val, nil, nil, :literal, nil )
       end
     end
 
     def initialize( id, type, val, opt, scope, kind=:var, var_type )
-      raise "invalid type, #{type}" unless TypeDecl === type
+      raise "invalid type, #{type}" unless Type === type
       @id = id
       @type = type
       @val = val
@@ -160,7 +168,7 @@ module Fc
     end
 
     def to_s
-      "<Lambda:#{@id}#{@type}>"
+      "<Lambda:#{@id} #{@type}>"
     end
   end
 
@@ -252,11 +260,11 @@ module Fc
       when :function
         block = ScopedBlock.new( @compiler, self, ast[1], ast[5] )
         args = ast[2].map do |v|
-          block.new_arg( v[0], TypeDecl[v[1]] )
+          block.new_arg( v[0], Type[v[1]] )
         end
-        type = TypeDecl[ [:lambda, args, ast[3]] ]
+        type = Type[ [:lambda, args, ast[3]] ]
         lmd = Lambda.new( ast[1], type, args, ast[4], block )
-        block.new_return_val(type.base) if type.base != TypeDecl[:void]
+        block.new_return_val(type.base) if type.base != Type[:void]
         new_const( ast[1], lmd.type, lmd, nil )
 
       when :var
@@ -271,7 +279,7 @@ module Fc
       when :const
         ast[1].each do |v|
           # raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
-          type = TypeDecl[v[1]] if v[1]
+          type = Type[v[1]] if v[1]
           new_const( v[0], type, v[2], v[3] )
         end
 
@@ -399,7 +407,7 @@ module Fc
           left = rval(ast[1])
           right = rval(ast[2])
           compatible_type( left.type, right.type )
-          r = new_tmp( TypeDecl[:int] )
+          r = new_tmp( Type[:int] )
           emit ast[0], r, left, right
 
         when :ne, :gt, :le, :ge
@@ -419,7 +427,7 @@ module Fc
 
         when :land
           end_label = new_label('end')
-          r = new_tmp( TypeDecl[:int] )
+          r = new_tmp( Type[:int] )
           left = rval(ast[1])
           emit :load, r, left
           emit :if, r, end_label
@@ -429,8 +437,8 @@ module Fc
 
         when :lor
           end_label = new_label('end')
-          r = new_tmp( TypeDecl[:int] )
-          r2 = new_tmp( TypeDecl[:int] )
+          r = new_tmp( Type[:int] )
+          r2 = new_tmp( Type[:int] )
           left = rval(ast[1])
           emit :load, r, left
           emit :not, r2, r
@@ -460,7 +468,7 @@ module Fc
           right = rval(ast[2])
           raise CompileError.new("index must be pointer or array") unless left.type.type == :pointer or left.type.type == :array
           raise CompileError.new("index must be int") if right.type.type != :int
-          r = new_tmp( TypeDecl[[:pointer, left.type.base]] )
+          r = new_tmp( Type[[:pointer, left.type.base]] )
           emit :index, r, left, right
           left_value = true
 
@@ -526,9 +534,9 @@ module Fc
       if Array === ast and ast[0] === :array
         size = const_eval(ast[1])
         size = size.val if Value === size
-        TypeDecl[ [ast[0], size, ast[2]] ]
+        Type[ [ast[0], size, ast[2]] ]
       else
-        TypeDecl[ast]
+        Type[ast]
       end
     end
 
@@ -580,11 +588,11 @@ module Fc
         init_type = Value.literal(init).type
       when String
         init = str.unpack('c*').concat([0])
-        init_type = TypeDecl[ [:array, init.size, :int] ]
+        init_type = Type[ [:array, init.size, :int] ]
       when Array
         if init[0] == :array
           init = init[1]
-          init_type = TypeDecl[ [:array, init.size, :int] ]
+          init_type = Type[ [:array, init.size, :int] ]
         else
           raise "not constant value #{@init}"
         end
@@ -614,7 +622,7 @@ module Fc
 
     def new_literal_string(str)
       var = add_var( Value.new("#{@tmp_count}".intern, 
-                               TypeDecl[[:array,str.size+1,:int]], 
+                               Type[[:array,str.size+1,:int]], 
                                str.unpack('c*').concat([0]), nil, self, :const, nil ) )
       @tmp_count += 1
       var

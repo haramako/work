@@ -315,7 +315,7 @@ module Fc
           r << op[1]
 
         when :index
-          raise if op[3].type != TypeDecl[:int]
+          raise if op[3].type != Type[:int]
           # raise if op[2].kind != :var
           if op[2].type.type == :array
             r << "clc"

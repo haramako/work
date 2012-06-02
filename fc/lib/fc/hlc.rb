@@ -102,7 +102,7 @@ module Fc
       unless @root.vars[:interrupt]
         blk = ScopedBlock.new(self,@root,:interrupt,[])
         blk.compile
-        lmd = Lambda.new(:interrupt,TypeDecl[[:lambda,[],:void]],[],nil,blk)
+        lmd = Lambda.new(:interrupt,Type[[:lambda,[],:void]],[],nil,blk)
         @root.new_const(:interrupt,lmd.type,lmd,nil)
       end
     end
