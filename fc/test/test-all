@@ -3,7 +3,9 @@
 
 require 'pp'
 require 'json'
-require_relative '../nes'
+require_relative '../lib/fc/nes'
+
+FC = 'bin/fc'
 
 size_prev = JSON.parse( File.read('size_prev.txt') )
 size_cur = Hash.new
@@ -17,7 +19,7 @@ end
 
 files.each do |file|
   puts "testing #{file}"
-  result = `cd .. && ./fc -d test/#{file} && node emu.js a.nes || echo __ERROR__`
+  result = `cd .. && #{FC} -d test/#{file} && node emu.js a.nes || echo __ERROR__`
   if /__ERROR__/ === result
     puts result
     err = true

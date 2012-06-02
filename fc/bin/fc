@@ -1,0 +1,93 @@
+#!/usr/bin/env ruby -Ku
+# coding: utf-8
+
+#
+#
+#
+
+require 'pp'
+require 'optparse'
+require_relative '../lib/fc/hlc'
+require_relative '../lib/fc/nes'
+require_relative '../lib/fc/asm'
+
+
+if __FILE__ == $0
+  $out = 'a.nes'
+  opt = OptionParser.new( "NES Compiler\nUsage: fc [options] <src.fc> ...\nOptions:\n" )
+  opt.on( '-h', '--help' ){ puts opt; exit }
+  opt.on( '-o:', 'output file' ){|v| $out = v }
+  opt.on( '-e', 'run by interpreter' ){ $run = true }
+  opt.on( '-S', 'output asm file' ){|v| $asm = true }
+  opt.on( '-d', '--debug', 'show debug info' ){|v| $debug_info = true }
+  opt.parse!
+
+  base = File.basename($out,'.*')
+  src_filename = ARGV[0]
+  src = File.read(src_filename)
+
+  # ソースコードを中間コードにコンパイル
+  com = Compiler.new
+  com.compile( src, src_filename )
+
+  if $debug_info
+    open( base+'.html', 'w' ) do |f|
+      f.write com.to_html
+    end
+  end
+
+  if $run
+    require_relative 'runner'
+    puts '====RUN===='
+    runner = Runner.new( com )
+    runner.run
+    exit
+  end
+
+  # 中間コードをアセンブラにコンパイルする
+  op_com = OpCompiler.new
+  op_com.compile( com.root )
+
+  if $debug_info
+    open( base+'.html', 'w' ) do |f|
+      f.write com.to_html
+    end
+  end
+
+  template = File.read( File.dirname(__FILE__) + '/../share/nes.asm' ) 
+
+  options = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
+  options.merge!( com.root.options )
+  options_asm = options.map{|k,v| "\t.#{k} #{v}" }
+  chr_asm = []
+  op_com.char_banks.each do |bank,asm|
+    chr_asm << "\t.bank #{2+bank}"
+    chr_asm << "\t.org $0000"
+    chr_asm.concat asm
+  end
+
+  options_asm = options_asm.join("\n");
+  chr_asm = chr_asm.join("\n");
+  code_asm = op_com.asm.join("\n")
+  str = ERB.new(template,nil,'-').result(binding)
+
+  open( base+'.asm', 'w' ) do |f|
+    f.write str
+  end
+
+  unless $asm
+    # puts '====ASSEMBLE====' if $debug_info
+    result = `/Users/makoto/bin/nesasm #{base+'.asm'}`
+    if /error/ === result
+      puts result
+      exit(1)
+    end
+  end
+
+
+  
+  size = parse_nes( base+'.nes' )[:prog_size] unless $asm
+  puts "code=#{size}, var=#{op_com.address-0x200}, zeropage=#{op_com.address_zeropage-0x10}"
+
+end
+
