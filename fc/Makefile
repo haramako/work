@@ -11,4 +11,4 @@ lib/fc/parser.rb: parser.y
 
 .PHONY: clean
 clean:
-	rm -f a.asm a.nes parser.output parser.rb
+	rm -f a.asm a.nes a.html lib/fc/parser.output lib/fc/parser.rb

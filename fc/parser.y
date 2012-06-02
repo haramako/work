@@ -1,4 +1,4 @@
-class Parser
+class Fc::Parser
   prechigh
     left '(' '['
     nonassoc UMINUS

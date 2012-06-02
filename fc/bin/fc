@@ -11,6 +11,7 @@ require_relative '../lib/fc/hlc'
 require_relative '../lib/fc/nes'
 require_relative '../lib/fc/asm'
 
+FC_PATH = File.dirname(__FILE__)
 
 if __FILE__ == $0
   $out = 'a.nes'
@@ -27,7 +28,7 @@ if __FILE__ == $0
   src = File.read(src_filename)
 
   # ソースコードを中間コードにコンパイル
-  com = Compiler.new
+  com = Fc::Compiler.new
   com.compile( src, src_filename )
 
   if $debug_info
@@ -45,7 +46,7 @@ if __FILE__ == $0
   end
 
   # 中間コードをアセンブラにコンパイルする
-  op_com = OpCompiler.new
+  op_com = Fc::OpCompiler.new
   op_com.compile( com.root )
 
   if $debug_info
