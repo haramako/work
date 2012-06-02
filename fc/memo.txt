@@ -49,3 +49,65 @@ a.hoge().fuga()
   [:call ,メソッド名, タプル(評価済み), 引数リスト(未評価), ブロックリスト ]
 メソッドは、通常の関数か、マクロ
 マクロの場合は、引数は評価されない。通常の関数の場合は評価されてから送られる。
+
+
+**掛け算
+
+a * b = f( a + b ) - f( a - b )
+(a * b) mod256 = ( f( a + b ) - f( a - b ) ) mod 256
+
+f(x) = x * x / 4
+
+((a mod256) * (b mod256) mod256)
+  = { [ f(a + b) mod256 ] - [ f(a-b) mod256 ] } mod 256
+  = ((a^2 + 2ab + b^2)/4 mod256) - ((a^2 - 2ab + b^2)/4 mod 256)
+
+
+f( a mod 256 + b mod 256 )
+  = ( ( A + B ) * ( A + B )) / 4
+  = ( A^2 + 2AB + B^2 ) / 4
+
+f( a + b )
+  = ( a^2 + 2ab + b^2 ) / 4
+  = ( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) / 4
+  = ( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4
+   +( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4
+
+   
+  = {  ( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4
+      +( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4 }
+   -{  ( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4
+      +( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4 }
+
+  = {  ( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4
+      +( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4 } mod 256
+   -{  ( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4
+      +( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4 } mod 256
+
+  =    ( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4     mod 256
+      +( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4 mod 256
+      -( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4     mod 256
+      -( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) mod 4 / 4 mod 256
+
+  =    ( (A^2 + 2AA' + A'^2 )   +   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4     mod 256
+      -( (A^2 + 2AA' + A'^2 )   -   2(AB+AB'+A'B+A'B')   +   (B^2 + 2BB' + B'^2 ) ) div 4     mod 256
+
+  =    ( + 2(AB+AB'+A'B+A'B') ) div 4     mod 256
+      -( - 2(AB+AB'+A'B+A'B') ) div 4     mod 256
+
+  =    AB mod 256
+
+
+ 10001000
+x10001000
+
+
+**クロック数
+CPU = 1.79MHz
+
+水平同期あたりクロック数 =   1,243 clock
+垂直同期あたりクロック数 = 298,363 clock
+vblankクロック数         =  19,890 clock
+
+60*240 = 14400 水平同期/秒
+

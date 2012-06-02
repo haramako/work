@@ -51,12 +51,12 @@ _Vgr_sprite:
 ;;   var i = 0;
 ;;   while( i<EN_BUL_MAX ){
 ;;     if( en_bul_type[i] ){
-;;       en_bul_y[i] += (en_bul_vy[i]+giff) / 4;
-;;       en_bul_x[i] += (en_bul_vx[i]+giff) / 4;
+;;       en_bul_y[i] += (en_bul_vy[i]+giff16) / 16;
+;;       en_bul_x[i] += (en_bul_vx[i]+giff16) / 16;
 ;;       gr_sprite( en_bul_x[i]-4, en_bul_y[i]-4, SPR_EN_BUL+anim, 1 );
 ;;       // 自機との当たり判定
-;;       if( my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
-;;         my_bang_count = 64;
+;;       if( my_muteki == 0 && my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
+;;         my_bang = 1;
 ;;         en_bul_type[i] = 0;
 ;;       }
 ;;       // 死亡判定
@@ -75,44 +75,38 @@ _Ven_bul_proce_0:
         bne .then4
         jmp .end4
 .then4:
-        lda _Ven_bul_vy,x       ; en_bul_y[i] += (en_bul_vy[i]+giff) / 4;
+        lda _Ven_bul_vy,x       ; en_bul_y[i] += (en_bul_vy[i]+giff16) / 16;
         clc
-        adc _Vgiff
+        adc _Vgiff16
         bpl .pl1
-        sta __reg+0
-        lda #0
-        sec
-        sbc __reg+0
         lsr a
         lsr a
-        sta __reg+0
-        lda #0
-        sec
-        sbc __reg+0
+        lsr a
+        lsr a
+        ora #240
         jmp .end1
 .pl1:
+        lsr a
+        lsr a
         lsr a
         lsr a
 .end1:
         clc
         adc _Ven_bul_y,x
         sta _Ven_bul_y,x
-        lda _Ven_bul_vx,x       ; en_bul_x[i] += (en_bul_vx[i]+giff) / 4;
+        lda _Ven_bul_vx,x       ; en_bul_x[i] += (en_bul_vx[i]+giff16) / 16;
         clc
-        adc _Vgiff
+        adc _Vgiff16
         bpl .pl2
-        sta __reg+0
-        lda #0
-        sec
-        sbc __reg+0
         lsr a
         lsr a
-        sta __reg+0
-        lda #0
-        sec
-        sbc __reg+0
+        lsr a
+        lsr a
+        ora #240
         jmp .end2
 .pl2:
+        lsr a
+        lsr a
         lsr a
         lsr a
 .end2:
@@ -134,7 +128,9 @@ _Ven_bul_proce_0:
         lda #1                  
         sta _Vgr_sprite_Vm_0
         jsr _Vgr_sprite
-        lda _Vmy_x              ; if( my_x + 8 - en_bul_x[i] < 16 && my_y + 8 - en_bul_y[i] < 16 ){
+        lda _Vmy_muteki         ; if( my_muteki == 0 && my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
+        bne .end3
+        lda _Vmy_x              
         clc
         adc #8
         sec
@@ -148,8 +144,8 @@ _Ven_bul_proce_0:
         sbc _Ven_bul_y,x
         cmp #16
         bcs .end3
-        lda #64
-        sta _Vmy_bang_count     ; my_bang_count = 64;
+        lda #1
+        sta _Vmy_bang           ; my_bang = 1;
         lda #0                  ; en_bul_type[i] = 0;
         sta _Ven_bul_type,x
 .end3:

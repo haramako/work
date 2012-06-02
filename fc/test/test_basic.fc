@@ -29,7 +29,7 @@ function test_int_op():void
   var i10 = 10;
 
   assert_equal( i1, i1, 'num');
-  assert_equal( i2*i3, 6, '+,-,*,/,%');
+  assert_equal( i2*i3, 6, '2*3');
   assert_equal( i5*i5, 25, '+,-,*,/,%');
   assert_equal( i5*60, 44, '+,-,*,/,%');
   assert_equal( i10/i3, 3, '/');

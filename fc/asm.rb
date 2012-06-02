@@ -180,15 +180,8 @@ class OpCompiler
               n.times { r << "lsr a" }
               r << "jmp #{end_label}"
               r << "#{negative_label}:"
-              r << "sta __reg+0"
-              r << "sec"
-              r << "lda #0"
-              r << "sbc __reg+0"
               n.times { r << "lsr a" }
-              r << "sta __reg+0"
-              r << "lda #0"
-              r << "sec"
-              r << "sbc __reg+0"
+              r << "ora ##{256-2**(8-n)}"
               r << "#{end_label}:"
             else
               n.times { r << "lsr a" }
