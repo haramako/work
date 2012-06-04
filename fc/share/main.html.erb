@@ -17,10 +17,46 @@ ins.differ { background-color: #faa; }
 </style>
 
 <div class="left_bar">
-  <%= left_bar %>
+  <ul>
+    <li><a href="#module">module</a></li>
+    <%- mod.lambdas.each do |lmd| -%>
+      <li><a href="#<%= lmd.id %>"><%= lmd.id %></a></li>
+    <%- end -%>
+  </ul>
 </div>
+
 <div class="content">
-  <%= block_to_html(@root) %>
+  <a name="module" ></a><h1>module</h1>
+  
+  <%- mod.lambdas.each do |lmd| -%>
+    <a name="<%=lmd.id%>"></a>
+    <h1>function <%= lmd.id %></h1>
+
+    <h2>variables</h2>
+    <table>
+      <tr><th>id</th><th>type</th><th>address</th><th>value</th><th>opt</th></tr>
+      <%- lmd.vars.each do |id,v| -%>
+        <tr>
+          <td><%= id %></td>
+          <td><%= v.type %></td>
+          <td><%= v.address and "0x%04x"%[v.address]  %></td>
+          <td><%= v.val %></td>
+          <td><%= v.opt %></td>
+        </tr>
+      <%- end -%>
+    </table>
+
+    <h2>ast</h2>
+    <pre class="code"><%= PP.pp(lmd.ast,'') %></pre>
+
+    <h2>code</h2>
+    <pre class="code">
+    <%- lmd.ops.each_with_index do |op,i| -%>
+      <%= "<font color='#aaa'>%04d:</font> %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
+    <%- end %></pre>
+  <%- end -%>
+
 </div>
+
 </body>
 </html>
