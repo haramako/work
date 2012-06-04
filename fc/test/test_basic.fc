@@ -226,7 +226,7 @@ function main():void
   exit(0);
 }
 
-var i:int;
+//var i:int;
 const CONST = 1;
 
 

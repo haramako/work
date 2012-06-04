@@ -63,33 +63,33 @@ block: '{' statement_list '}' { result = val[1] }
          
 else_block: | 'else' block { result = val[1] }
 
-exp: '(' exp ')' { result = val[1] }
-   | exp '='  exp { result = [:load, val[0], val[2]] }
-   | exp '+'  exp { result = [:add, val[0], val[2]] }
-   | exp '-'  exp { result = [:sub, val[0], val[2]] }
-   | exp '*'  exp { result = [:mul, val[0], val[2]] }
-   | exp '/'  exp { result = [:div, val[0], val[2]] }
-   | exp '%'  exp { result = [:mod, val[0], val[2]] }
-   | exp '&'  exp { result = [:and, val[0], val[2]] }
-   | exp '|'  exp { result = [:or , val[0], val[2]] }
-   | exp '^'  exp { result = [:xor, val[0], val[2]] }
-   | exp '&&'  exp { result = [:land, val[0], val[2]] }
-   | exp '||'  exp { result = [:lor, val[0], val[2]] }
-   | exp '+=' exp { result = [:load, val[0], [:add, val[0], val[2]]] }
-   | exp '-=' exp { result = [:load, val[0], [:sub, val[0], val[2]]] }
-   | exp '==' exp { result = [:eq, val[0], val[2]] }
-   | exp '!=' exp { result = [:ne, val[0], val[2]] }
-   | exp '<'  exp { result = [:lt, val[0], val[2]] }
-   | exp '>'  exp { result = [:gt, val[0], val[2]] }
-   | exp '<=' exp { result = [:le, val[0], val[2]] }
-   | exp '>=' exp { result = [:ge, val[0], val[2]] }
-   | '!' exp = UMINUS { result = [:not, val[1]] }
-   | '-' exp = UMINUS { result = [:uminus, val[1]] }
-   | '*' exp = UMINUS { result = [:deref, val[1]] }
-   | '&' exp = UMINUS { result = [:ref, val[1]] }
-   | exp '(' exp_list ')' { result = [:call, val[0], val[2]] }
-   | exp '[' exp ']' { result = [:index, val[0], val[2]] }
-   | '[' exp_list ']' { result = [:array, val[1]] }
+exp: '(' exp ')'            { result = val[1] }
+   | exp '='  exp           { result = [:load, val[0], val[2]] }
+   | exp '+'  exp           { result = [:add, val[0], val[2]] }
+   | exp '-'  exp           { result = [:sub, val[0], val[2]] }
+   | exp '*'  exp           { result = [:mul, val[0], val[2]] }
+   | exp '/'  exp           { result = [:div, val[0], val[2]] }
+   | exp '%'  exp           { result = [:mod, val[0], val[2]] }
+   | exp '&'  exp           { result = [:and, val[0], val[2]] }
+   | exp '|'  exp           { result = [:or , val[0], val[2]] }
+   | exp '^'  exp           { result = [:xor, val[0], val[2]] }
+   | exp '&&' exp           { result = [:land, val[0], val[2]] }
+   | exp '||' exp           { result = [:lor, val[0], val[2]] }
+   | exp '+=' exp           { result = [:load, val[0], [:add, val[0], val[2]]] }
+   | exp '-=' exp           { result = [:load, val[0], [:sub, val[0], val[2]]] }
+   | exp '==' exp           { result = [:eq, val[0], val[2]] }
+   | exp '!=' exp           { result = [:ne, val[0], val[2]] }
+   | exp '<'  exp           { result = [:lt, val[0], val[2]] }
+   | exp '>'  exp           { result = [:gt, val[0], val[2]] }
+   | exp '<=' exp           { result = [:le, val[0], val[2]] }
+   | exp '>=' exp           { result = [:ge, val[0], val[2]] }
+   | '!' exp = UMINUS       { result = [:not, val[1]] }
+   | '-' exp = UMINUS       { result = [:uminus, val[1]] }
+   | '*' exp = UMINUS       { result = [:deref, val[1]] }
+   | '&' exp = UMINUS       { result = [:ref, val[1]] }
+   | exp '(' exp_list ')'   { result = [:call, val[0], val[2]] }
+   | exp '[' exp ']'        { result = [:index, val[0], val[2]] }
+   | '[' exp_list ']'       { result = [:array, val[1]] }
    | NUMBER
    | IDENT
    | STRING

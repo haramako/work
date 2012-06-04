@@ -26,7 +26,7 @@ module Fc
   ######################################################################
   class Type
 
-    attr_reader :type # 種類( :void, :int, :pointer, :array, :lambda のいずれか )
+    attr_reader :kind # 種類( :void, :int, :pointer, :array, :lambda のいずれか )
     attr_reader :size # サイズ(単位:byte)
     attr_reader :signed # signedかどうか(intの場合のみ)
     attr_reader :base # ベース型(pointer,array,lambdaの場合のみ)
@@ -39,13 +39,13 @@ module Fc
 
     def initialize( ast )
       if ast == :void
-        @type = :void
+        @kind = :void
         @size = 1
       elsif ast == :bool
-        @type = :bool
+        @kind = :bool
         @size = 1
       elsif Symbol === ast
-        @type = :int
+        @kind = :int
         if BASIC_TYPES[ast]
           @size = BASIC_TYPES[ast][0]
           @signed = BASIC_TYPES[ast][1]
@@ -54,23 +54,23 @@ module Fc
         end
       elsif Array === ast
         if ast[0] == :pointer
-          @type = :pointer
+          @kind = :pointer
           @base = Type[ ast[1] ]
           @size = 2
         elsif ast[0] == :array
-          @type = :array
+          @kind = :array
           @base = Type[ ast[2] ]
           @length = ast[1]
           @size = @base.size * @length
         elsif ast[0] == :lambda
-          @type = :lambda
+          @kind = :lambda
           @base = Type[ ast[2] ]
           @args = ast[1]
           @size = 2
         end
       end
 
-      case @type
+      case @kind
       when :int, :void, :bool
         @str = "#{ast}"
       when :pointer
@@ -99,16 +99,34 @@ module Fc
   end
 
   ######################################################################
-  # 値を持つもの(変数、テンポラリ変数、リテラル、定数など）
+  # 変数、定数など識別子で区別されるもの
+  #
+  # 区別したいのは以下のもの
+  #                 例                          代入 id     val       kind          asm
+  # 引数            function( arg:int )]:void   o    arg    -         arg           __STACK__+0,x
+  # 帰り値          return 0;                   o    -      -         result        __STACK__-1,x
+  # ローカル変数    var i:int;                  o    i      -         var           __STACK_+1,x
+  # テンポラリ変数                              x    i      -         temp          __STACK_+1,x
+  # ローカル定数    const c = 1;                x    c      1         const         #1
+  # ローカル定数2   const c = [1,2]             x    c      -         symbol        .c
+  # 文字列リテラル  "hoge"                      x    a0     [1,2]     symbol        .a0 ( int[]の定数として保持 )
+  # グローバル変数  var i:int;                  o    i      -         global_var    i
+  # グローバル定数  const c = 1;                x    c      1         global_const  #1
+  # グローバル定数2 function f():void;          x    f      1         global_symbol f
+  #
+  # シンボルをもつか、値をもつか
+  # アセンブラでシンボルを使うか、スタックを使うか
+  # 定数か変数か
+  # 代入可能か？
+  #
   ######################################################################
   class Identifier
-    attr_reader :kind # 種類( :var, :const, :literal のいずれか）
-    attr_reader :id # 変数名( リテラルの場合は、nil )
+    
+    attr_reader :kind # 種類
     attr_reader :type # Type
-    attr_reader :val # リテラルもしくは定数の場合は数値
-    attr_reader :opt # オプション
-    attr_reader :scope # スコープ(Function)
-    attr_reader :var_type # varのときのみ( :var, :temp, :arg, :reterun_val のいずれか )
+    attr_reader :id   # 変数名
+    attr_reader :val  # 定数の場合はその値( Fixnumか配列 )
+    attr_reader :opt  # オプション
 
     # 以下は、アセンブラで使用
     attr_accessor :address # アドレス
@@ -116,132 +134,70 @@ module Fc
     attr_accessor :nonlocal # クロージャから参照されているかどうか
     attr_accessor :reg # 格納場所( :mem, :none, :a, :carry, :not_carry, :zero, :not_zero, :negative, :not_negative のいずれか )
 
-    def self.literal( val )
-      if val >= 256
-        Value.new( nil, Type[:int16], val, nil, nil, :literal, nil )
-      else
-        Value.new( nil, Type[:int], val, nil, nil, :literal, nil )
-      end
-    end
-
-    def initialize( id, type, val, opt, scope, kind=:var, var_type )
+    def initialize( kind, id, type, val, opt )
       raise "invalid type, #{type}" unless Type === type
+      unless [:arg, :result, :var, :temp, :const, :symbol, :global_var, :global_const, :global_symbol].include?( kind )
+        raise "invalid kind, #{kind}" 
+      end
+      @kind = kind
       @id = id
       @type = type
       @val = val
       @opt = opt || Hash.new
-      @scope = scope
-      @kind = kind
-      @var_type = var_type
     end
 
     def assignable?
-      ( ( @kind == :var and @var_type != :temp ) or @type.type == :pointer )
+      [:arg, :result, :var, :global_var].include?( @kind )
     end
-
+    
     def const?
-      ( @kind != :var )
+      [:const, :global_const ].include?( @kind )
+    end
+    
+    def symbol?
+      [:symbol, :global_symbol ].include?( @kind )
     end
 
     def to_s
-      if @id
-        if @scope
-          "#{scope.id}$#{id}:#{type}"
-        else
-          "#{id}:#{type}"
-        end
-      else
-        @val.inspect
-      end
+      "#{id}:#{type}"
     end
+
   end
 
   ######################################################################
   # 値そのもの
   ######################################################################
   class Value
-    attr_reader :kind # 種類( :var, :const, :literal のいずれか）
-    attr_reader :type   # Type
-    attr_reader :id # 変数名( リテラルの場合は、nil )
-    attr_reader :val # リテラルもしくは定数の場合はFixnum
-    attr_reader :opt # オプション
-    attr_reader :scope # スコープ(Function)
-    attr_reader :var_type # varのときのみ( :var, :temp, :arg, :result のいずれか )
+    attr_reader :kind # 種類( :val, :id のいずれか )
+    attr_reader :type # Type
+    attr_reader :id   # 識別子( kind == :idのときのみ )
+    attr_reader :val  # 値( kind == :literalのときのみ )
 
-    # 以下は、アセンブラで使用
-    attr_accessor :address # アドレス
-    attr_accessor :lr # 生存期間([from,to]という２要素の配列)
-    attr_accessor :nonlocal # クロージャから参照されているかどうか
-    attr_accessor :reg # 格納場所( :mem, :none, :a, :carry, :not_carry, :zero, :not_zero, :negative, :not_negative のいずれか )
-
-    def self.literal( val )
-      if val >= 256
-        Value.new( nil, Type[:int16], val, nil, nil, :literal, nil )
+    def initialize( id_or_val )
+      if Fixnum === val
+        @kind = :val
+        @type = Type[:int]
+        @val = val
       else
-        Value.new( nil, Type[:int], val, nil, nil, :literal, nil )
+        @kind = :id
+        @type = id.type
+        @id = id
       end
     end
-
-    def initialize( id, type, val, opt, scope, kind=:var, var_type )
-      raise "invalid type, #{type}" unless Type === type
-      @id = id
-      @type = type
-      @val = val
-      @opt = opt || Hash.new
-      @scope = scope
-      @kind = kind
-      @var_type = var_type
-    end
-
-    def assignable?
-      ( ( @kind == :var and @var_type != :temp ) or @type.type == :pointer )
-    end
-
-    def const?
-      ( @kind != :var )
-    end
-
-    def to_s
-      if @id
-        if @scope
-          "#{scope.id}$#{id}:#{type}"
-        else
-          "#{id}:#{type}"
-        end
-      else
-        @val.inspect
-      end
-    end
-
+    
   end
 
   ######################################################################
-  # スコープ付きブロック
+  # モジュール
   ######################################################################
-  class ScopedBlock
-    attr_reader :upper, :id, :ast, :vars, :ops, :options, :includes
- 
-    # アセンブラで使用する
-    attr_accessor :asm
-    attr_accessor :optimized_ops
+  class Module
+    attr_reader :vars, :lambdas, :opt, :includes
 
-    def initialize( upper )
-      @upper = upper
+    def initialize
       @vars = Hash.new
-      @tmp_count = 1
-      @label_count = 0
-      @ops = []
-      @options = Hash.new
-      @asm = []
-      @loops = []
-      @cur_filename = nil
-      @cur_line = 0
-      @cur_line_str = nil
+      @lambdas = []
+      @opt = Hash.new
       @includes = []
-    end
-
-    def to_s
-      "<Block:#{@id}>"
     end
 
   end
@@ -249,18 +205,16 @@ module Fc
   ######################################################################
   # 関数
   ######################################################################
-  class Lambda < ScopedBlock
-    attr_reader :id, :type, :opt, :ast, :block
-    attr_accessor :ops, :args
-    attr_accessor :upper
+  class Lambda
+    attr_reader :id, :args, :type, :opt, :ast, :ops
 
-    def initialize( id, type, opt, ast )
+    def initialize( id, args, base_type, opt, ast )
       @id = id
-      @type = type
+      @args = args
+      @type = Type[[:lambda, args.map{|arg|arg[1]}, base_type]]
       @opt = opt || Hash.new
       @ast = ast
-      @block = nil
-      super(nil)
+      @ops = []
     end
 
     def to_s

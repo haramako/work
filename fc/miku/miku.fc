@@ -266,30 +266,6 @@ function en_process_1(i:int):void
 
 // 敵の弾の処理
 function en_bul_process():void options (extern:true) {}
-/*
-function en_bul_process():void
-{
-  var i = 0;
-  while( i<EN_BUL_MAX ){
-    if( en_bul_type[i] ){
-      en_bul_y[i] += (en_bul_vy[i]+giff) / 4;
-      en_bul_x[i] += (en_bul_vx[i]+giff) / 4;
-      gr_sprite( en_bul_x[i]-4, en_bul_y[i]-4, SPR_EN_BUL+anim, 1 );
-      // 自機との当たり判定
-      if( my_muteki == 0 && my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
-        my_bang = 1;
-        en_bul_type[i] = 0;
-      }
-      // 死亡判定
-      if( en_bul_y[i] < 8 || en_bul_y[i] > 248 || en_bul_x[i] < 8 || en_bul_x[i] > 248 ){
-          en_bul_type[i] = 0;
-      }
-    }
-    i += 1;
-  }
-}
-*/
-
 
 function en_bul_new():int
 {

@@ -42,6 +42,8 @@ if $run
   exit
 end
 
+exit(0)
+
 # 中間コードをアセンブラにコンパイルする
 op_com = Fc::OpCompiler.new
 op_com.compile( com )

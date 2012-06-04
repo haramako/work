@@ -93,113 +93,224 @@ module Fc
   # High-Level コンパイラ( FCソース -> 中間コード へのコンパイルを行う )
   ######################################################################
   class Hlc
-    attr_reader :ast, :pos_info, :root, :lambdas, :includes
+    attr_reader :ast, :pos_info, :module
 
     def initialize
       @@debug = 3
       @pos_info = Hash.new
       @src = Hash.new
-      @scopes = []
-      @label_count = 0
-      @tmp_count = 1
-      @options = Hash.new
-      @includes = []
       @loops = []
     end
 
     def compile( filename )
-      @cur_filename = '(unknown)'
-      @cur_line_no = 0
+      mc = ModuleCompiler.new( filename )
+      @module = mc.module
+      @pos_info = mc.pos_info
 
-      begin
-        @lambdas = Hash.new
-        @root = ScopedBlock.new(nil)
-        @scopes << @root
+      # interruptがなかったら足す
+      #unless @global.vars[:interrupt]
+      #  compile_decl( [:function, :interrupt, [], :void, Hash.new, []] )
+      #end
 
-        compile_module( filename )
+      @module.lambdas.each do |id,lmd|
+        dout 1, "compiling function #{id}"
+        # compile_lambda( module, lmd )
+      end
+    end
 
-        # interruptがなかったら足す
-        unless @root.vars[:interrupt]
-          compile_decl( [:function, :interrupt, [], :void, Hash.new, []] )
+    # コンパイラで共通で使うモジュール
+    module CompilerBase
+
+      def guess_type( type, val )
+        return Type[type] if type
+        if Numeric === val
+          if val >= 256
+            Type[:int16]
+          elsif val < -127
+            Type[:sint16]
+          elsif val < 0
+            Type[:sint8]
+          else
+            Type[:int8]
+          end
+        elsif Array === val and val[0] == :array
+          Type[[:array, val[1].size, :int8]]
+        else
+          raise 
         end
+      end
 
-        @lambdas.each do |id,lmd|
-          dout 1, "compiling function #{id}"
-          compile_lambda( lmd )
+      def const_eval( ast )
+        r = ast
+        case ast
+        when Symbol
+          var = find_var( ast )
+          r = var.val if var.const? and var.type.type == :int
+        when Numeric
+          r = ast
+        when String
+          r = ast
+        when Array
+          case ast[0]
+          when :array
+            r = [:array, ast[1].map{|v| const_eval(v)} ]
+          when :add, :sub, :mul, :div, :mod, :eq, :ne, :lt, :gt, :le, :ge, :rsh, :lsh
+            ast[1] = const_eval( ast[1] )
+            ast[2] = const_eval( ast[2] )
+            if Numeric === ast[1] and Numeric === ast[2]
+              case ast[0]
+              when :add then r = ast[1] +  ast[2]
+              when :sub then r = ast[1] -  ast[2]
+              when :mul then r = ast[1] *  ast[2]
+              when :div then r = ast[1] /  ast[2]
+              when :mod then r = ast[1] %  ast[2]
+              when :eq  then r = ast[1] == ast[2]
+              when :ne  then r = ast[1] != ast[2]
+              when :lt  then r = ast[1] <  ast[2]
+              when :gt  then r = ast[1] >  ast[2]
+              when :le  then r = ast[1] <= ast[2]
+              when :ge  then r = ast[1] >= ast[2]
+              end
+            end
+            r = 1 if r == true 
+            r = 0 if r == false
+          when :not, :uminus
+            ast[1] = const_eval( ast[1] )
+            if Numeric === ast[1]
+              case ast[0]
+              when :not then r = (ast[1]==0 ? 1 : 0 )
+              when :uminus then r = -ast[1]
+              end
+            end
+          when :call
+            ast[2] = ast[2].map {|exp| const_eval(exp)}
+          end
         end
+        r
+      end
 
+      def type_eval( ast )
+        if Array === ast and ast[0] === :array
+          size = const_eval(ast[1])
+          size = size.val if Value === size
+          Type[ [ast[0], size, ast[2]] ]
+        else
+          Type[ast]
+        end
+      end
 
+      def compatible_type( a, b )
+        return a if  a == b
+        if a.type == :int and b.type == :int
+          if a.size > b.size then return a else return b end
+        elsif a.type == :pointer and b.type == :array and a.base == b.base
+          return a
+        end
+        raise CompileError.new("cant convert type #{a} and #{b}")
+      end
+
+    end
+
+    ############################################
+    # モジュールのコンパイルを行うクラス
+    ############################################
+    class ModuleCompiler
+      include CompilerBase
+      attr_reader :module, :pos_info
+
+      def initialize( filename )
+        # dout 1, "compiling module #{filename}"
+        @module = Module.new
+        @path = Fc.find_module(filename)
+        src = File.read( @path )
+        ast, @pos_info = Parser.new(src,@path).parse
+        @src = src.split(/\n/)
+        ast.each do |ast2|
+          compile_decl( ast2 )
+        end
+        pp @module
       rescue CompileError
-        $!.filename ||= @cur_filename
+        $!.filename ||= @path.to_s
         $!.line_no ||= @cur_line_no 
         $!.backtrace.unshift "#{$!.filename}:#{$!.line_no}"
         raise
       end
 
-    end
+      def compile_decl( ast )
+        # update_pos( ast )
+        case ast[0]
+        when :options
+          @options.merge!( ast[1] )
 
-    ############################################
-    # モジュールのコンパイル
-    ############################################
-    def compile_module( filename )
-      dout 1, "compiling module #{filename}"
-      path = Fc.find_module(filename)
-      src = File.read( path )
-      @cur_filename = path.to_s
-      ast, pos_info = Parser.new(src,path).parse
-      @src[filename] = src.split(/\n/)
-      @pos_info.merge! pos_info
-      ast.each do |ast2|
-        compile_decl( ast2 )
-      end
-    end
+        when :include
+          filename = ast[1]
+          if File.extname(filename) == '.asm'
+            @includes << Fc::find_module( filename )
+          else
+            mc = ModuleCompiler.new( filename )
+            @module.vars.merge! mc.module.vars
+            @module.lambdas.concat mc.module.lambdas
+            @module.opt.merge! mc.module.opt
+            @module.includes.concat mc.module.includes
+            @pos_info.merge! mc.pos_info
+          end
 
-    def compile_decl( ast )
-      # update_pos( ast )
-      case ast[0]
-      when :options
-        @options.merge!( ast[1] )
+        when :function
+          _, id, args, base_type, opt, block = ast
+          args = args.map { |arg| [arg[0], Type[arg[1]]] }
+          arg_types = args.map { |arg| arg[1] }
+          base_type = Type[ base_type ]
+          lmd = Lambda.new( id, args, base_type, opt, block )
+          @module.lambdas << lmd
+          add_var Identifier.new( :global_symbol, id, lmd.type, lmd, opt )
 
-      when :include
-        filename = ast[1]
-        if File.extname(filename) == '.asm'
-          @includes << Fc::find_module( filename )
+        when :var
+          ast[1].each do |v|
+            id, type, init, opt = v
+            raise CompileError.new("can't init global variable") if init
+            # type = Type[const_type_eval(type)]
+            type = type_eval(type) if type
+            compatible_type( type, init.type ) if type and init
+            new_var( id, type, opt )
+          end
+
+        when :const
+          ast[1].each do |v|
+            id, type, val, opt = v
+            raise CompileError.new("connot define const without value #{v[0]}") unless val
+            val = const_eval(val) if val
+            type = guess_type(type,val)
+            if type.kind == :array
+              add_var Identifier.new( :global_symbol, id, type, lmd, opt )
+            else
+              add_var Identifier.new( :global_const, id, type, lmd, opt )
+            end
+          end
         else
-          compile_module( filename )
+          raise CompileError.new("invalid op #{op}")
         end
+      end
 
-      when :function
-        _, id, args, type, opt, block = ast
-        arg_types = args.map { |arg| Type[arg[1]] }
-        type = Type[ [:lambda, arg_types, type] ]
-        lmd = Lambda.new( id, type, opt, block )
-        lmd.upper = @scopes[-1]
-        @scopes.push lmd
-        arg_vars = args.map { |arg| new_arg( arg[0], Type[arg[1]] ) }
-        lmd.args = arg_vars
-        new_result( lmd.type.base ) if lmd.type.base.type != :void
-        @scopes.pop
-        @lambdas[id] = lmd
-        new_const( id, type, lmd, opt )
+      def add_var( var )
+        raise CompileError.new("var #{var.id} already defined") if @module.vars[var.id]
+        @module.vars[var.id] = var
+        var
+      end
 
-      when :var
-        ast[1].each do |v|
-          id, type, init, opt = v
-          raise CompileError.new("can't init global variable") if init
-          type = Type[const_type_eval(type)]
-          compatible_type( type, init.type ) if type and init
-          new_var( id, type, opt )
+      def new_const( id, type, val, opt )
+        add_var( Identifier.new( :global_const, id, type, val, opt ) )
+      end
+
+      def new_var( id, type, opt )
+        add_var( Identifier.new( :global_var, id, type, nil, opt ) )
+      end
+
+      def find_var(id)
+        if @vars[id]
+          @vars[id] 
+        else
+          raise CompileError.new(" #{id} not defined")
         end
-
-      when :const
-        ast[1].each do |v|
-          id, type, val, opt = v
-          # raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
-          type = Type[type] if type
-          new_const( id, type, val, opt )
-        end
-      else
-        raise CompileError.new("invalid op #{op}")
       end
     end
 
@@ -207,11 +318,8 @@ module Fc
     # Lambdaのコンパイル
     ############################################
     def compile_lambda( lmd )
-      old_lmd, @cur_lmd = @cur_lmd, lmd
-      old_block, @cur_block = @cur_block, lmd
-      @scopes.push lmd
 
-
+      @cur_lambda = lmd
       @ops = []
       compile_block( lmd.ast )
 
@@ -227,23 +335,13 @@ module Fc
       lmd.ops = @ops
       @ops = nil
 
-      @scopes.pop
-      @cur_block = old_block
-      @cur_lmd = old_lmd
     end
 
     # ブロックをコンパイルする
     def compile_block( ast )
-
-      #block = ScopedBlock.new( @scopes[-1] )
-
-      # old_block, @cur_block = @cur_block, block
-      # @scopes.push block
       ast.each do |stat|
         compile_statement( stat )
       end
-      # @scopes.pop
-      # @cur_block = old_block
     end
 
     # 文をコンパイルする
@@ -353,7 +451,7 @@ module Fc
         r = find_var( ast )
 
       when Numeric
-        r = Value.literal( ast )
+        r = Value.new( ast )
 
       when String
         r = new_literal_string(ast)
@@ -466,74 +564,6 @@ module Fc
       [r,left_value]
     end
 
-    def const_eval( ast )
-      r = ast
-      case ast
-      when Symbol
-        var = find_var( ast )
-        r = var.val if var.const? and var.type.type == :int
-      when Numeric
-        r = ast
-      when String
-        r = ast
-      when Array
-        case ast[0]
-        when :array
-          r = [:array, ast[1].map{|v| const_eval(v)} ]
-        when :add, :sub, :mul, :div, :mod, :eq, :ne, :lt, :gt, :le, :ge, :rsh, :lsh
-          ast[1] = const_eval( ast[1] )
-          ast[2] = const_eval( ast[2] )
-          if Numeric === ast[1] and Numeric === ast[2]
-            case ast[0]
-            when :add then r = ast[1] +  ast[2]
-            when :sub then r = ast[1] -  ast[2]
-            when :mul then r = ast[1] *  ast[2]
-            when :div then r = ast[1] /  ast[2]
-            when :mod then r = ast[1] %  ast[2]
-            when :eq  then r = ast[1] == ast[2]
-            when :ne  then r = ast[1] != ast[2]
-            when :lt  then r = ast[1] <  ast[2]
-            when :gt  then r = ast[1] >  ast[2]
-            when :le  then r = ast[1] <= ast[2]
-            when :ge  then r = ast[1] >= ast[2]
-            end
-          end
-          r = 0 if r == false
-          r = 1 if r == true
-        when :not, :uminus
-          ast[1] = const_eval( ast[1] )
-          if Numeric === ast[1]
-            case ast[0]
-            when :not then r = (ast[1]==0 ? 1 : 0 )
-            when :uminus then r = -ast[1]
-            end
-          end
-        when :call
-          ast[2] = ast[2].map {|exp| const_eval(exp)}
-        end
-      end
-      r
-    end
-
-    def const_type_eval( ast )
-      if Array === ast and ast[0] === :array
-        size = const_eval(ast[1])
-        size = size.val if Value === size
-        Type[ [ast[0], size, ast[2]] ]
-      else
-        Type[ast]
-      end
-    end
-
-    def compatible_type( a, b )
-      return a if  a == b
-      if a.type == :int and b.type == :int
-        if a.size > b.size then return a else return b end
-      elsif a.type == :pointer and b.type == :array and a.base == b.base
-        return a
-      end
-      raise CompileError.new("cant convert type #{a} and #{b}")
-    end
 
     def update_pos( ast )
       if @compiler.pos_info[ast]
@@ -639,7 +669,7 @@ module Fc
     ############################################
     def to_html
       @template_main ||= File.read( Fc.find_share('main.html.erb') )
-      left_bar = make_left_bar(@root)
+      left_bar = make_left_bar(@global)
       ERB.new(@template_main,nil,'-').result(binding)
     end
 
@@ -655,7 +685,7 @@ module Fc
 
     def make_left_bar(block)
       id = block.id 
-      id = '(root block)' if block.id == :''
+      id = '(global)' if block.id == :''
       r = "<li><a href='##{id}'>#{id}</a><ul>"
       block.vars.each do |id,v|
         r += make_left_bar(v.val.block) if v.val and Lambda === v.val and v.val.type.type == :lambda
