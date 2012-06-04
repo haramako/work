@@ -14,12 +14,13 @@
 	.bank 0
 __reg = 0                       ; 汎用レジスタ
 
-	.org $8000
+	.bank 1
+	.org $A000
 __start:
 	sei
 	ldx #255
 	txs
-	jsr __init
+	jsr main
 .loop:
     jmp .loop
 
@@ -29,7 +30,7 @@ __interrupt:
     pha
     tya
     pha
-    jsr _Vinterrupt
+    jsr interrupt
     pla
     tay
     pla
@@ -198,7 +199,10 @@ __mod_8:
         rts
         
 __mod_16:
-        rts 
+        rts
+        
+	.bank 0
+	.org $8000
         
 <%= code_asm %>
 <%= chr_asm %>

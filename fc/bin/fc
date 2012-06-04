@@ -23,15 +23,14 @@ opt.parse!
 
 base = File.basename($out,'.*')
 src_filename = ARGV[0]
-src = File.read(src_filename)
 
 # ソースコードを中間コードにコンパイル
-com = Fc::Compiler.new
-com.compile( src, src_filename )
+com = Fc::Hlc.new
+com.compile( src_filename )
 
 if $debug_info
   open( base+'.html', 'w' ) do |f|
-    f.write com.to_html
+    # f.write com.to_html
   end
 end
 
@@ -45,11 +44,11 @@ end
 
 # 中間コードをアセンブラにコンパイルする
 op_com = Fc::OpCompiler.new
-op_com.compile( com.root )
+op_com.compile( com )
 
 if $debug_info
   open( base+'.html', 'w' ) do |f|
-    f.write com.to_html
+    # f.write com.to_html
   end
 end
 

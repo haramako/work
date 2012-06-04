@@ -17,29 +17,28 @@ module Fc
       @char_banks = Hash.new {|h,k| h[k] = [] } # バンクごとのアセンブラ
     end
 
-    def compile( block, extern = false )
+    def compile( com )
+      @asm << compile_vars( com.root )
 
       # lambdaのコンパイル
-      block.vars.each do |id,v|
-        if Lambda === v.val 
-          compile v.val.block, v.val.opt[:extern]
-        end
+      com.lambdas.each do |id,lmd|
+        @asm <<  compile_lambda( lmd )
       end
 
-      @asm << "; function #{block.id}" 
-
       # include(.asm)の処理
-      block.includes.each do |file|
+      com.includes.each do |file|
+        pp file.to_s
         @asm << "\t.include \"#{file}\""
       end
 
-      # 関数のコードをコンパイル
-      code_asm = compile_block( block )
+    end
 
+    def compile_vars( block )
+      r = []
       # 関数のデータをコンパイル
       block.vars.each do |id,v|
         if v.opt and v.opt[:address]
-          @asm << "#{to_asm(v)} = #{v.opt[:address]}"
+          r << "#{to_asm(v)} = #{v.opt[:address]}"
           v.address = v.opt[:address]
         elsif v.const?
           # constの場合
@@ -47,9 +46,9 @@ module Fc
             raise "invalid const #{v}" unless v.opt[:char_bank] and Numeric === v.opt[:char_bank]
             @char_banks[v.opt[:char_bank]] << "\t.incbin \"#{v.opt[:file]}\""
           elsif Array === v.val
-            @asm << "#{to_asm(v)}:"
+            r << "#{to_asm(v)}:"
             v.val.each_slice(16) do |slice|
-              @asm << "\t.db #{slice.join(',')}"
+              r << "\t.db #{slice.join(',')}"
             end
           elsif Numeric === v.val or Lambda === v.val
             # function, 数値定数
@@ -57,32 +56,25 @@ module Fc
             raise "invalid const #{v}"
           end
         else
-          if v.reg == :mem
+          if v.reg == :mem or v.reg == nil
             if v.type.type == :pointer
               # ポインターはzeropageに配置する
-              @asm << "#{to_asm(v)} = $#{'%04x'%[@address_zeropage]}"
+              r << "#{to_asm(v)} = $#{'%04x'%[@address_zeropage]}"
               v.address = @address_zeropage
               @address_zeropage += v.type.size
             else
               # ポインター以外なら普通に配置
-              @asm << "#{to_asm(v)} = $#{'%04x'%[@address]}"
+              r << "#{to_asm(v)} = $#{'%04x'%[@address]}"
               v.address = @address
               @address += v.type.size
             end
           end
         end
       end
-
-      if extern
-        # DO NOTHING
-      else
-        @asm.concat code_asm
-      end
-      @asm << ''
-
+      r
     end
 
-    def compile_block( block )
+    def compile_lambda( block )
       ops = block.ops
       block.optimized_ops = Marshal.load(Marshal.dump(ops))
       ops = optimize( block, ops )
@@ -90,11 +82,14 @@ module Fc
       alloc_register( block, ops )
 
       r = []
-      if block.id == :''
-        r << "__init:" 
-      else
-        r << "#{to_asm(block)}:" 
-      end
+
+      r << "; function #{block.id}" 
+
+      r.concat compile_vars( block )
+
+      return r if block.opt[:extern]
+
+      r << "#{to_asm(block)}:" 
 
       ops.each_with_index do |op,op_no| # op=オペランド
         r << "; #{'%04d'%[op_no]}: #{op.inspect}"
@@ -125,7 +120,7 @@ module Fc
             r.concat load( op[2].val.args[i], arg)
           end
           r << "jsr #{to_asm(op[2])}"
-          r.concat load( op[1], op[2].val.block.vars[:'0'] ) if op[1]
+          r.concat load( op[1], op[2].val.vars[:'0'] ) if op[1]
 
         when :load
           r.concat load( op[1], op[2] )
@@ -393,6 +388,8 @@ module Fc
       r = r.map do |line|
         if line.index(':') and line[0] != ';'
           line
+        elsif /\w+\s*=/ === line
+          line
         else
           "\t"+line
         end
@@ -479,19 +476,31 @@ module Fc
     end
 
     def to_asm( v )
-      if ScopedBlock === v
-        if v.upper
-          mangle "#{to_asm(v.upper)}_V#{v.id}"
-        else
-          mangle "#{v.id}"
-        end
+      r = to_asm_sub( v )
+      if r[0] == '#'
+        r
+      else
+        mangle r
+      end
+      r
+    end
+
+    def to_asm_sub( v )
+      if Lambda == v or ScopedBlock === v
+        "#{v.id}"
       elsif v.kind == :literal
         "##{v.val.to_s}"
       else
-        if v.scope
-          mangle "#{to_asm(v.scope)}_V#{v.id}"
+        if Lambda === v.val
+          "#{v.id}"
+        elsif v.scope
+          if v.scope.upper
+            "#{to_asm(v.scope)}_V#{v.id}"
+          else
+            "#{v.id}"
+          end
         else
-          mangle "#{v.id}"
+          "#{v.id}"
         end
       end
     end
@@ -522,6 +531,7 @@ module Fc
     end
 
     def optimize( block, ops )
+      return ops
       ops = optimize_unuse( block, ops )
       ops = optimize_pointer( block, ops )
       ops = optimize_unuse( block, ops )
@@ -541,21 +551,21 @@ module Fc
         when :load
           if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1] 
             unless op[1].opt[:address] or op[1].nonlocal
-              #puts "omit #{op}"
+              puts "omit #{op}"
               next
             end
           end
         when :pget, :pset
           if Value === op[1] 
             if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
-              #puts "omit #{op}"
+              puts "omit #{op}"
               next
             end
           end
         when :call
           if Value === op[1] 
             if op[1].lr.nil? or op[1].lr[0] == op[1].lr[1]
-              #puts "omit #{op}"
+              puts "replace #{op}"
               r << [op[0]]+[nil]+op[2..-1]
               next
             end
@@ -609,10 +619,12 @@ module Fc
     def alloc_register( block, ops )
       calc_liverange( block, ops )
       block.vars.each do |id,v|
+        v.reg = :mem
+        next
         if v.kind != :var or # 変数じゃないか
             v.nonlocal or # ローカルじゃないか
             v.var_type == :arg or # 引数か
-            v.var_type == :return_val # 返り値
+            v.var_type == :result # 返り値
           v.reg = :mem
         elsif v.opt and v.opt[:address] # address指定なら mem
           v.reg = :mem
@@ -648,7 +660,7 @@ module Fc
 
     def calc_liverange( block, ops )
       block.vars.each do |id,v|
-        if v.var_type == :arg or v.var_type == :return_val
+        if v.var_type == :arg or v.var_type == :result
           v.lr = [0, ops.size-1]
         else
           v.lr = nil

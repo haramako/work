@@ -1,14 +1,14 @@
-_Vppu_put:
-        lda _Vppu_put_Vto+1
-        sta _VPPU_ADDR
-        lda _Vppu_put_Vto
-        sta _VPPU_ADDR
+ppu_put:
+        lda ppu_put_Vto+1
+        sta PPU_ADDR
+        lda ppu_put_Vto
+        sta PPU_ADDR
         ldy #0
 .loop:
-        lda [_Vppu_put_Vfrom],y
-        sta _VPPU_DATA
+        lda [ppu_put_Vfrom],y
+        sta PPU_DATA
         iny
-        cpy _Vppu_put_Vsize
+        cpy ppu_put_Vsize
         bne .loop
         sty $100
         rts
@@ -25,23 +25,23 @@ _Vppu_put:
 ;;   gr_sprite_idx += 4;
 ;; }
 ;; USING: X
-_Vgr_sprite:
-        ldy _Vgr_sprite_idx     ; if( gr_sprite_idx >= 252 ){ return; } var p:int = gr_sprite_idx;
+gr_sprite:
+        ldy gr_sprite_idx     ; if( gr_sprite_idx >= 252 ){ return; } var p:int = gr_sprite_idx;
         cpy #252
         bcs .end
-        lda _Vgr_sprite_Vy      ; gr_sprite_buf[p] = y;
-        sta _Vgr_sprite_buf,y   
+        lda gr_sprite_Vy      ; gr_sprite_buf[p] = y;
+        sta gr_sprite_buf,y   
         iny                     ; gr_sprite_buf[p+1] = pat;
-        lda _Vgr_sprite_Vp_0
-        sta _Vgr_sprite_buf,y
+        lda gr_sprite_Vpat
+        sta gr_sprite_buf,y
         iny                     ; gr_sprite_buf[p+2] = mode;
-        lda _Vgr_sprite_Vm_0     
-        sta _Vgr_sprite_buf,y
+        lda gr_sprite_Vmode
+        sta gr_sprite_buf,y
         iny                     ; gr_sprite_buf[p+3] = x;
-        lda _Vgr_sprite_Vx
-        sta _Vgr_sprite_buf,y
+        lda gr_sprite_Vx
+        sta gr_sprite_buf,y
         iny                     ; gr_sprite_idx += 4;
-        sty _Vgr_sprite_idx
+        sty gr_sprite_idx
 .end:
         rts
         
@@ -68,16 +68,16 @@ _Vgr_sprite:
 ;;   }
 ;; }
 ;; USING: X,Y
-_Ven_bul_proce_0:
+en_bul_process:
         ldx #0                  ; while(...
 .loop:
-        lda _Ven_bul_type,x     ; if( en_bul_type[i] ){
+        lda en_bul_type,x     ; if( en_bul_type[i] ){
         bne .then4
         jmp .end4
 .then4:
-        lda _Ven_bul_vy,x       ; en_bul_y[i] += (en_bul_vy[i]+giff16) / 16;
+        lda en_bul_vy,x       ; en_bul_y[i] += (en_bul_vy[i]+giff16) / 16;
         clc
-        adc _Vgiff16
+        adc giff16
         bpl .pl1
         lsr a
         lsr a
@@ -92,11 +92,11 @@ _Ven_bul_proce_0:
         lsr a
 .end1:
         clc
-        adc _Ven_bul_y,x
-        sta _Ven_bul_y,x
-        lda _Ven_bul_vx,x       ; en_bul_x[i] += (en_bul_vx[i]+giff16) / 16;
+        adc en_bul_y,x
+        sta en_bul_y,x
+        lda en_bul_vx,x       ; en_bul_x[i] += (en_bul_vx[i]+giff16) / 16;
         clc
-        adc _Vgiff16
+        adc giff16
         bpl .pl2
         lsr a
         lsr a
@@ -111,50 +111,50 @@ _Ven_bul_proce_0:
         lsr a
 .end2:
         clc
-        adc _Ven_bul_x,x
-        sta _Ven_bul_x,x
-        lda _Ven_bul_x,x        ; gr_sprite( en_bul_x[i]-4, en_bul_y[i]-4, SPR_EN_BUL+anim, 1 );
+        adc en_bul_x,x
+        sta en_bul_x,x
+        lda en_bul_x,x        ; gr_sprite( en_bul_x[i]-4, en_bul_y[i]-4, SPR_EN_BUL+anim, 1 );
         sec
         sbc #4
-        sta _Vgr_sprite_Vx
-        lda _Ven_bul_y,x        
+        sta gr_sprite_Vx
+        lda en_bul_y,x        
         sec
         sbc #4
-        sta _Vgr_sprite_Vy
+        sta gr_sprite_Vy
         lda #$e0
         clc
-        adc _Vanim
-        sta _Vgr_sprite_Vp_0
+        adc anim
+        sta gr_sprite_Vpat
         lda #1                  
-        sta _Vgr_sprite_Vm_0
-        jsr _Vgr_sprite
-        lda _Vmy_muteki         ; if( my_muteki == 0 && my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
+        sta gr_sprite_Vmode
+        jsr gr_sprite
+        lda my_muteki         ; if( my_muteki == 0 && my_x + 4 - en_bul_x[i] < 8 && my_y + 4 - en_bul_y[i] < 8 ){
         bne .end3
-        lda _Vmy_x              
+        lda my_x              
         clc
         adc #8
         sec
-        sbc _Ven_bul_x,x
+        sbc en_bul_x,x
         cmp #16
         bcs .end3
-        lda _Vmy_y
+        lda my_y
         clc
         adc #8
         sec
-        sbc _Ven_bul_y,x
+        sbc en_bul_y,x
         cmp #16
         bcs .end3
         lda #1
-        sta _Vmy_bang           ; my_bang = 1;
+        sta my_bang           ; my_bang = 1;
         lda #0                  ; en_bul_type[i] = 0;
-        sta _Ven_bul_type,x
+        sta en_bul_type,x
 .end3:
-        lda _Ven_bul_y,x        ; if( en_bul_y[i] < 8 || en_bul_y[i] > 248 || en_bul_x[i] < 8 || en_bul_x[i] > 248 ){
+        lda en_bul_y,x        ; if( en_bul_y[i] < 8 || en_bul_y[i] > 248 || en_bul_x[i] < 8 || en_bul_x[i] > 248 ){
         cmp #8
         bcc .kill
         cmp #240
         bcs .kill
-        lda _Ven_bul_x,x
+        lda en_bul_x,x
         cmp #8
         bcc .kill
         cmp #240
@@ -162,7 +162,7 @@ _Ven_bul_proce_0:
         jmp .loop_end
 .kill:
         lda #0                  ; en_bul_type[i] = 0;
-        sta _Ven_bul_type,x
+        sta en_bul_type,x
 .end4:
 .loop_end:        
         inx                     ; i += 1;
@@ -182,13 +182,13 @@ _Ven_bul_proce_0:
 ;;   }
 ;; }
 ;;; USING Y
-_Vmemcpy:
+memcpy:
         ldy #0
 .loop:
-        lda [_Vmemcpy_Vfrom],y
-        sta [_Vmemcpy_Vto],y
+        lda [memcpy_Vfrom],y
+        sta [memcpy_Vto],y
         iny
-        cpy _Vmemcpy_Vsize
+        cpy memcpy_Vsize
         bne .loop
         rts
         
@@ -201,24 +201,24 @@ _Vmemcpy:
 ;;   }
 ;; }
 ;;; USING Y
-_Vmemset:
+memset:
         ldy #0
 .loop:
-        lda _Vmemset_Vc
-        sta [_Vmemset_Vp],y
+        lda memset_Vc
+        sta [memset_Vp],y
         iny
-        cpy _Vmemset_Vsize
+        cpy memset_Vsize
         bne .loop
         rts
 
 ;;; USING Y
-_Vmemzero:
+memzero:
         lda #0
         tay
 .loop:
-        sta [_Vmemzero_Vp],y
+        sta [memzero_Vp],y
         iny
-        cpy _Vmemzero_Vsize
+        cpy memzero_Vsize
         bne .loop
         rts
                 

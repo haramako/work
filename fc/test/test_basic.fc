@@ -201,25 +201,33 @@ function test_optimize_bug():void
 {
   print('test_optimize_bug:');
   // uppperの変数が unuse として判断されてしまうバグ
-  var t1_local:int = 0;
-  function t1():void {
-    t1_local = 1;
-  }
-  t1();
-  assert_equal( t1_local, 1, 'local unuse');
+  //var t1_local:int = 0;
+  //function t1():void {
+  //  t1_local = 1;
+  //}
+  //t1();
+  //assert_equal( t1_local, 1, 'local unuse');
   puts('');
 }
 
-test_const_op();
-test_int_op();
-test_int8_op();
-test_int16_op();
-test_int8x16_op();
-test_logical_op();
-test_var();
+function main():void
+{
+  test_const_op();
+  test_int_op();
+  test_int8_op();
+  test_int16_op();
+  test_int8x16_op();
+  test_logical_op();
+  test_var();
 
-test_nesasm_limit();
-test_optimize_bug();
+  test_nesasm_limit();
+  test_optimize_bug();
 
-exit(0);
+  exit(0);
+}
+
+var i:int;
+const CONST = 1;
+
+
 

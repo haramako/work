@@ -1,15 +1,15 @@
 
 var vsync_flag:int;
-var ppu_ctrl1_bak:int = 0b10000000;
-var ppu_ctrl2_bak:int = 0b00011110;
-var ppu_scroll1:int = 0;
-var ppu_scroll2:int = 0;
+var ppu_ctrl1_bak:int;// = 0b10000000;
+var ppu_ctrl2_bak:int;// = 0b00011110;
+var ppu_scroll1:int;
+var ppu_scroll2:int;
 
-var gr_idx:int = 0;
+var gr_idx:int;
 var gr_to_buf:int16[4];
 var gr_from_buf:int*[4];
 var gr_size_buf:int[4];
-var gr_sprite_idx:int = 0;
+var gr_sprite_idx:int;
 var gr_sprite_buf:int[256] options (address:0x0700);
 
 var pad_a:int;

@@ -27,19 +27,19 @@ function wait(n:int):void
   }
 }
 
-var anim:int = 0;
-var anim_count:int = 0;
+var anim:int;
+var anim_count:int;
 var giff:int8;
 var giff16:int8;
 
-var my_stat:int = 0;
-var my_muteki:int = 0;
-var my_muteki_count:int = 0;
-var my_bang:int = 0;
-var my_x:int = 100;
-var my_y:int = 100;
-var my_bang_count:int = 0;
-var my_wait:int = 0;
+var my_stat:int;
+var my_muteki:int;
+var my_muteki_count:int;
+var my_bang:int;
+var my_x:int;
+var my_y:int;
+var my_bang_count:int;
+var my_wait:int;
 
 const MY_BUL_MAX = 8;
 var my_bul_type:int[MY_BUL_MAX];
@@ -47,7 +47,7 @@ var my_bul_x:int[MY_BUL_MAX];
 var my_bul_y:int[MY_BUL_MAX];
 var my_bul_vx:int8[MY_BUL_MAX];
 var my_bul_vy:int8[MY_BUL_MAX];
-var my_bul_idx:int = 0;
+var my_bul_idx:int;
 
 const EN_MAX = 16;
 var en_type:int[EN_MAX];
@@ -57,8 +57,8 @@ var en_p1:int[EN_MAX];
 var en_p2:int[EN_MAX];
 var en_p3:int[EN_MAX];
 var en_p4:int[EN_MAX];
-var en_wait:int = 0;
-var en_now = 0;
+var en_wait:int;
+var en_now:int;
 
 const EN_BUL_MAX = 48;
 var en_bul_type:int[EN_BUL_MAX];
@@ -66,7 +66,7 @@ var en_bul_x:int[EN_BUL_MAX];
 var en_bul_y:int[EN_BUL_MAX];
 var en_bul_vx:int8[EN_BUL_MAX];
 var en_bul_vy:int8[EN_BUL_MAX];
-var en_bul_idx = 0;
+var en_bul_idx:int;
 
 const PALLET:int[32] = [0x0f,0x19,0x29,0x30, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13,
                         0x0f,0x1B,0x2B,0x30, 0x0f,0x04,0x26,0x36, 0x0f,0x11,0x12,0x13, 0x0f,0x11,0x12,0x13];
@@ -303,9 +303,13 @@ const GIFF_TABLE = [0,8,4,12, 2,10,6,14, 1,9,5,13, 3,11,7,15];
 
 function main(): void
 {
+  ppu_ctrl1_bak = 0b10000000;
+  ppu_ctrl2_bak = 0b00011110;
+  
   ppu_lock();
 
   ppu_put( 0x3f00, PALLET, 32 );
+  ppu_put( 0x2080, "HOGE", 4 );
 
   memzero( my_bul_y, MY_BUL_MAX );
   memzero( en_type, EN_MAX );
@@ -328,5 +332,3 @@ function main(): void
   }
   
 }
-
-main();

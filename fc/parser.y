@@ -19,8 +19,17 @@ rule
 
 /****************************************************/
 /* program */
-program: statement_list
-       
+program: | decl_list
+
+decl_list: decl_list decl { result = val[0] + [val[1]] }
+         | decl           { result = [val[0]] }
+
+decl: 'include' '(' STRING ')' options_if ';'  { result = [:include, val[2]] }
+    | 'var' var_decl_list ';'                  { result = [:var, val[1]] }
+    | 'const' var_decl_list ';'                { result = [:const, val[1]] }
+    | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if function_block
+                                               { result = [:function, val[1], val[3], val[6], val[7], val[8]] }
+    | options ';'                              { result = [:options, val[0]] }                                            
 
 /****************************************************/
 /* statement */
@@ -30,24 +39,17 @@ statement_list: statement_list statement_i { result = val[0] + [val[1]] }
               
 statement_i: statement { info(val[0]) }
 
-statement: options ';' { result = [:options, val[0]] }
-         | 'function' IDENT '(' var_decl_list_if ')' ':' type_decl options_if function_block
-              { result = [:function, val[1], val[3], val[6], val[7], val[8]] }
-         | 'include' '(' STRING ')' ';'          { result = [:include, val[2]] }
-         | 'var' var_decl_list ';'               { result = [:var, val[1]] }
+statement: 'var' var_decl_list ';'               { result = [:var, val[1]] }
          | 'const' var_decl_list ';'             { result = [:const, val[1]] }
-         | 'include_bin' '(' option_list ')' ';' { result = [:include_bin, val[2]] }
-
-         | 'if' '(' exp ')' block else_block { result = [:if, val[2], val[4], val[5]] }
-         | 'loop' '(' ')' block { result = [:loop, val[3]] }
-         | 'while' '(' exp ')' block { result = [:while, val[2], val[4]] }
+         | 'if' '(' exp ')' block else_block     { result = [:if, val[2], val[4], val[5]] }
+         | 'loop' '(' ')' block                  { result = [:loop, val[3]] }
+         | 'while' '(' exp ')' block             { result = [:while, val[2], val[4]] }
          | 'for' '(' IDENT ',' exp ',' exp ')' block { result = [:for, val[2], val[4], val[6], val[8]] }
-         | 'break' ';' { result = [:break] }
-         | 'continue' ';' { result = [:continue] }
-         | 'return' ';' { result = [:return] }
-         | 'return' exp ';' { result = [:return, val[1]] }
-         | 'asm' '(' STRING ')' ';' { result = [:asm, val[2]] }
-
+         | 'break' ';'                           { result = [:break] }
+         | 'continue' ';'                        { result = [:continue] }
+         | 'return' ';'                          { result = [:return] }
+         | 'return' exp ';'                      { result = [:return, val[1]] }
+         | 'asm' '(' STRING ')' ';'              { result = [:asm, val[2]] }
          |  exp ';' { result = [:exp, val[0]] }
          
 function_block: '{' '}' { result = [] }
