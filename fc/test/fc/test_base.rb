@@ -1,7 +1,7 @@
 # coding: utf-8
 
 require 'rspec'
-require '../lib/fc/base'
+require_relative '../../lib/fc/base'
 
 include Fc
 
@@ -9,21 +9,21 @@ describe Type, 'when initialize' do
 
   it 'as void' do
     v = Type[ :void ]
-    v.type.should == :void
+    v.kind.should == :void
     v.base.should == nil
     v.size.should == 1
   end
 
   it 'as bool' do
     v = Type[ :bool ]
-    v.type.should == :bool
+    v.kind.should == :bool
     v.base.should == nil
     v.size.should == 1
   end
 
   it 'as int' do
     v = Type[ :int ]
-    v.type.should == :int
+    v.kind.should == :int
     v.signed.should == false
     v.base.should == nil
     v.size.should == 1
@@ -31,7 +31,7 @@ describe Type, 'when initialize' do
 
   it 'as array' do
     v = Type[ [:array, 10, :int16 ] ]
-    v.type.should == :array
+    v.kind.should == :array
     v.base.should == Type[:int16]
     v.length.should == 10
     v.size.should == 20
@@ -39,14 +39,14 @@ describe Type, 'when initialize' do
 
   it 'as pointer' do
     v = Type[ [:pointer, :int ] ]
-    v.type.should == :pointer
+    v.kind.should == :pointer
     v.size.should == 2
     v.base.should == Type[:int]
   end
 
   it 'as lambda' do
     v = Type[ [:lambda, [Type[:int], Type[:int]], [:pointer, :int] ] ]
-    v.type.should == :lambda
+    v.kind.should == :lambda
     v.size.should == 2
     v.base.should == Type[ [:pointer,:int] ]
     v.args.should == [ Type[:int], Type[:int] ]

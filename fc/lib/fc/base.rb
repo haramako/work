@@ -61,7 +61,7 @@ module Fc
           @kind = :array
           @base = Type[ ast[2] ]
           @length = ast[1]
-          @size = @base.size * @length
+          @size = @length && @base.size * @length
         elsif ast[0] == :lambda
           @kind = :lambda
           @base = Type[ ast[2] ]
@@ -174,14 +174,24 @@ module Fc
     attr_reader :val  # 値( kind == :literalのときのみ )
 
     def initialize( id_or_val )
-      if Fixnum === val
-        @kind = :val
-        @type = Type[:int]
-        @val = val
-      else
+      if Identifier === id_or_val
         @kind = :id
         @type = id.type
         @id = id
+      elsif Fixnum === id_or_val
+        @kind = :val
+        @type = Type[:int]
+        @val = id_or_val
+      else
+        raise "invalid id or val #{id_or_val}"
+      end
+    end
+
+    def to_s
+      if @kind == id
+        "#{id}"
+      else
+        "#{val}"
       end
     end
     

@@ -4,7 +4,7 @@ all: lib/fc/parser.rb
 
 .PHONY: test
 test: all
-	rspec test
+	rspec test/fc/test_*.rb
 	cd test ; ./test-all
 
 lib/fc/parser.rb: parser.y

@@ -226,8 +226,9 @@ function main():void
   exit(0);
 }
 
-//var i:int;
-const CONST = 1;
-
-
-
+var i1:int;
+const CONST = 2;
+var a1:int[4];
+var a2:int[CONST];
+const a3:int[] = [1,2];
+const s1 = "hoge";

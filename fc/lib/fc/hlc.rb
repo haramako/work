@@ -122,21 +122,33 @@ module Fc
     module CompilerBase
 
       def guess_type( type, val )
-        return Type[type] if type
         if Numeric === val
           if val >= 256
-            Type[:int16]
+            val_type = Type[:int16]
           elsif val < -127
-            Type[:sint16]
+            val_type = Type[:sint16]
           elsif val < 0
-            Type[:sint8]
+            val_type = Type[:sint8]
           else
-            Type[:int8]
+            val_type = Type[:int8]
           end
         elsif Array === val and val[0] == :array
-          Type[[:array, val[1].size, :int8]]
+          if type and type.base
+            base_type = type.base
+          else
+            base_type = :int
+          end
+          val_type = Type[[:array, val.length, base_type]]
+        elsif String === val
+          val_type = Type[[:array, val.size, :uint8]]
         else
-          raise 
+          raise  "can't guess type #{type}, #{val}"
+        end
+
+        if type
+          compatible_type( type, val_type )
+        else
+          val_type
         end
       end
 
@@ -145,7 +157,7 @@ module Fc
         case ast
         when Symbol
           var = find_var( ast )
-          r = var.val if var.const? and var.type.type == :int
+          r = var.val if var.const?
         when Numeric
           r = ast
         when String
@@ -194,19 +206,24 @@ module Fc
           size = const_eval(ast[1])
           size = size.val if Value === size
           Type[ [ast[0], size, ast[2]] ]
-        else
+        elsif ast
           Type[ast]
+        else
+          nil
         end
       end
 
       def compatible_type( a, b )
         return a if  a == b
-        if a.type == :int and b.type == :int
+        if a.kind == :int and b.kind == :int
           if a.size > b.size then return a else return b end
-        elsif a.type == :pointer and b.type == :array and a.base == b.base
+        elsif a.kind == :pointer and b.kind == :array and a.base == b.base
           return a
+        elsif a.kind == :array and b.kind == :array and a.base == b.base and a.length == nil
+          # 配列の長さを省略した場合
+          return b
         end
-        raise CompileError.new("cant convert type #{a} and #{b}")
+        raise CompileError.new("not compatible type '#{a}' and '#{b}'")
       end
 
     end
@@ -279,11 +296,11 @@ module Fc
             id, type, val, opt = v
             raise CompileError.new("connot define const without value #{v[0]}") unless val
             val = const_eval(val) if val
-            type = guess_type(type,val)
+            type = guess_type(type_eval(type),val)
             if type.kind == :array
-              add_var Identifier.new( :global_symbol, id, type, lmd, opt )
+              add_var Identifier.new( :global_symbol, id, type, val, opt )
             else
-              add_var Identifier.new( :global_const, id, type, lmd, opt )
+              add_var Identifier.new( :global_const, id, type, val, opt )
             end
           end
         else
@@ -306,8 +323,8 @@ module Fc
       end
 
       def find_var(id)
-        if @vars[id]
-          @vars[id] 
+        if @module.vars[id]
+          @module.vars[id] 
         else
           raise CompileError.new(" #{id} not defined")
         end
