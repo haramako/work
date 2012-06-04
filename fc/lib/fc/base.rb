@@ -33,7 +33,10 @@ module Fc
     attr_reader :length # 配列の要素数(arrayのみ)
     attr_reader :args # 引数クラスのリスト(lambdaの場合のみ)
 
-    BASIC_TYPES = { int:[1,false], uint:[1,false], int8:[1,true], uint8:[1,false], int16:[2,true], uint16:[2,false] }
+    BASIC_TYPES = { 
+      int:[1,false], uint:[1,false], 
+      int8:[1,false], sint8:[1,true], uint8:[1,false], 
+      int16:[2,false], sint16:[2,true], uint16:[2,false] }
 
     private_class_method :new
 
@@ -72,7 +75,7 @@ module Fc
 
       case @kind
       when :int, :void, :bool
-        @str = "#{ast}"
+        @str = "#{signed ? 's' : 'u' }#{@kind}#{size*8}"
       when :pointer
         @str = "#{@base}*"
       when :array
@@ -176,8 +179,8 @@ module Fc
     def initialize( id_or_val )
       if Identifier === id_or_val
         @kind = :id
-        @type = id.type
-        @id = id
+        @type = id_or_val.type
+        @id = id_or_val
       elsif Fixnum === id_or_val
         @kind = :val
         @type = Type[:int]
@@ -188,10 +191,10 @@ module Fc
     end
 
     def to_s
-      if @kind == id
-        "#{id}"
+      if @kind == :id
+        "{#{@id}}"
       else
-        "#{val}"
+        "{#{@val}}"
       end
     end
     
@@ -216,7 +219,7 @@ module Fc
   # 関数
   ######################################################################
   class Lambda
-    attr_reader :id, :args, :type, :opt, :ast, :ops
+    attr_reader :id, :args, :type, :opt, :ast, :ops, :vars
 
     def initialize( id, args, base_type, opt, ast )
       @id = id
@@ -225,6 +228,7 @@ module Fc
       @opt = opt || Hash.new
       @ast = ast
       @ops = []
+      @vars = Hash.new
     end
 
     def to_s

@@ -112,13 +112,30 @@ module Fc
       #  compile_decl( [:function, :interrupt, [], :void, Hash.new, []] )
       #end
 
-      @module.lambdas.each do |id,lmd|
-        dout 1, "compiling function #{id}"
-        # compile_lambda( module, lmd )
+      @module.lambdas.each do |lmd|
+        dout 1, "compiling function #{lmd.id}"
+        lc = LambdaCompiler.new( self, @module, lmd )
+      end
+      pp @module
+    end
+
+    def update_pos( ast )
+      if @pos_info[ast]
+        pos_info = @pos_info[ast]
+        @cur_filename, @cur_line_no, @cur_line_str = @pos_info[ast]
+        # puts "compiling ... line #{@cur_line}"
       end
     end
 
+    def dout( level, *args )
+      if @@debug >= level
+        puts args.join(" ")
+      end
+    end
+
+    ############################################
     # コンパイラで共通で使うモジュール
+    ############################################
     module CompilerBase
 
       def guess_type( type, val )
@@ -141,6 +158,8 @@ module Fc
           val_type = Type[[:array, val.length, base_type]]
         elsif String === val
           val_type = Type[[:array, val.size, :uint8]]
+        elsif Value === val
+          val_type = val.type
         else
           raise  "can't guess type #{type}, #{val}"
         end
@@ -233,6 +252,7 @@ module Fc
     ############################################
     class ModuleCompiler
       include CompilerBase
+
       attr_reader :module, :pos_info
 
       def initialize( filename )
@@ -245,7 +265,6 @@ module Fc
         ast.each do |ast2|
           compile_decl( ast2 )
         end
-        pp @module
       rescue CompileError
         $!.filename ||= @path.to_s
         $!.line_no ||= @cur_line_no 
@@ -288,7 +307,7 @@ module Fc
             # type = Type[const_type_eval(type)]
             type = type_eval(type) if type
             compatible_type( type, init.type ) if type and init
-            new_var( id, type, opt )
+            add_var Identifier.new( :var, id, type, nil, opt )
           end
 
         when :const
@@ -314,14 +333,6 @@ module Fc
         var
       end
 
-      def new_const( id, type, val, opt )
-        add_var( Identifier.new( :global_const, id, type, val, opt ) )
-      end
-
-      def new_var( id, type, opt )
-        add_var( Identifier.new( :global_var, id, type, nil, opt ) )
-      end
-
       def find_var(id)
         if @module.vars[id]
           @module.vars[id] 
@@ -334,360 +345,322 @@ module Fc
     ############################################
     # Lambdaのコンパイル
     ############################################
-    def compile_lambda( lmd )
+    class LambdaCompiler
+      include CompilerBase
 
-      @cur_lambda = lmd
-      @ops = []
-      compile_block( lmd.ast )
+      def initialize( hlc, _module, lmd )
+        @hlc = hlc
+        @module = _module
+        @lmd = lmd
+        @label_count = 0
+        @tmp_count = 0
+        @scope_count = 0
+        @scope = [Hash.new]
 
-      # returnを追加する
-      if @ops[-1].nil? or @ops[-1][0] != :return
-        if lmd.vars[:'0']
-          raise CompileError.new( "no return" )
-        else
-          emit :return
+        # 引数の追加
+        @lmd.args.each do |id,type|
+          add_var Identifier.new( :arg, id, type, nil, nil )
+        end
+
+        compile_block( lmd.ast )
+
+        # returnを追加する
+        if @lmd.ops[-1].nil? or @lmd.ops[-1][0] != :return
+          if @lmd.type.base == Type[:void]
+            emit :return
+          else
+            raise CompileError.new( "no return" )
+          end
         end
       end
 
-      lmd.ops = @ops
-      @ops = nil
-
-    end
-
-    # ブロックをコンパイルする
-    def compile_block( ast )
-      ast.each do |stat|
-        compile_statement( stat )
+      # ブロックをコンパイルする
+      def compile_block( ast )
+        ast.each do |stat|
+          compile_statement( stat )
+        end
       end
-    end
 
-    # 文をコンパイルする
-    def compile_statement( ast )
-      update_pos( ast )
+      # 文をコンパイルする
+      def compile_statement( ast )
+        @hlc.update_pos( ast )
 
-      case ast[0]
-
-      when :var
-        ast[1].each do |v|
-          init = v[2] && rval(const_eval(v[2]))
-          type = ( v[1] && const_type_eval(v[1]) ) || init.type
-          compatible_type( type, init.type ) if type and init
-          var = new_var( v[0], type, v[3] )
-          emit :load, var, init if init
-        end
-
-      when :const
-        ast[1].each do |v|
-          # raise CompileError.new("connot define const without value #{v[0]}") unless v[2]
-          type = Type[v[1]] if v[1]
-          new_const( v[0], type, v[2], v[3] )
-        end
-
-      when :'if'
-        then_label, else_label, end_label = new_labels('then', 'else','end')
-        cond = rval(ast[1])
-        emit :if, cond, else_label
-        emit :label, then_label
-        compile_block(ast[2])
-        emit :jump, end_label
-        emit :label, else_label
-        if ast[3]
-          compile_block(ast[3])
-        end
-        emit :label, end_label
-
-      when :loop
-        begin_label, end_label = new_labels('begin', 'end')
-        @loops << end_label
-        emit :label, begin_label
-        compile_block ast[1]
-        emit :jump, begin_label
-        emit :label, end_label
-        @loops.pop
-        
-      when :'while'
-        begin_label, end_label = new_labels('begin', 'end')
-        @loops << end_label
-        emit :label, begin_label
-        cond = rval(ast[1])
-        emit :if, cond, end_label
-        compile_block ast[2]
-        emit :jump, begin_label
-        emit :label, end_label
-        @loops.pop
-
-      when :for
-        compile_block( [[:exp, [:load, ast[1], ast[2]]],
-                        [:while, 
-                         [:lt, ast[1], ast[3]],
-                         ast[4] + [[:exp, [:load, ast[1], [:add, ast[1], 1] ]]]
-                        ] ] )
-
-      when :break
-        raise CompileError.new("cannot break without loop") if @loops.empty?
-        emit :jump, @loops[-1]
-
-      when :return
-        if @scopes[-1].vars[:'0']
-          # 非void関数
-          raise CompileError.new("can't return without value") unless ast[1]
-          emit :return, rval(ast[1])
-        else
-          # void関数
-          raise CompileError.new("can't return from void function") if ast[1]
-          emit :return
-        end
-
-      when :exp
-        const_eval( ast[1] )
-        rval( ast[1] )
-
-      when :asm
-        emit *ast
-
-      else
-        raise "unknow op #{ast}"
-      end
-    end
-
-    def rval( ast )
-      v, left = lval( ast )
-      if left
-        r = new_tmp( v.type.base )
-        emit :pget, r, v
-        r
-      else
-        v
-      end
-    end
-
-    def lval( ast )
-      left_value = false
-      case ast
-      when Symbol
-        r = find_var( ast )
-
-      when Numeric
-        r = Value.new( ast )
-
-      when String
-        r = new_literal_string(ast)
-
-      when Array
         case ast[0]
 
-        when :load
-          left, left_value = lval(ast[1])
-          right = rval(ast[2])
-          if left_value
-            compatible_type( left.type.base, right.type )
-            raise CompileError.new("#{left} is not left value") unless left.assignable?
-            emit :pset, left, right
-            r = left
-            left_value = true
-          else
-            compatible_type( left.type, right.type )
-            raise CompileError.new("#{left} is not left value") unless left.assignable?
-            emit :load, left, right
-            r = left
+        when :var
+          ast[1].each do |v|
+            id, type, init, opt = v
+            init = init && rval( const_eval(v[2]) )
+            type = guess_type( type_eval(type), init )
+            compatible_type( type, init.type ) if type and init
+            var = add_var Identifier.new( :var, id, type, nil, opt )
+            emit :load, Value.new(var), init if init
           end
 
-        when :not, :uminus
-          left = rval(ast[1])
-          r = new_tmp( left.type )
-          emit ast[0], r, left
+        when :const
+          ast[1].each do |v|
+            id, type, val, opt = v
+            raise CompileError.new("connot define const without value #{v[0]}") unless val
+            val = const_eval(val) if val
+            type = guess_type(type_eval(type),val)
+            if type.kind == :array
+              add_var Identifier.new( :symbol, id, type, val, opt )
+            else
+              add_var Identifier.new( :const, id, type, val, opt )
+            end
+          end
 
-        when :add, :sub, :mul, :div, :mod, :and, :or, :xor
-          left = rval(ast[1])
-          right = rval(ast[2])
-          r = new_tmp( compatible_type( left.type, right.type ) )
-          emit ast[0], r, left, right
+        when :'if'
+          then_label, else_label, end_label = new_labels('then', 'else','end')
+          cond = rval(ast[1])
+          emit :if, cond, else_label
+          emit :label, then_label
+          compile_block(ast[2])
+          emit :jump, end_label
+          emit :label, else_label
+          if ast[3]
+            compile_block(ast[3])
+          end
+          emit :label, end_label
 
-        when :eq, :lt
-          left = rval(ast[1])
-          right = rval(ast[2])
-          compatible_type( left.type, right.type )
-          r = new_tmp( Type[:int] )
-          emit ast[0], r, left, right
+        when :loop
+          begin_label, end_label = new_labels('begin', 'end')
+          @loops << end_label
+          emit :label, begin_label
+          compile_block ast[1]
+          emit :jump, begin_label
+          emit :label, end_label
+          @loops.pop
+          
+        when :'while'
+          begin_label, end_label = new_labels('begin', 'end')
+          @loops << end_label
+          emit :label, begin_label
+          cond = rval(ast[1])
+          emit :if, cond, end_label
+          compile_block ast[2]
+          emit :jump, begin_label
+          emit :label, end_label
+          @loops.pop
 
-        when :ne, :gt, :le, :ge
-          # これらは、eq,lt の引数の順番とnotを組合せて合成する
-          left = ast[1]
-          right = ast[2]
+        when :for
+          compile_block( [[:exp, [:load, ast[1], ast[2]]],
+                          [:while, 
+                           [:lt, ast[1], ast[3]],
+                           ast[4] + [[:exp, [:load, ast[1], [:add, ast[1], 1] ]]]
+                          ] ] )
+
+        when :break
+          raise CompileError.new("cannot break without loop") if @loops.empty?
+          emit :jump, @loops[-1]
+
+        when :return
+          if @scopes[-1].vars[:'0']
+            # 非void関数
+            raise CompileError.new("can't return without value") unless ast[1]
+            emit :return, rval(ast[1])
+          else
+            # void関数
+            raise CompileError.new("can't return from void function") if ast[1]
+            emit :return
+          end
+
+        when :exp
+          const_eval( ast[1] )
+          rval( ast[1] )
+
+        when :asm
+          emit *ast
+
+        else
+          raise "unknow op #{ast}"
+        end
+      end
+
+      def rval( ast )
+        v, left = lval( ast )
+        if left
+          r = new_tmp( v.type.base )
+          emit :pget, r, v
+          r
+        else
+          v
+        end
+      end
+
+      def lval( ast )
+        left_value = false
+        case ast
+        when Symbol
+          r = Value.new( find_var( ast ) )
+
+        when Numeric
+          r = Value.new( ast )
+
+        when String
+          val = ast.unpack('c*').concat([0])
+          var = add_var Identifier.new( :symbol, "$#{@tmp_count}".intern, Type[[:array, val.size, :uint8]], val, nil )
+          @tmp_count += 1
+          r = Value.new( var )
+
+        when Array
           case ast[0]
-          when :ne
-            r = rval([:not, [:eq, left, right]])
-          when :gt
-            r = rval([:lt, right, left])
-          when :le
-            r = rval([:not, [:lt, right, left]])
-          when :ge
-            r = rval([:not, [:lt, left, right]])
-          end
 
-        when :land
-          end_label = new_label('end')
-          r = new_tmp( Type[:int] )
-          left = rval(ast[1])
-          emit :load, r, left
-          emit :if, r, end_label
-          right = rval(ast[2])
-          emit :load, r, right
-          emit :label, end_label
+          when :load
+            left, left_value = lval(ast[1])
+            right = rval(ast[2])
+            if left_value
+              compatible_type( left.type.base, right.type )
+              raise CompileError.new("#{left} is not left value") unless left.id and left.id.assignable?
+              emit :pset, left, right
+              r = left
+              left_value = true
+            else
+              compatible_type( left.type, right.type )
+              raise CompileError.new("#{left} is not left value") unless left.id and left.id.assignable?
+              emit :load, left, right
+              r = left
+            end
 
-        when :lor
-          end_label = new_label('end')
-          r = new_tmp( Type[:int] )
-          r2 = new_tmp( Type[:int] )
-          left = rval(ast[1])
-          emit :load, r, left
-          emit :not, r2, r
-          emit :if, r2, end_label
-          right = rval(ast[2])
-          emit :load, r, right
-          emit :label, end_label
+          when :not, :uminus
+            left = rval(ast[1])
+            r = new_tmp( left.type )
+            emit ast[0], r, left
 
-        when :call
-          func = find_var( ast[1] )
-          if func.type.base.type != :void
-            r = new_tmp( func.type.base )
+          when :add, :sub, :mul, :div, :mod, :and, :or, :xor
+            left = rval(ast[1])
+            right = rval(ast[2])
+            r = new_tmp( compatible_type( left.type, right.type ) )
+            emit ast[0], r, left, right
+
+          when :eq, :lt
+            left = rval(ast[1])
+            right = rval(ast[2])
+            compatible_type( left.type, right.type )
+            r = new_tmp( Type[:int] )
+            emit ast[0], r, left, right
+
+          when :ne, :gt, :le, :ge
+            # これらは、eq,lt の引数の順番とnotを組合せて合成する
+            left = ast[1]
+            right = ast[2]
+            case ast[0]
+            when :ne
+              r = rval([:not, [:eq, left, right]])
+            when :gt
+              r = rval([:lt, right, left])
+            when :le
+              r = rval([:not, [:lt, right, left]])
+            when :ge
+              r = rval([:not, [:lt, left, right]])
+            end
+
+          when :land
+            end_label = new_label('end')
+            r = new_tmp( Type[:int] )
+            left = rval(ast[1])
+            emit :load, r, left
+            emit :if, r, end_label
+            right = rval(ast[2])
+            emit :load, r, right
+            emit :label, end_label
+
+          when :lor
+            end_label = new_label('end')
+            r = new_tmp( Type[:int] )
+            r2 = new_tmp( Type[:int] )
+            left = rval(ast[1])
+            emit :load, r, left
+            emit :not, r2, r
+            emit :if, r2, end_label
+            right = rval(ast[2])
+            emit :load, r, right
+            emit :label, end_label
+
+          when :call
+=begin
+            func = find_var( ast[1] )
+            if func.type.base.kind != :void
+              r = new_tmp( func.type.base )
+            else
+              r = nil
+            end
+            raise CompileError.new("lambda #{func} has #{func.val.args.size} but #{ast[2].size}") if ast[2].size != func.val.args.size
+            args = []
+            ast[2].each_with_index do |arg,i|
+              v = rval(arg)
+              compatible_type( func.val.args[i].type, v.type )
+              args << v
+            end
+            emit :call, r, func, *args
+=end
+
+          when :index
+            left = rval(ast[1])
+            right = rval(ast[2])
+            raise CompileError.new("index must be pointer or array") unless left.type.type == :pointer or left.type.type == :array
+            raise CompileError.new("index must be int") if right.type.type != :int
+            r = new_tmp( Type[[:pointer, left.type.base]] )
+            emit :index, r, left, right
+            left_value = true
+
           else
-            r = nil
+            raise "unknown op #{ast}"
           end
-          raise CompileError.new("lambda #{func} has #{func.val.args.size} but #{ast[2].size}") if ast[2].size != func.val.args.size
-          args = []
-          ast[2].each_with_index do |arg,i|
-            v = rval(arg)
-            compatible_type( func.val.args[i].type, v.type )
-            args << v
-          end
-          emit :call, r, func, *args
-
-        when :index
-          left = rval(ast[1])
-          right = rval(ast[2])
-          raise CompileError.new("index must be pointer or array") unless left.type.type == :pointer or left.type.type == :array
-          raise CompileError.new("index must be int") if right.type.type != :int
-          r = new_tmp( Type[[:pointer, left.type.base]] )
-          emit :index, r, left, right
-          left_value = true
-
         else
           raise "unknown op #{ast}"
         end
-      else
-        raise "unknown op #{ast}"
+        [r,left_value]
       end
-      [r,left_value]
-    end
 
 
-    def update_pos( ast )
-      if @compiler.pos_info[ast]
-        pos_info = @compiler.pos_info[ast]
-        @cur_filename, @cur_line_no, @cur_line_str = @compiler.pos_info[ast]
-        # puts "compiling ... line #{@cur_line}"
+      def emit( *op )
+        @lmd.ops << op
       end
-    end
 
-    def emit( *op )
-      @ops << op
-    end
-
-    def new_label( name )
-      new_labels( name )[0]
-    end
-
-    def new_labels( *names )
-      @label_count += 1
-      names.map { |n| '.'+n+'_'+@label_count.to_s }
-    end
-
-    def add_var(var)
-      raise CompileError.new("var #{var.id} already defined") if @scopes[-1].vars[var.id]
-      @scopes[-1].vars[var.id] = var
-      var
-    end
-
-    def new_var(id,type,opt)
-      add_var Value.new(id,type,nil,opt,@scopes[-1], :var, :var )
-    end
-
-    def new_const(id,type,init,opt)
-      case init
-      when nil, Lambda
-      when Numeric
-        init_type = Value.literal(init).type
-      when String
-        init = str.unpack('c*').concat([0])
-        init_type = Type[ [:array, init.size, :int] ]
-      when Array
-        if init[0] == :array
-          init = init[1]
-          init_type = Type[ [:array, init.size, :int] ]
-        else
-          raise "not constant value #{@init}"
-        end
-      else
-        raise "not constant value #{@init}"
+      def new_label( name )
+        new_labels( name )[0]
       end
-      if type and init_type
-        compatible_type( init_type, type ) 
+
+      def new_labels( *names )
+        @label_count += 1
+        names.map { |n| '.'+n+'_'+@label_count.to_s }
       end
-      type = init_type unless type
-      add_var Value.new(id,type,init,opt,@scopes[-1], :const, nil )
-    end
 
-    def new_tmp( type )
-      var = add_var( Value.new("#{@tmp_count}".intern,type,nil,nil,@scopes[-1], :var, :temp) )
-      @tmp_count += 1
-      var
-    end
-
-    def new_arg(id,type)
-      add_var Value.new(id,type,nil,nil,@scopes[-1], :var, :arg)
-    end
-
-    def new_result(type)
-      add_var Value.new(:'0',type,nil,nil,@scopes[-1], :var, :result )
-    end
-
-    def new_literal_string(str)
-      var = add_var( Value.new("#{@tmp_count}".intern, 
-                               Type[[:array,str.size+1,:int]], 
-                               str.unpack('c*').concat([0]), nil, @scopes[-1], :const, nil ) )
-      @tmp_count += 1
-      var
-    end
-
-    def find_var(id)
-      @scopes.reverse_each do |s|
-        return s.vars[id] if s.vars[id]
+      def add_var(var)
+        raise CompileError.new("var #{var.id} already defined") if @lmd.vars[var.id]
+        @lmd.vars[var.id] = var
+        var
       end
-      raise CompileError.new(" #{id} not defined")
-    end
 
-    def update_pos( ast )
-      if @pos_info[ast]
-        pos_info = @pos_info[ast]
-        @cur_filename, @cur_line_no, @cur_line_str = @pos_info[ast]
-        # puts "compiling ... line #{@cur_line}"
+      def new_tmp( type )
+        var = add_var Identifier.new(:temp, "$#{@tmp_count}".intern, type, nil,nil )
+        @tmp_count += 1
+        Value.new( var )
       end
-    end
 
-    def dout( level, *args )
-      if @@debug >= level
-        puts args.join(" ")
+      def find_var(id)
+        return @lmd.vars[id] if @lmd.vars[id]
+        return @module.vars[id] if @module.vars[id]
+        raise CompileError.new(" #{id} not defined")
       end
+
+    end
+  end
+
+  ############################################
+  # HTML出力用クラス
+  ############################################
+  class HtmlOutput
+    def initialize
     end
 
-    ############################################
-    # HTML出力用関数群
-    ############################################
-    def to_html
-      @template_main ||= File.read( Fc.find_share('main.html.erb') )
-      left_bar = make_left_bar(@global)
-      ERB.new(@template_main,nil,'-').result(binding)
+    def module_to_html( mod )
+      path = Fc.find_share('main.html.erb')
+      @template_main ||= File.read( path )
+      erb = ERB.new(@template_main,nil,'-')
+      erb.filename = path.to_s
+      erb.result(binding)
     end
 
     def block_to_html(block)
@@ -700,16 +673,6 @@ module Fc
       ERB.new(@template_block,nil,'-').result(binding)
     end
 
-    def make_left_bar(block)
-      id = block.id 
-      id = '(global)' if block.id == :''
-      r = "<li><a href='##{id}'>#{id}</a><ul>"
-      block.vars.each do |id,v|
-        r += make_left_bar(v.val.block) if v.val and Lambda === v.val and v.val.type.type == :lambda
-      end
-      r += '</ul></li>'
-      r
-    end
   end
 
 end

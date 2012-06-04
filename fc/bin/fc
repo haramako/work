@@ -30,7 +30,7 @@ com.compile( src_filename )
 
 if $debug_info
   open( base+'.html', 'w' ) do |f|
-    # f.write com.to_html
+    f.write Fc::HtmlOutput.new.module_to_html( com.module )
   end
 end
 
