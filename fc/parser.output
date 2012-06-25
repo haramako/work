@@ -1,0 +1,2413 @@
+
+
+-------- Grammar --------
+
+rule 1 program: statement_list
+rule 2 block: "{" statement_list "}"
+rule 3 block: "{" "}"
+rule 4 statement_list: statement_list statement_i
+rule 5 statement_list: statement_i
+rule 6 statement_i: statement
+rule 7 statement: options ";"
+rule 8 statement: "function" IDENT "(" var_decl_list_if ")" ":" type_decl options_if block
+rule 9 statement: "include" "(" STRING ")" ";"
+rule 10 statement: "var" var_decl_list ";"
+rule 11 statement: "const" var_decl_list ";"
+rule 12 statement: "include_bin" "(" option_list ")" ";"
+rule 13 statement: "if" "(" exp ")" block else_block
+rule 14 statement: "loop" "(" ")" block
+rule 15 statement: "while" "(" exp ")" block
+rule 16 statement: "break" ";"
+rule 17 statement: "continue" ";"
+rule 18 statement: "return" ";"
+rule 19 statement: "return" exp ";"
+rule 20 statement: exp ";"
+rule 21 else_block: 
+rule 22 else_block: "else" block
+rule 23 exp: "(" exp ")"
+rule 24 exp: exp "=" exp
+rule 25 exp: exp "+" exp
+rule 26 exp: exp "-" exp
+rule 27 exp: exp "*" exp
+rule 28 exp: exp "/" exp
+rule 29 exp: exp "+=" exp
+rule 30 exp: exp "-=" exp
+rule 31 exp: exp "==" exp
+rule 32 exp: exp "!=" exp
+rule 33 exp: exp "<" exp
+rule 34 exp: exp ">" exp
+rule 35 exp: exp "<=" exp
+rule 36 exp: exp ">=" exp
+rule 37 exp: "!" exp
+rule 38 exp: "-" exp
+rule 39 exp: "*" exp
+rule 40 exp: "&" exp
+rule 41 exp: exp "(" exp_list ")"
+rule 42 exp: exp "[" exp "]"
+rule 43 exp: "[" exp_list "]"
+rule 44 exp: NUMBER
+rule 45 exp: IDENT
+rule 46 exp: STRING
+rule 47 exp_list: exp_list "," exp
+rule 48 exp_list: exp
+rule 49 exp_list: 
+rule 50 options_if: 
+rule 51 options_if: options
+rule 52 options: "options" "(" option_list ")"
+rule 53 option_list: option_list_sub
+rule 54 option_list_sub: option_list_sub "," option
+rule 55 option_list_sub: option
+rule 56 option: IDENT ":" exp
+rule 57 var_decl_list_if: 
+rule 58 var_decl_list_if: var_decl_list
+rule 59 var_decl_list: var_decl_list "," var_decl
+rule 60 var_decl_list: var_decl
+rule 61 var_decl: IDENT ":" type_decl var_init var_option
+rule 62 var_init: 
+rule 63 var_init: "=" exp
+rule 64 var_option: 
+rule 65 var_option: "options" "(" option_list ")"
+rule 66 type_decl: type_modifier type_decl
+rule 67 type_decl: IDENT
+rule 68 type_modifier: "[" exp "]"
+rule 69 type_modifier: "*"
+rule 70 type_modifier: "(" type_decl_list ")"
+rule 71 type_decl_list: type_decl "," type_decl
+rule 72 type_decl_list: type_decl
+rule 73 type_decl_list: 
+
+------- Symbols -------
+
+**Nonterminals, with rules where they appear
+
+  $start (43)
+    on right: 
+    on left : 
+  program (44)
+    on right: 
+    on left : 1
+  statement_list (45)
+    on right: 1 2 4
+    on left : 4 5
+  block (46)
+    on right: 8 13 14 15 22
+    on left : 2 3
+  statement_i (47)
+    on right: 4 5
+    on left : 6
+  statement (48)
+    on right: 6
+    on left : 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+  options (49)
+    on right: 7 51
+    on left : 52
+  var_decl_list_if (50)
+    on right: 8
+    on left : 57 58
+  type_decl (51)
+    on right: 8 61 66 71 72
+    on left : 66 67
+  options_if (52)
+    on right: 8
+    on left : 50 51
+  var_decl_list (53)
+    on right: 10 11 58 59
+    on left : 59 60
+  option_list (54)
+    on right: 12 52 65
+    on left : 53
+  exp (55)
+    on right: 13 15 19 20 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 47 48 56 63 68
+    on left : 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46
+  else_block (56)
+    on right: 13
+    on left : 21 22
+  exp_list (57)
+    on right: 41 43 47
+    on left : 47 48 49
+  option_list_sub (58)
+    on right: 53 54
+    on left : 54 55
+  option (59)
+    on right: 54 55
+    on left : 56
+  var_decl (60)
+    on right: 59 60
+    on left : 61
+  var_init (61)
+    on right: 61
+    on left : 62 63
+  var_option (62)
+    on right: 61
+    on left : 64 65
+  type_modifier (63)
+    on right: 66
+    on left : 68 69 70
+  type_decl_list (64)
+    on right: 70
+    on left : 71 72 73
+
+**Terminals, with rules where they appear
+
+  $end (0) 
+  error (1) 
+  UMINUS (2) 
+  "(" (3) 8 9 12 13 14 15 23 41 52 65 70
+  "[" (4) 42 43 68
+  "*" (5) 27 39 69
+  "/" (6) 28
+  "+" (7) 25
+  "-" (8) 26 38
+  "<" (9) 33
+  ">" (10) 34
+  "<=" (11) 35
+  ">=" (12) 36
+  "==" (13) 31
+  "!=" (14) 32
+  "=" (15) 24 63
+  "+=" (16) 29
+  "-=" (17) 30
+  "{" (18) 2 3
+  "}" (19) 2 3
+  ";" (20) 7 9 10 11 12 16 17 18 19 20
+  "function" (21) 8
+  IDENT (22) 8 45 56 61 67
+  ")" (23) 8 9 12 13 14 15 23 41 52 65 70
+  ":" (24) 8 56 61
+  "include" (25) 9
+  STRING (26) 9 46
+  "var" (27) 10
+  "const" (28) 11
+  "include_bin" (29) 12
+  "if" (30) 13
+  "loop" (31) 14
+  "while" (32) 15
+  "break" (33) 16
+  "continue" (34) 17
+  "return" (35) 18 19
+  "else" (36) 22
+  "!" (37) 37
+  "&" (38) 40
+  "]" (39) 42 43 68
+  NUMBER (40) 44
+  "," (41) 47 54 59 71
+  "options" (42) 52 65
+
+--------- State ---------
+
+state 0
+
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  "function"    shift, and go to state 6
+  IDENT         shift, and go to state 25
+  "include"     shift, and go to state 7
+  STRING        shift, and go to state 26
+  "var"         shift, and go to state 8
+  "const"       shift, and go to state 9
+  "include_bin"  shift, and go to state 10
+  "if"          shift, and go to state 11
+  "loop"        shift, and go to state 12
+  "while"       shift, and go to state 13
+  "break"       shift, and go to state 14
+  "continue"    shift, and go to state 15
+  "return"      shift, and go to state 16
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+  "options"     shift, and go to state 27
+
+  program       go to state 1
+  statement_list  go to state 2
+  statement_i   go to state 3
+  statement     go to state 4
+  options       go to state 5
+  exp           go to state 17
+
+state 1
+
+
+  $end          shift, and go to state 28
+
+
+state 2
+
+   1) program : statement_list _
+   4) statement_list : statement_list _ statement_i
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  "function"    shift, and go to state 6
+  IDENT         shift, and go to state 25
+  "include"     shift, and go to state 7
+  STRING        shift, and go to state 26
+  "var"         shift, and go to state 8
+  "const"       shift, and go to state 9
+  "include_bin"  shift, and go to state 10
+  "if"          shift, and go to state 11
+  "loop"        shift, and go to state 12
+  "while"       shift, and go to state 13
+  "break"       shift, and go to state 14
+  "continue"    shift, and go to state 15
+  "return"      shift, and go to state 16
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+  "options"     shift, and go to state 27
+  $default      reduce using rule 1 (program)
+
+  statement_i   go to state 29
+  statement     go to state 4
+  options       go to state 5
+  exp           go to state 17
+
+state 3
+
+   5) statement_list : statement_i _
+
+  $default      reduce using rule 5 (statement_list)
+
+
+state 4
+
+   6) statement_i : statement _
+
+  $default      reduce using rule 6 (statement_i)
+
+
+state 5
+
+   7) statement : options _ ";"
+
+  ";"           shift, and go to state 30
+
+
+state 6
+
+   8) statement : "function" _ IDENT "(" var_decl_list_if ")" ":" type_decl options_if block
+
+  IDENT         shift, and go to state 31
+
+
+state 7
+
+   9) statement : "include" _ "(" STRING ")" ";"
+
+  "("           shift, and go to state 32
+
+
+state 8
+
+  10) statement : "var" _ var_decl_list ";"
+
+  IDENT         shift, and go to state 35
+
+  var_decl_list  go to state 33
+  var_decl      go to state 34
+
+state 9
+
+  11) statement : "const" _ var_decl_list ";"
+
+  IDENT         shift, and go to state 35
+
+  var_decl_list  go to state 36
+  var_decl      go to state 34
+
+state 10
+
+  12) statement : "include_bin" _ "(" option_list ")" ";"
+
+  "("           shift, and go to state 37
+
+
+state 11
+
+  13) statement : "if" _ "(" exp ")" block else_block
+
+  "("           shift, and go to state 38
+
+
+state 12
+
+  14) statement : "loop" _ "(" ")" block
+
+  "("           shift, and go to state 39
+
+
+state 13
+
+  15) statement : "while" _ "(" exp ")" block
+
+  "("           shift, and go to state 40
+
+
+state 14
+
+  16) statement : "break" _ ";"
+
+  ";"           shift, and go to state 41
+
+
+state 15
+
+  17) statement : "continue" _ ";"
+
+  ";"           shift, and go to state 42
+
+
+state 16
+
+  18) statement : "return" _ ";"
+  19) statement : "return" _ exp ";"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  ";"           shift, and go to state 43
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 44
+
+state 17
+
+  20) statement : exp _ ";"
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  ";"           shift, and go to state 45
+
+
+state 18
+
+  23) exp : "(" _ exp ")"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 61
+
+state 19
+
+  37) exp : "!" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 62
+
+state 20
+
+  38) exp : "-" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 63
+
+state 21
+
+  39) exp : "*" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 64
+
+state 22
+
+  40) exp : "&" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 65
+
+state 23
+
+  43) exp : "[" _ exp_list "]"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+  $default      reduce using rule 49 (exp_list)
+
+  exp           go to state 66
+  exp_list      go to state 67
+
+state 24
+
+  44) exp : NUMBER _
+
+  $default      reduce using rule 44 (exp)
+
+
+state 25
+
+  45) exp : IDENT _
+
+  $default      reduce using rule 45 (exp)
+
+
+state 26
+
+  46) exp : STRING _
+
+  $default      reduce using rule 46 (exp)
+
+
+state 27
+
+  52) options : "options" _ "(" option_list ")"
+
+  "("           shift, and go to state 68
+
+
+state 28
+
+
+  $end          shift, and go to state 69
+
+
+state 29
+
+   4) statement_list : statement_list statement_i _
+
+  $default      reduce using rule 4 (statement_list)
+
+
+state 30
+
+   7) statement : options ";" _
+
+  $default      reduce using rule 7 (statement)
+
+
+state 31
+
+   8) statement : "function" IDENT _ "(" var_decl_list_if ")" ":" type_decl options_if block
+
+  "("           shift, and go to state 70
+
+
+state 32
+
+   9) statement : "include" "(" _ STRING ")" ";"
+
+  STRING        shift, and go to state 71
+
+
+state 33
+
+  10) statement : "var" var_decl_list _ ";"
+  59) var_decl_list : var_decl_list _ "," var_decl
+
+  ";"           shift, and go to state 72
+  ","           shift, and go to state 73
+
+
+state 34
+
+  60) var_decl_list : var_decl _
+
+  $default      reduce using rule 60 (var_decl_list)
+
+
+state 35
+
+  61) var_decl : IDENT _ ":" type_decl var_init var_option
+
+  ":"           shift, and go to state 74
+
+
+state 36
+
+  11) statement : "const" var_decl_list _ ";"
+  59) var_decl_list : var_decl_list _ "," var_decl
+
+  ";"           shift, and go to state 75
+  ","           shift, and go to state 73
+
+
+state 37
+
+  12) statement : "include_bin" "(" _ option_list ")" ";"
+
+  IDENT         shift, and go to state 79
+
+  option_list   go to state 76
+  option_list_sub  go to state 77
+  option        go to state 78
+
+state 38
+
+  13) statement : "if" "(" _ exp ")" block else_block
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 80
+
+state 39
+
+  14) statement : "loop" "(" _ ")" block
+
+  ")"           shift, and go to state 81
+
+
+state 40
+
+  15) statement : "while" "(" _ exp ")" block
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 82
+
+state 41
+
+  16) statement : "break" ";" _
+
+  $default      reduce using rule 16 (statement)
+
+
+state 42
+
+  17) statement : "continue" ";" _
+
+  $default      reduce using rule 17 (statement)
+
+
+state 43
+
+  18) statement : "return" ";" _
+
+  $default      reduce using rule 18 (statement)
+
+
+state 44
+
+  19) statement : "return" exp _ ";"
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  ";"           shift, and go to state 83
+
+
+state 45
+
+  20) statement : exp ";" _
+
+  $default      reduce using rule 20 (statement)
+
+
+state 46
+
+  24) exp : exp "=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 84
+
+state 47
+
+  25) exp : exp "+" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 85
+
+state 48
+
+  26) exp : exp "-" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 86
+
+state 49
+
+  27) exp : exp "*" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 87
+
+state 50
+
+  28) exp : exp "/" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 88
+
+state 51
+
+  29) exp : exp "+=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 89
+
+state 52
+
+  30) exp : exp "-=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 90
+
+state 53
+
+  31) exp : exp "==" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 91
+
+state 54
+
+  32) exp : exp "!=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 92
+
+state 55
+
+  33) exp : exp "<" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 93
+
+state 56
+
+  34) exp : exp ">" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 94
+
+state 57
+
+  35) exp : exp "<=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 95
+
+state 58
+
+  36) exp : exp ">=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 96
+
+state 59
+
+  41) exp : exp "(" _ exp_list ")"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+  $default      reduce using rule 49 (exp_list)
+
+  exp           go to state 66
+  exp_list      go to state 97
+
+state 60
+
+  42) exp : exp "[" _ exp "]"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 98
+
+state 61
+
+  23) exp : "(" exp _ ")"
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  ")"           shift, and go to state 99
+
+
+state 62
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  37) exp : "!" exp _
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  $default      reduce using rule 37 (exp)
+
+
+state 63
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  38) exp : "-" exp _
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  $default      reduce using rule 38 (exp)
+
+
+state 64
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  39) exp : "*" exp _
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  $default      reduce using rule 39 (exp)
+
+
+state 65
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  40) exp : "&" exp _
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  $default      reduce using rule 40 (exp)
+
+
+state 66
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+  48) exp_list : exp _
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 48 (exp_list)
+
+
+state 67
+
+  43) exp : "[" exp_list _ "]"
+  47) exp_list : exp_list _ "," exp
+
+  "]"           shift, and go to state 100
+  ","           shift, and go to state 101
+
+
+state 68
+
+  52) options : "options" "(" _ option_list ")"
+
+  IDENT         shift, and go to state 79
+
+  option_list   go to state 102
+  option_list_sub  go to state 77
+  option        go to state 78
+
+state 69
+
+
+  $default      accept
+
+
+state 70
+
+   8) statement : "function" IDENT "(" _ var_decl_list_if ")" ":" type_decl options_if block
+
+  IDENT         shift, and go to state 35
+  $default      reduce using rule 57 (var_decl_list_if)
+
+  var_decl_list_if  go to state 103
+  var_decl_list  go to state 104
+  var_decl      go to state 34
+
+state 71
+
+   9) statement : "include" "(" STRING _ ")" ";"
+
+  ")"           shift, and go to state 105
+
+
+state 72
+
+  10) statement : "var" var_decl_list ";" _
+
+  $default      reduce using rule 10 (statement)
+
+
+state 73
+
+  59) var_decl_list : var_decl_list "," _ var_decl
+
+  IDENT         shift, and go to state 35
+
+  var_decl      go to state 106
+
+state 74
+
+  61) var_decl : IDENT ":" _ type_decl var_init var_option
+
+  "("           shift, and go to state 112
+  "["           shift, and go to state 110
+  "*"           shift, and go to state 111
+  IDENT         shift, and go to state 109
+
+  type_decl     go to state 107
+  type_modifier  go to state 108
+
+state 75
+
+  11) statement : "const" var_decl_list ";" _
+
+  $default      reduce using rule 11 (statement)
+
+
+state 76
+
+  12) statement : "include_bin" "(" option_list _ ")" ";"
+
+  ")"           shift, and go to state 113
+
+
+state 77
+
+  53) option_list : option_list_sub _
+  54) option_list_sub : option_list_sub _ "," option
+
+  ","           shift, and go to state 114
+  $default      reduce using rule 53 (option_list)
+
+
+state 78
+
+  55) option_list_sub : option _
+
+  $default      reduce using rule 55 (option_list_sub)
+
+
+state 79
+
+  56) option : IDENT _ ":" exp
+
+  ":"           shift, and go to state 115
+
+
+state 80
+
+  13) statement : "if" "(" exp _ ")" block else_block
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  ")"           shift, and go to state 116
+
+
+state 81
+
+  14) statement : "loop" "(" ")" _ block
+
+  "{"           shift, and go to state 117
+
+  block         go to state 118
+
+state 82
+
+  15) statement : "while" "(" exp _ ")" block
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  ")"           shift, and go to state 119
+
+
+state 83
+
+  19) statement : "return" exp ";" _
+
+  $default      reduce using rule 19 (statement)
+
+
+state 84
+
+  24) exp : exp _ "=" exp
+  24) exp : exp "=" exp _
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 24 (exp)
+
+
+state 85
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  25) exp : exp "+" exp _
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  $default      reduce using rule 25 (exp)
+
+
+state 86
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  26) exp : exp "-" exp _
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  $default      reduce using rule 26 (exp)
+
+
+state 87
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  27) exp : exp "*" exp _
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  $default      reduce using rule 27 (exp)
+
+
+state 88
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  28) exp : exp "/" exp _
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  $default      reduce using rule 28 (exp)
+
+
+state 89
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  29) exp : exp "+=" exp _
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 29 (exp)
+
+
+state 90
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  30) exp : exp "-=" exp _
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 30 (exp)
+
+
+state 91
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  31) exp : exp "==" exp _
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  $default      reduce using rule 31 (exp)
+
+
+state 92
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  32) exp : exp "!=" exp _
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  $default      reduce using rule 32 (exp)
+
+
+state 93
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  33) exp : exp "<" exp _
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  $default      reduce using rule 33 (exp)
+
+
+state 94
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  34) exp : exp ">" exp _
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  $default      reduce using rule 34 (exp)
+
+
+state 95
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  35) exp : exp "<=" exp _
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  $default      reduce using rule 35 (exp)
+
+
+state 96
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  36) exp : exp ">=" exp _
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  $default      reduce using rule 36 (exp)
+
+
+state 97
+
+  41) exp : exp "(" exp_list _ ")"
+  47) exp_list : exp_list _ "," exp
+
+  ")"           shift, and go to state 120
+  ","           shift, and go to state 101
+
+
+state 98
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+  42) exp : exp "[" exp _ "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  "]"           shift, and go to state 121
+
+
+state 99
+
+  23) exp : "(" exp ")" _
+
+  $default      reduce using rule 23 (exp)
+
+
+state 100
+
+  43) exp : "[" exp_list "]" _
+
+  $default      reduce using rule 43 (exp)
+
+
+state 101
+
+  47) exp_list : exp_list "," _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 122
+
+state 102
+
+  52) options : "options" "(" option_list _ ")"
+
+  ")"           shift, and go to state 123
+
+
+state 103
+
+   8) statement : "function" IDENT "(" var_decl_list_if _ ")" ":" type_decl options_if block
+
+  ")"           shift, and go to state 124
+
+
+state 104
+
+  58) var_decl_list_if : var_decl_list _
+  59) var_decl_list : var_decl_list _ "," var_decl
+
+  ","           shift, and go to state 73
+  $default      reduce using rule 58 (var_decl_list_if)
+
+
+state 105
+
+   9) statement : "include" "(" STRING ")" _ ";"
+
+  ";"           shift, and go to state 125
+
+
+state 106
+
+  59) var_decl_list : var_decl_list "," var_decl _
+
+  $default      reduce using rule 59 (var_decl_list)
+
+
+state 107
+
+  61) var_decl : IDENT ":" type_decl _ var_init var_option
+
+  "="           shift, and go to state 127
+  $default      reduce using rule 62 (var_init)
+
+  var_init      go to state 126
+
+state 108
+
+  66) type_decl : type_modifier _ type_decl
+
+  "("           shift, and go to state 112
+  "["           shift, and go to state 110
+  "*"           shift, and go to state 111
+  IDENT         shift, and go to state 109
+
+  type_modifier  go to state 108
+  type_decl     go to state 128
+
+state 109
+
+  67) type_decl : IDENT _
+
+  $default      reduce using rule 67 (type_decl)
+
+
+state 110
+
+  68) type_modifier : "[" _ exp "]"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 129
+
+state 111
+
+  69) type_modifier : "*" _
+
+  $default      reduce using rule 69 (type_modifier)
+
+
+state 112
+
+  70) type_modifier : "(" _ type_decl_list ")"
+
+  "("           shift, and go to state 112
+  "["           shift, and go to state 110
+  "*"           shift, and go to state 111
+  IDENT         shift, and go to state 109
+  $default      reduce using rule 73 (type_decl_list)
+
+  type_modifier  go to state 108
+  type_decl_list  go to state 130
+  type_decl     go to state 131
+
+state 113
+
+  12) statement : "include_bin" "(" option_list ")" _ ";"
+
+  ";"           shift, and go to state 132
+
+
+state 114
+
+  54) option_list_sub : option_list_sub "," _ option
+
+  IDENT         shift, and go to state 79
+
+  option        go to state 133
+
+state 115
+
+  56) option : IDENT ":" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 134
+
+state 116
+
+  13) statement : "if" "(" exp ")" _ block else_block
+
+  "{"           shift, and go to state 117
+
+  block         go to state 135
+
+state 117
+
+   2) block : "{" _ statement_list "}"
+   3) block : "{" _ "}"
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  "}"           shift, and go to state 137
+  "function"    shift, and go to state 6
+  IDENT         shift, and go to state 25
+  "include"     shift, and go to state 7
+  STRING        shift, and go to state 26
+  "var"         shift, and go to state 8
+  "const"       shift, and go to state 9
+  "include_bin"  shift, and go to state 10
+  "if"          shift, and go to state 11
+  "loop"        shift, and go to state 12
+  "while"       shift, and go to state 13
+  "break"       shift, and go to state 14
+  "continue"    shift, and go to state 15
+  "return"      shift, and go to state 16
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+  "options"     shift, and go to state 27
+
+  statement_list  go to state 136
+  statement_i   go to state 3
+  statement     go to state 4
+  options       go to state 5
+  exp           go to state 17
+
+state 118
+
+  14) statement : "loop" "(" ")" block _
+
+  $default      reduce using rule 14 (statement)
+
+
+state 119
+
+  15) statement : "while" "(" exp ")" _ block
+
+  "{"           shift, and go to state 117
+
+  block         go to state 138
+
+state 120
+
+  41) exp : exp "(" exp_list ")" _
+
+  $default      reduce using rule 41 (exp)
+
+
+state 121
+
+  42) exp : exp "[" exp "]" _
+
+  $default      reduce using rule 42 (exp)
+
+
+state 122
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+  47) exp_list : exp_list "," exp _
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 47 (exp_list)
+
+
+state 123
+
+  52) options : "options" "(" option_list ")" _
+
+  $default      reduce using rule 52 (options)
+
+
+state 124
+
+   8) statement : "function" IDENT "(" var_decl_list_if ")" _ ":" type_decl options_if block
+
+  ":"           shift, and go to state 139
+
+
+state 125
+
+   9) statement : "include" "(" STRING ")" ";" _
+
+  $default      reduce using rule 9 (statement)
+
+
+state 126
+
+  61) var_decl : IDENT ":" type_decl var_init _ var_option
+
+  "options"     shift, and go to state 141
+  $default      reduce using rule 64 (var_option)
+
+  var_option    go to state 140
+
+state 127
+
+  63) var_init : "=" _ exp
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  IDENT         shift, and go to state 25
+  STRING        shift, and go to state 26
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+
+  exp           go to state 142
+
+state 128
+
+  66) type_decl : type_modifier type_decl _
+
+  $default      reduce using rule 66 (type_decl)
+
+
+state 129
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+  68) type_modifier : "[" exp _ "]"
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  "]"           shift, and go to state 143
+
+
+state 130
+
+  70) type_modifier : "(" type_decl_list _ ")"
+
+  ")"           shift, and go to state 144
+
+
+state 131
+
+  71) type_decl_list : type_decl _ "," type_decl
+  72) type_decl_list : type_decl _
+
+  ","           shift, and go to state 145
+  $default      reduce using rule 72 (type_decl_list)
+
+
+state 132
+
+  12) statement : "include_bin" "(" option_list ")" ";" _
+
+  $default      reduce using rule 12 (statement)
+
+
+state 133
+
+  54) option_list_sub : option_list_sub "," option _
+
+  $default      reduce using rule 54 (option_list_sub)
+
+
+state 134
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+  56) option : IDENT ":" exp _
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 56 (option)
+
+
+state 135
+
+  13) statement : "if" "(" exp ")" block _ else_block
+
+  "else"        shift, and go to state 147
+  $default      reduce using rule 21 (else_block)
+
+  else_block    go to state 146
+
+state 136
+
+   2) block : "{" statement_list _ "}"
+   4) statement_list : statement_list _ statement_i
+
+  "("           shift, and go to state 18
+  "["           shift, and go to state 23
+  "*"           shift, and go to state 21
+  "-"           shift, and go to state 20
+  "}"           shift, and go to state 148
+  "function"    shift, and go to state 6
+  IDENT         shift, and go to state 25
+  "include"     shift, and go to state 7
+  STRING        shift, and go to state 26
+  "var"         shift, and go to state 8
+  "const"       shift, and go to state 9
+  "include_bin"  shift, and go to state 10
+  "if"          shift, and go to state 11
+  "loop"        shift, and go to state 12
+  "while"       shift, and go to state 13
+  "break"       shift, and go to state 14
+  "continue"    shift, and go to state 15
+  "return"      shift, and go to state 16
+  "!"           shift, and go to state 19
+  "&"           shift, and go to state 22
+  NUMBER        shift, and go to state 24
+  "options"     shift, and go to state 27
+
+  statement_i   go to state 29
+  statement     go to state 4
+  options       go to state 5
+  exp           go to state 17
+
+state 137
+
+   3) block : "{" "}" _
+
+  $default      reduce using rule 3 (block)
+
+
+state 138
+
+  15) statement : "while" "(" exp ")" block _
+
+  $default      reduce using rule 15 (statement)
+
+
+state 139
+
+   8) statement : "function" IDENT "(" var_decl_list_if ")" ":" _ type_decl options_if block
+
+  "("           shift, and go to state 112
+  "["           shift, and go to state 110
+  "*"           shift, and go to state 111
+  IDENT         shift, and go to state 109
+
+  type_decl     go to state 149
+  type_modifier  go to state 108
+
+state 140
+
+  61) var_decl : IDENT ":" type_decl var_init var_option _
+
+  $default      reduce using rule 61 (var_decl)
+
+
+state 141
+
+  65) var_option : "options" _ "(" option_list ")"
+
+  "("           shift, and go to state 150
+
+
+state 142
+
+  24) exp : exp _ "=" exp
+  25) exp : exp _ "+" exp
+  26) exp : exp _ "-" exp
+  27) exp : exp _ "*" exp
+  28) exp : exp _ "/" exp
+  29) exp : exp _ "+=" exp
+  30) exp : exp _ "-=" exp
+  31) exp : exp _ "==" exp
+  32) exp : exp _ "!=" exp
+  33) exp : exp _ "<" exp
+  34) exp : exp _ ">" exp
+  35) exp : exp _ "<=" exp
+  36) exp : exp _ ">=" exp
+  41) exp : exp _ "(" exp_list ")"
+  42) exp : exp _ "[" exp "]"
+  63) var_init : "=" exp _
+
+  "("           shift, and go to state 59
+  "["           shift, and go to state 60
+  "*"           shift, and go to state 49
+  "/"           shift, and go to state 50
+  "+"           shift, and go to state 47
+  "-"           shift, and go to state 48
+  "<"           shift, and go to state 55
+  ">"           shift, and go to state 56
+  "<="          shift, and go to state 57
+  ">="          shift, and go to state 58
+  "=="          shift, and go to state 53
+  "!="          shift, and go to state 54
+  "="           shift, and go to state 46
+  "+="          shift, and go to state 51
+  "-="          shift, and go to state 52
+  $default      reduce using rule 63 (var_init)
+
+
+state 143
+
+  68) type_modifier : "[" exp "]" _
+
+  $default      reduce using rule 68 (type_modifier)
+
+
+state 144
+
+  70) type_modifier : "(" type_decl_list ")" _
+
+  $default      reduce using rule 70 (type_modifier)
+
+
+state 145
+
+  71) type_decl_list : type_decl "," _ type_decl
+
+  "("           shift, and go to state 112
+  "["           shift, and go to state 110
+  "*"           shift, and go to state 111
+  IDENT         shift, and go to state 109
+
+  type_modifier  go to state 108
+  type_decl     go to state 151
+
+state 146
+
+  13) statement : "if" "(" exp ")" block else_block _
+
+  $default      reduce using rule 13 (statement)
+
+
+state 147
+
+  22) else_block : "else" _ block
+
+  "{"           shift, and go to state 117
+
+  block         go to state 152
+
+state 148
+
+   2) block : "{" statement_list "}" _
+
+  $default      reduce using rule 2 (block)
+
+
+state 149
+
+   8) statement : "function" IDENT "(" var_decl_list_if ")" ":" type_decl _ options_if block
+
+  "options"     shift, and go to state 27
+  $default      reduce using rule 50 (options_if)
+
+  options_if    go to state 153
+  options       go to state 154
+
+state 150
+
+  65) var_option : "options" "(" _ option_list ")"
+
+  IDENT         shift, and go to state 79
+
+  option_list_sub  go to state 77
+  option        go to state 78
+  option_list   go to state 155
+
+state 151
+
+  71) type_decl_list : type_decl "," type_decl _
+
+  $default      reduce using rule 71 (type_decl_list)
+
+
+state 152
+
+  22) else_block : "else" block _
+
+  $default      reduce using rule 22 (else_block)
+
+
+state 153
+
+   8) statement : "function" IDENT "(" var_decl_list_if ")" ":" type_decl options_if _ block
+
+  "{"           shift, and go to state 117
+
+  block         go to state 156
+
+state 154
+
+  51) options_if : options _
+
+  $default      reduce using rule 51 (options_if)
+
+
+state 155
+
+  65) var_option : "options" "(" option_list _ ")"
+
+  ")"           shift, and go to state 157
+
+
+state 156
+
+   8) statement : "function" IDENT "(" var_decl_list_if ")" ":" type_decl options_if block _
+
+  $default      reduce using rule 8 (statement)
+
+
+state 157
+
+  65) var_option : "options" "(" option_list ")" _
+
+  $default      reduce using rule 65 (var_option)
+
