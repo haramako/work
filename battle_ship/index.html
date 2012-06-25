@@ -1,0 +1,33 @@
+<html>
+<head>
+  <title>ばとるしっぷのテストページ</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="./javascripts/underscore-min.js"></script>
+  <script src="./javascripts/simple_require.js"></script>
+  <script src="./node_modules/battle_ship/utils.js"></script>
+  <script src="./node_modules/battle_ship/game.js"></script>
+  <script src="./node_modules/browser_game.js"></script>
+  <script>require('browser_game').startIndexHtml();</script>
+</head>
+<body>
+<style>
+table {
+  border-collapse: collapse;
+}
+th, td {
+  border: solid 1px #888;
+}
+</style>
+
+<h1>ばとるしっぷのテストページ</h1>
+
+<p><button id="create_session">セッションの作成</button></p>
+                                               
+<table id="sessions">
+</table>
+
+
+</body>  
+</html>
+   

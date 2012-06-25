@@ -54,7 +54,7 @@ describe Type, 'when initialize' do
 
   it 'as complex type' do
     v = Type[ [:array, 10, [:pointer, [:array, 2, :int] ] ] ]
-    v.to_s.should == 'int[2]*[10]'
+    v.to_s.should == 'uint8[2]*[10]'
   end
 
 end

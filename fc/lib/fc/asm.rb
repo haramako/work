@@ -3,12 +3,13 @@ require 'digest/md5'
 
 module Fc
   ######################################################################
-  # 中間コードコンパイラ
+  # Low-Level コンパイラ( 中間コード -> アセンブリ へのコンパイルを行う )
   ######################################################################
-  class OpCompiler
+  class Llc
     attr_reader :asm, :char_banks, :includes, :address, :address_zeropage
 
     def initialize
+      @module = nil
       @label_count = 0
       @asm = []
       @address = 0x200
@@ -17,26 +18,76 @@ module Fc
       @char_banks = Hash.new {|h,k| h[k] = [] } # バンクごとのアセンブラ
     end
 
-    def compile( com )
-      @asm << compile_vars( com.root )
+    def compile( mod )
+      @module = mod
+
+      # モジュール変数のコンパイル
+      @module.vars.each do |id,v|
+        case v.kind
+        when :global_var
+          if v.opt[:address]
+            @asm << "#{to_asm(v)} = #{v.opt[:address]}"
+          else
+            @asm << "#{to_asm(v)} = $#{'%04x'%[@address]}"
+            @address += v.type.size
+          end
+        when :global_const
+          @asm << "#{to_asm(v)} = #{v.val}"
+        when :global_symbol
+          if Array === v.val
+            @asm << "#{to_asm(v)}:"
+            v.val[1].each_slice(16) do |slice|
+              @asm << "\t.db #{slice.join(',')}"
+            end
+          elsif Lambda === v.val
+            # DO NOTHING
+          else
+            pp [v,v.val]
+            raise
+          end
+        end
+      end
 
       # lambdaのコンパイル
-      com.lambdas.each do |id,lmd|
-        @asm <<  compile_lambda( lmd )
+      @module.lambdas.each do |lmd|
+        next if lmd.opt[:extern]
+        @asm << compile_lambda( lmd )
+        @asm << ''
+      end
+
+      # interruptがなかったら足す
+      unless @module.vars[:interrupt]
+        @asm << "interrupt:"
+        @asm << "\trts"
       end
 
       # include(.asm)の処理
-      com.includes.each do |file|
-        pp file.to_s
+      @module.includes.each do |file|
         @asm << "\t.include \"#{file}\""
       end
 
     end
 
-    def compile_vars( block )
+    def compile_vars( lmd )
       r = []
       # 関数のデータをコンパイル
-      block.vars.each do |id,v|
+      lmd.vars.each do |id,v|
+        case v.kind
+        when :symbol
+          if Array === v.val
+            r << "#{to_asm(v)}:"
+            v.val.each_slice(16) do |slice|
+              r << "\t.db #{slice.join(',')}"
+            end
+          elsif Lambda === v.val
+            # DO NOTHING
+          else
+            pp [v,v.val]
+            raise
+          end
+        else
+        end
+=begin
         if v.opt and v.opt[:address]
           r << "#{to_asm(v)} = #{v.opt[:address]}"
           v.address = v.opt[:address]
@@ -57,39 +108,29 @@ module Fc
           end
         else
           if v.reg == :mem or v.reg == nil
-            if v.type.type == :pointer
-              # ポインターはzeropageに配置する
-              r << "#{to_asm(v)} = $#{'%04x'%[@address_zeropage]}"
-              v.address = @address_zeropage
-              @address_zeropage += v.type.size
-            else
-              # ポインター以外なら普通に配置
-              r << "#{to_asm(v)} = $#{'%04x'%[@address]}"
-              v.address = @address
-              @address += v.type.size
-            end
+            # ポインター以外なら普通に配置
+            r << "#{to_asm(v)} = $#{'%04x'%[@address]}"
+            v.address = @address
+            @address += v.type.size
           end
         end
+=end
       end
       r
     end
 
-    def compile_lambda( block )
-      ops = block.ops
-      block.optimized_ops = Marshal.load(Marshal.dump(ops))
-      ops = optimize( block, ops )
-      block.optimized_ops = ops
-      alloc_register( block, ops )
+    def compile_lambda( lmd )
+      ops = lmd.ops
+      # block.optimized_ops = Marshal.load(Marshal.dump(ops))
+      # ops = optimize( block, ops )
+      # block.optimized_ops = ops
+      alloc_register( lmd )
 
       r = []
 
-      r << "; function #{block.id}" 
+      r << "; function #{lmd.id}" 
 
-      r.concat compile_vars( block )
-
-      return r if block.opt[:extern]
-
-      r << "#{to_asm(block)}:" 
+      r << "#{to_asm(lmd)}:" 
 
       ops.each_with_index do |op,op_no| # op=オペランド
         r << "; #{'%04d'%[op_no]}: #{op.inspect}"
@@ -112,15 +153,46 @@ module Fc
           r << "jmp #{op[1]}"
 
         when :return
-          r.concat load( block.vars[:'0'], op[1] ) if op[1]
+          # r.concat load( @lmd.result, op[1] ) if op[1]
           r << "rts"
 
         when :call
-          op[3..-1].each_with_index do |arg,i|
-            r.concat load( op[2].val.args[i], arg)
+          size = 0
+          op[3..-1].each_with_index do |from,i|
+            to = op[2].args[i][1]
+            if to.kind == :pointer and from.type.kind == :array 
+              raise "can't convert from #{from} to #{to}" unless from.type.base == to.base
+              # 配列からポインタに変換
+              r << "lda #LOW(#{to_asm(from)})"
+              r << "sta #{size+0}+__STACK__,x"
+              r << "lda #HIGH(#{to_asm(from)})"
+              r << "sta #{size+1}+__STACK__,x"
+              size += 2
+            else
+              # 通常の代入
+              if from.type.kind != :int
+                raise "can't convert from #{from} to #{to}" unless from.type.base == to.base
+              end
+              to.size.times do |i|
+                if from.type.size > i
+                  r << load_a(from,i)
+                elsif from.type.size == i
+                  r << "lda #0"
+                end
+                r << "sta #{size}+__STACK__,x"
+                size += 1
+              end
+            end
           end
+          r << "txa"
+          r << "pha"
+          r << "clc"
+          r << "adc #10"
+          r << "tax"
           r << "jsr #{to_asm(op[2])}"
-          r.concat load( op[1], op[2].val.vars[:'0'] ) if op[1]
+          r << "pla"
+          r << "tax"
+          # r.concat load( op[1], op[2].val.vars[:'0'] ) if op[1]
 
         when :load
           r.concat load( op[1], op[2] )
@@ -232,7 +304,7 @@ module Fc
           end
 
         when :uminus
-          raise if op[1].type.type != :int
+          raise if op[1].type.kind != :int
           op[1].type.size.times do |i|
             r << "sec" if i == 0
             r << "lda #0"
@@ -312,15 +384,15 @@ module Fc
         when :index
           raise if op[3].type != Type[:int]
           # raise if op[2].kind != :var
-          if op[2].type.type == :array
+          if op[2].type.kind == :array
             r << "clc"
             r << "lda #LOW(#{a[2]})"
             r << "adc #{a[3]}"
-            r << "sta #{a[1]}+0"
+            r << "sta 0+#{a[1]}"
             r << "lda #HIGH(#{a[2]})"
             r << "adc #0"
-            r << "sta #{a[1]}+1"
-          elsif op[2].type.type == :pointer
+            r << "sta 1+#{a[1]}"
+          elsif op[2].type.kind == :pointer
             r << "clc"
             r << "lda #{byte(op[2],0)}"
             r << "adc #{a[3]}"
@@ -334,13 +406,13 @@ module Fc
 
         when :pget
           r << "ldy #0"
-          r << "lda [#{to_asm(op[2])}],y"
+          # r << "lda [#{to_asm(op[2])}],y"
           r << store_a(op[1],0)
 
         when :pset
           r << "ldy #0"
           r << load_a( op[2],0)
-          r << "sta [#{to_asm(op[1])}],y"
+          # r << "sta [#{to_asm(op[1])}],y"
 
           # 最適化後のオペレータ
         when :index_pget
@@ -382,6 +454,8 @@ module Fc
         end
       end
 
+      r.concat compile_vars( lmd )
+
       # 空の行を削除
       r.delete(nil)
       # ラベル行以外はインデントする
@@ -395,7 +469,7 @@ module Fc
         end
       end
 
-      block.asm = r
+      lmd.asm = r
 
       r
     end
@@ -414,7 +488,7 @@ module Fc
 
     def load( to, from )
       r = []
-      if to.type.type == :pointer and from.type.type == :array 
+      if to.type.kind == :pointer and from.type.kind == :array 
         raise "can't convert from #{from} to #{to}" unless from.type.base == to.type.base
         # 配列からポインタに変換
         r << "lda #LOW(#{to_asm(from)})"
@@ -423,7 +497,7 @@ module Fc
         r << "sta #{byte(to,1)}"
       else
         # 通常の代入
-        if from.type.type != :int
+        if from.type.kind != :int
           raise "can't convert from #{from} to #{to}" unless from.type.base == to.type.base
         end
         to.type.size.times do |i|
@@ -439,6 +513,7 @@ module Fc
     end
 
     def load_a( v, n )
+      return "lda #{byte(v,n)}"
       case v.reg
       when :mem
         "lda #{byte(v,n)}"
@@ -453,6 +528,7 @@ module Fc
     end
 
     def store_a( v, n )
+      return  "sta #{byte(v,n)}"
       case v.reg
       when :mem
         "sta #{byte(v,n)}"
@@ -476,37 +552,32 @@ module Fc
     end
 
     def to_asm( v )
-      r = to_asm_sub( v )
-      if r[0] == '#'
-        r
-      else
-        mangle r
-      end
-      r
-    end
-
-    def to_asm_sub( v )
-      if Lambda == v or ScopedBlock === v
-        "#{v.id}"
-      elsif v.kind == :literal
-        "##{v.val.to_s}"
-      else
-        if Lambda === v.val
-          "#{v.id}"
-        elsif v.scope
-          if v.scope.upper
-            "#{to_asm(v.scope)}_V#{v.id}"
-          else
-            "#{v.id}"
-          end
+      v = v.val || v.id if Value === v
+      if Numeric === v
+        "##{v}"
+      elsif Identifier === v
+        case v.kind
+        when :var, :arg, :result, :temp
+          "__STACK__+#{0},x"
+        when :const, :symbol
+          mangle ".#{v.id}"
+        when :global_const, :global_symbol, :global_var
+          mangle "#{v.id}"
         else
-          "#{v.id}"
+          raise "invalid v #{v}"
         end
+      elsif Symbol === v
+        "#{v}"
+      elsif Lambda === v
+        "#{v.id}"
+      else
+        raise "invalid v = #{v}"
       end
     end
 
     # 長すぎる場合は、だめっぽいのでカットする
     def mangle(str)
+      str = str.to_s.gsub(/\$/){'_D'}
       return str if str.size < 16
       n = 0
       while true
@@ -523,13 +594,33 @@ module Fc
     end
 
     def byte( v, n )
-      if v.const? and Numeric === v.val
+      if v.val
         "##{(v.val >> (n*8)) % 256}"
       else
-        "#{to_asm(v)}+#{n}"
+        "#{n}+#{to_asm(v)}"
       end
     end
 
+    ############################################
+    # レジスター割り当て
+    ############################################
+    def alloc_register( lmd )
+      reg = []
+      lmd.args.each do |id,var|
+        reg << var
+      end
+      lmd.vars.each do |id,var|
+        if var.kind == :var or var.kind == :temp
+          reg << var
+        end
+      end
+      pp reg
+    end
+
+    ############################################
+    # オプティマイザ
+    ############################################
+=begin
     def optimize( block, ops )
       return ops
       ops = optimize_unuse( block, ops )
@@ -686,6 +777,6 @@ module Fc
       end
     end
 
+=end
   end
-
 end

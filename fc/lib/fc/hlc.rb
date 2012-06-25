@@ -107,16 +107,10 @@ module Fc
       @module = mc.module
       @pos_info = mc.pos_info
 
-      # interruptがなかったら足す
-      #unless @global.vars[:interrupt]
-      #  compile_decl( [:function, :interrupt, [], :void, Hash.new, []] )
-      #end
-
       @module.lambdas.each do |lmd|
-        dout 1, "compiling function #{lmd.id}"
+        # dout 1, "compiling function #{lmd.id}"
         lc = LambdaCompiler.new( self, @module, lmd )
       end
-      pp @module
     end
 
     def update_pos( ast )
@@ -180,7 +174,7 @@ module Fc
         when Numeric
           r = ast
         when String
-          r = ast
+          r = [:array, ast.unpack('c*') +[0] ]
         when Array
           case ast[0]
           when :array
@@ -281,7 +275,7 @@ module Fc
         when :include
           filename = ast[1]
           if File.extname(filename) == '.asm'
-            @includes << Fc::find_module( filename )
+            @module.includes << Fc::find_module( filename )
           else
             mc = ModuleCompiler.new( filename )
             @module.vars.merge! mc.module.vars
@@ -403,6 +397,7 @@ module Fc
             raise CompileError.new("connot define const without value #{v[0]}") unless val
             val = const_eval(val) if val
             type = guess_type(type_eval(type),val)
+            val = val[1] if Array === val and val[0] == :array
             if type.kind == :array
               add_var Identifier.new( :symbol, id, type, val, opt )
             else
@@ -455,7 +450,7 @@ module Fc
           emit :jump, @loops[-1]
 
         when :return
-          if @scopes[-1].vars[:'0']
+          if @lmd.type.base != Type[:void]
             # 非void関数
             raise CompileError.new("can't return without value") unless ast[1]
             emit :return, rval(ast[1])
@@ -505,6 +500,11 @@ module Fc
 
         when Array
           case ast[0]
+
+          when :array
+            var = add_var Identifier.new( :symbol, "$#{@tmp_count}".intern, Type[[:array, ast[1].size, :uint8]], ast[1], nil )
+            @tmp_count += 1
+            r = Value.new( var )
 
           when :load
             left, left_value = lval(ast[1])
@@ -578,28 +578,26 @@ module Fc
             emit :label, end_label
 
           when :call
-=begin
-            func = find_var( ast[1] )
-            if func.type.base.kind != :void
-              r = new_tmp( func.type.base )
+            lmd = find_var( ast[1] ).val
+            if lmd.type.base != Type[:void]
+              r = new_tmp( lmd.type.base )
             else
               r = nil
             end
-            raise CompileError.new("lambda #{func} has #{func.val.args.size} but #{ast[2].size}") if ast[2].size != func.val.args.size
+            raise CompileError.new("lambda #{func} has #{func.val.args.size} but #{ast[2].size}") if ast[2].size != lmd.args.size
             args = []
             ast[2].each_with_index do |arg,i|
               v = rval(arg)
-              compatible_type( func.val.args[i].type, v.type )
+              compatible_type( lmd.args[i][1], v.type )
               args << v
             end
-            emit :call, r, func, *args
-=end
+            emit :call, r, lmd, *args
 
           when :index
             left = rval(ast[1])
             right = rval(ast[2])
-            raise CompileError.new("index must be pointer or array") unless left.type.type == :pointer or left.type.type == :array
-            raise CompileError.new("index must be int") if right.type.type != :int
+            raise CompileError.new("index must be pointer or array") unless left.type.kind == :pointer or left.type.kind == :array
+            raise CompileError.new("index must be int") if right.type.kind != :int
             r = new_tmp( Type[[:pointer, left.type.base]] )
             emit :index, r, left, right
             left_value = true

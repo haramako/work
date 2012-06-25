@@ -111,11 +111,11 @@ module Fc
   # ローカル変数    var i:int;                  o    i      -         var           __STACK_+1,x
   # テンポラリ変数                              x    i      -         temp          __STACK_+1,x
   # ローカル定数    const c = 1;                x    c      1         const         #1
-  # ローカル定数2   const c = [1,2]             x    c      -         symbol        .c
+  # ローカル定数2   const c = [1,2]             x    c      [1,2]     symbol        .c
   # 文字列リテラル  "hoge"                      x    a0     [1,2]     symbol        .a0 ( int[]の定数として保持 )
   # グローバル変数  var i:int;                  o    i      -         global_var    i
   # グローバル定数  const c = 1;                x    c      1         global_const  #1
-  # グローバル定数2 function f():void;          x    f      1         global_symbol f
+  # グローバル定数2 function f():void;          x    f      f         global_symbol f
   #
   # シンボルをもつか、値をもつか
   # アセンブラでシンボルを使うか、スタックを使うか
@@ -220,6 +220,7 @@ module Fc
   ######################################################################
   class Lambda
     attr_reader :id, :args, :type, :opt, :ast, :ops, :vars
+    attr_accessor :asm
 
     def initialize( id, args, base_type, opt, ast )
       @id = id

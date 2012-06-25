@@ -1,0 +1,31 @@
+<html>
+<head>
+  <title>ばとるしっぷのテストページ</title>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script src="./javascripts/underscore-min.js"></script>
+  <script src="./javascripts/simple_require.js"></script>
+  <script src="./node_modules/battle_ship/utils.js"></script>
+  <script src="./node_modules/battle_ship/game.js"></script>
+  <script src="./node_modules/browser_game.js"></script>
+  <script>require('browser_game').startGameHtml();</script>
+</head>
+<body>
+<style>
+table.field { border-collapse: collapse; }
+table.field tr { border: solid 1px #000; }
+table.field td { border: solid 1px #66f; width: 40px; height: 40px; }
+td.cell0 { background-color: #88f; }
+td.cell1 { background-color: #8f8; }
+td.cell2 { background-color: #f88; }
+</style>
+
+<h1>ばとるしっぷのテスト</h1>
+
+<canvas id="canvas" width="720" height="400"></canvas>
+
+<div id="init_panel">
+  <button id="finish">完了</button>
+</div>
+
+</body>
+</html>

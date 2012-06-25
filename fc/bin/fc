@@ -27,6 +27,7 @@ src_filename = ARGV[0]
 # ソースコードを中間コードにコンパイル
 com = Fc::Hlc.new
 com.compile( src_filename )
+mod = com.module
 
 if $debug_info
   open( base+'.html', 'w' ) do |f|
@@ -42,23 +43,21 @@ if $run
   exit
 end
 
-exit(0)
-
 # 中間コードをアセンブラにコンパイルする
-op_com = Fc::OpCompiler.new
-op_com.compile( com )
+op_com = Fc::Llc.new
+op_com.compile( mod )
 
 if $debug_info
   open( base+'.html', 'w' ) do |f|
-    # f.write com.to_html
+    f.write Fc::HtmlOutput.new.module_to_html( com.module )
   end
 end
 
 template = File.read( File.dirname(__FILE__) + '/../share/nes.asm' ) 
 
-options = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
-options.merge!( com.root.options )
-options_asm = options.map{|k,v| "\t.#{k} #{v}" }
+opt = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
+opt.merge! mod.opt
+opt_asm = opt.map{|k,v| "\t.#{k} #{v}" }
 chr_asm = []
 op_com.char_banks.each do |bank,asm|
   chr_asm << "\t.bank #{2+bank}"
@@ -66,7 +65,7 @@ op_com.char_banks.each do |bank,asm|
   chr_asm.concat asm
 end
 
-options_asm = options_asm.join("\n");
+opt_asm = opt_asm.join("\n");
 chr_asm = chr_asm.join("\n");
 code_asm = op_com.asm.join("\n")
 str = ERB.new(template,nil,'-').result(binding)
