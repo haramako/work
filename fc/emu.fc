@@ -1,7 +1,0 @@
-/*
- * コマンドラインエミュレータ用の定義ファイル
- */
-
-var EMU_ADDR    :*int options (address:0x1000);
-var EMU_PRINT   :int  options (address:0x1002);
-var EMU_FINISH  :int  options (address:0x1003);

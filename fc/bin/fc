@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby -Ku
+# coding: utf-8
+
+#
+#
+#
+
+require 'pp'
+require 'optparse'
+require_relative '../lib/fc/hlc'
+require_relative '../lib/fc/nes'
+require_relative '../lib/fc/asm'
+
+# コマンドライン引数の解釈
+$out = 'a.nes'
+opt = OptionParser.new( "NES Compiler\nUsage: fc [options] <src.fc> ...\nOptions:\n" )
+opt.on( '-h', '--help' ){ puts opt; exit }
+opt.on( '-o:', 'output file' ){|v| $out = v }
+opt.on( '-e', 'run by interpreter' ){ $run = true }
+opt.on( '-S', 'output asm file' ){|v| $asm = true }
+opt.on( '-d', '--debug', 'show debug info' ){|v| $debug_info = true }
+opt.parse!
+
+base = File.basename($out,'.*')
+src_filename = ARGV[0]
+
+# ソースコードを中間コードにコンパイル
+com = Fc::Hlc.new
+com.compile( src_filename )
+mod = com.module
+
+if $debug_info
+  open( base+'.html', 'w' ) do |f|
+    f.write Fc::HtmlOutput.new.module_to_html( com.module )
+  end
+end
+
+if $run
+  require_relative 'runner'
+  puts '====RUN===='
+  runner = Runner.new( com )
+  runner.run
+  exit
+end
+
+# 中間コードをアセンブラにコンパイルする
+op_com = Fc::Llc.new
+op_com.compile( mod )
+
+if $debug_info
+  open( base+'.html', 'w' ) do |f|
+    f.write Fc::HtmlOutput.new.module_to_html( com.module )
+  end
+end
+
+template = File.read( File.dirname(__FILE__) + '/../share/nes.asm' ) 
+
+opt = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
+opt.merge! mod.opt
+opt_asm = opt.map{|k,v| "\t.#{k} #{v}" }
+chr_asm = []
+op_com.char_banks.each do |bank,asm|
+  chr_asm << "\t.bank #{2+bank}"
+  chr_asm << "\t.org $0000"
+  chr_asm.concat asm
+end
+
+opt_asm = opt_asm.join("\n");
+chr_asm = chr_asm.join("\n");
+code_asm = op_com.asm.join("\n")
+str = ERB.new(template,nil,'-').result(binding)
+
+open( base+'.asm', 'w' ) do |f|
+  f.write str
+end
+
+unless $asm
+  # puts '====ASSEMBLE====' if $debug_info
+  result = `/Users/makoto/bin/nesasm #{base+'.asm'}`
+  if /error/ === result
+    puts result
+    exit(1)
+  end
+end
+
+size = parse_nes( base+'.nes' )[:prog_size] unless $asm
+puts "code=#{size}, var=#{op_com.address-0x200}, zeropage=#{op_com.address_zeropage-0x10}"

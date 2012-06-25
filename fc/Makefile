@@ -1,11 +1,15 @@
 
 .PHONY: all
-all: parser.rb
+all: lib/fc/parser.rb
 
-parser.rb: parser.y
-	racc parser.y -o parser.rb
+.PHONY: test
+test: all
+	rspec test/fc/test_*.rb
+	cd test ; ./test-all
+
+lib/fc/parser.rb: parser.y
+	racc parser.y -o lib/fc/parser.rb
 
 .PHONY: clean
 clean:
-	rm -f *.asm *.nes parser.output parser.rb
-
+	rm -f a.asm a.nes a.html lib/fc/parser.output lib/fc/parser.rb

@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
+require 'pp'
+require 'json'
+require_relative '../lib/fc/nes'
+
+FC = 'bin/fc'
+EMU = 'bin/emu6502'
+
+size_prev = JSON.parse( File.read('size_prev.txt') )
+size_cur = Hash.new
+
+err = false
+if ARGV.empty?
+  files = Dir.glob 'test_*.fc'
+else
+  files = ARGV
+end
+
+files.each do |file|
+  puts "testing #{file}"
+  result = `cd .. && #{FC} -d test/#{file} && #{EMU} a.nes || echo __ERROR__`
+  if /__ERROR__/ === result
+    puts result
+    err = true
+  end
+  nes = parse_nes( '../a.nes' )
+  size_cur[file] = nes[:prog_size]
+end
+
+File.write( 'size_cur.txt', JSON.dump( size_cur ) )
+
+
+size_cur.each_key do |file|
+  if size_prev[file] and size_cur[file] >= size_prev[file] * 1.1 # 1.1倍は適当
+    puts "warning: code size increased, %s %d->%d"%[file, size_prev[file], size_cur[file]]
+  end
+end
+
+exit(1) if err
