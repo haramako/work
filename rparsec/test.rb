@@ -50,6 +50,7 @@ class TestParser
 
 end
 
+  alias s sequence
 
 pp TestParser.k.lexer.lexeme.parse( 'static function hoge fuga' ) #.map(&:text)
 
