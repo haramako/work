@@ -20,6 +20,7 @@
  if typeof(module) == 'undefined' and typeof(exports) == 'undefined'
      eval('var exports, global; exports = {}; window.（パッケージ名） = exports; global = window;')
 
+本格的なAMD(Asyncronas Module Definition)を使わないのは、まだ、どのAMD企画がメインになるかわからないため。
 
 *必要なnpmパッケージ
 

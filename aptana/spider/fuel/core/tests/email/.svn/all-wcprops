@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tests/email
+END
+driver.php
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tests/email/driver.php
+END
+sendmail.php
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tests/email/sendmail.php
+END
+mail.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tests/email/mail.php
+END
+smtp.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tests/email/smtp.php
+END

@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/oil/views/admin/crud/views/actions
+END
+view.php
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/oil/views/admin/crud/views/actions/view.php
+END
+_form.php
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/oil/views/admin/crud/views/actions/_form.php
+END
+create.php
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/oil/views/admin/crud/views/actions/create.php
+END
+edit.php
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/oil/views/admin/crud/views/actions/edit.php
+END
+index.php
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/oil/views/admin/crud/views/actions/index.php
+END

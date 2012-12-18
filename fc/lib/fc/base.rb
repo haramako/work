@@ -43,7 +43,7 @@ module Fc
     def initialize( ast )
       if ast == :void
         @kind = :void
-        @size = 1
+        @size = 0
       elsif ast == :bool
         @kind = :bool
         @size = 1
@@ -74,6 +74,8 @@ module Fc
       end
 
       case @kind
+      when :void
+        @str = "void"
       when :int, :void, :bool
         @str = "#{signed ? 's' : 'u' }#{@kind}#{size*8}"
       when :pointer
@@ -107,9 +109,9 @@ module Fc
   # 区別したいのは以下のもの
   #                 例                          代入 id     val       kind          asm
   # 引数            function( arg:int )]:void   o    arg    -         arg           __STACK__+0,x
-  # 帰り値          return 0;                   o    -      -         result        __STACK__-1,x
-  # ローカル変数    var i:int;                  o    i      -         var           __STACK_+1,x
-  # テンポラリ変数                              x    i      -         temp          __STACK_+1,x
+  # 帰り値          return 0;                   o    -      -         result        __STACK__-N,x
+  # ローカル変数    var i:int;                  o    i      -         var           __STACK__+N,x
+  # テンポラリ変数                              x    i      -         temp          __STACK__+N,x
   # ローカル定数    const c = 1;                x    c      1         const         #1
   # ローカル定数2   const c = [1,2]             x    c      [1,2]     symbol        .c
   # 文字列リテラル  "hoge"                      x    a0     [1,2]     symbol        .a0 ( int[]の定数として保持 )
@@ -183,7 +185,15 @@ module Fc
         @id = id_or_val
       elsif Fixnum === id_or_val
         @kind = :val
-        @type = Type[:int]
+        if id_or_val >= 256
+          @type = Type[:int16]
+        elsif id_or_val < -127
+          @type = Type[:sint16]
+        elsif id_or_val < 0
+          @type = Type[:sint8]
+        else
+          @type = Type[:int8]
+        end
         @val = id_or_val
       else
         raise "invalid id or val #{id_or_val}"
@@ -204,13 +214,14 @@ module Fc
   # モジュール
   ######################################################################
   class Module
-    attr_reader :vars, :lambdas, :opt, :includes
+    attr_reader :vars, :lambdas, :options, :includes, :include_chrs
 
     def initialize
       @vars = Hash.new
       @lambdas = []
-      @opt = Hash.new
+      @options = Hash.new
       @includes = []
+      @include_chrs = []
     end
 
   end
@@ -220,7 +231,7 @@ module Fc
   ######################################################################
   class Lambda
     attr_reader :id, :args, :type, :opt, :ast, :ops, :vars
-    attr_accessor :asm
+    attr_accessor :asm, :frame_size
 
     def initialize( id, args, base_type, opt, ast )
       @id = id

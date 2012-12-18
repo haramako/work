@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/!svn/ver/19889/trunk/android/MoeMoe/res/values
+END
+styles.xml
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/!svn/ver/17991/trunk/android/MoeMoe/res/values/styles.xml
+END
+theme_anim_dialog.xml
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/!svn/ver/17991/trunk/android/MoeMoe/res/values/theme_anim_dialog.xml
+END
+strings.xml
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/!svn/ver/19889/trunk/android/MoeMoe/res/values/strings.xml
+END
+splash_theme.xml
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/!svn/ver/18651/trunk/android/MoeMoe/res/values/splash_theme.xml
+END
+splash_styles.xml
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/!svn/ver/18651/trunk/android/MoeMoe/res/values/splash_styles.xml
+END

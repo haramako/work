@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/!svn/ver/18486/trunk/php/app_spider/public
+END
+.htaccess.sample
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/!svn/ver/18437/trunk/php/app_spider/public/.htaccess.sample
+END
+index.php
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/!svn/ver/18437/trunk/php/app_spider/public/index.php
+END

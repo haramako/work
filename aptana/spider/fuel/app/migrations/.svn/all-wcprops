@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/!svn/ver/18452/trunk/php/app_spider/fuel/app/migrations
+END
+.gitkeep
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/!svn/ver/18437/trunk/php/app_spider/fuel/app/migrations/.gitkeep
+END
+001_init_database.php
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/!svn/ver/20501/trunk/php/app_spider/fuel/app/migrations/001_init_database.php
+END

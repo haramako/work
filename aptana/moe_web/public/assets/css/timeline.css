@@ -1,0 +1,481 @@
+@charset "UTF-8";
+
+@import url("../css/basic.css");
+
+/*=============================================================================
+■div#center_line
+背景にタイムラインの線を表示する。中のコンテンツは中央配置。
+=============================================================================*/
+div#center_line {
+   width: 640px;
+	background						: url("../img/center_line.png");
+   background-repeat: repeat-y;
+	margin							: 0 auto;
+   padding-top: 20px;
+}
+
+/*=============================================================================
+■ul#timeline_object
+タイムライン表示領域の設定。
+=============================================================================*/
+ul#timeline_object {
+	width								: 620px;
+	height							: auto;
+	margin							: 0px auto;
+}
+
+/*=============================================================================
+■ul#timeline_object li
+幅一杯に領域を取らないようにしている。
+=============================================================================*/
+ul#timeline_object li {
+	display							: inline-block;
+	margin-bottom					: -72px
+}
+
+ul#timeline_object li.left {
+}
+
+ul#timeline_object li.right {
+   margin-left: 344px;
+}
+
+/*-----------------------------------------------------------------------------
+img.timeline_icon 新着アプリのタイムライン上に表示するアイコン
+-----------------------------------------------------------------------------*/
+img.timeline_icon {
+	width								: 26px;
+	height							: 26px;
+	position							: absolute;
+	top								: -6px;
+}
+
+/*-----------------------------------------------------------------------------
+img.timeline_badge ランキングのタイムライン上に表示するバッジ画像
+-----------------------------------------------------------------------------*/
+img.timeline_badge {
+	width								: 72px;
+	height							: 72px;
+	position							: absolute;
+	top								: -29px;
+}
+
+/*=============================================================================
+■li.object_icon
+アイコン表示のコンテンツ領域の設定
+=============================================================================*/
+ul#timeline_object li.object_icon {
+	width								: 276px;
+	height							: auto;
+	position							: relative;
+}
+
+li.object_icon > div {
+	display							: inline-block;
+	float								: left;
+	margin-bottom					: 5px;
+}
+
+li.object_icon div.app_evaluation_area {
+	width								: 132px;
+	height							: auto;
+	margin							: 5px 0px;
+	text-align						: center;
+}
+
+li.object_icon div.app_evaluation_area img {
+	margin-bottom					: 10px;
+}
+
+li.object_icon div.app_icon_area {
+	width								: 144px;
+	height							: 144px;
+}
+
+ul#timeline_object li.left div.app_icon_area {
+	text-align						: right;
+}
+
+li.object_icon div.app_icon_area div.icon_frame {
+	width								: 128px;
+	height							: 128px;
+	padding							: 7px;
+	border-radius					: 16px;
+	border							: 1px solid #d0d0d0;
+	background-image				: url(../img/bg_frame.png);
+}
+
+li.object_icon div.app_icon_area div.icon_frame img {
+	width								: 100%;
+	height							: 100%;
+	border-radius					: 5px;
+}
+
+/*-----------------------------------------------------------------------------
+・div.app_info_area
+アプリ名、ジャンル名
+-----------------------------------------------------------------------------*/
+li div.app_info_area {
+	width								: 100%;
+	height							: 82px;
+	text-align						: right;
+	margin-top						: 5px;
+}
+
+li.right div.app_info_area {
+	text-align						: left;
+}
+
+/*-----------------------------------------------------------------------------
+・アプリ名の設定
+li 共通
+-----------------------------------------------------------------------------*/
+li div.app_info_area div.app_name {
+	width								: 100%;
+	margin-bottom					: 5px;
+	padding							: 0px;
+	font-weight						: bold;
+	color								: #333333;
+	font-size						: 18pt;
+}
+
+/*-----------------------------------------------------------------------------
+・カテゴリ名の設定
+li 共通
+-----------------------------------------------------------------------------*/
+li div.app_info_area div.app_category {
+	width								: 100%;
+	padding							: 0px;
+}
+
+li.object_icon div.ico_sider_l {
+	position							: absolute;
+	top								: 20px;
+}
+
+div.ico_sider_l .ranking_num {
+   display: block;
+   width: 140px;
+   margin: 0px -70px;
+   text-align: center;
+	position							: absolute;
+	font-size						: 24pt;
+	font-weight						: bold;
+	color								: white;
+}
+
+/*-----------------------------------------------------------------------------
+li.left 共通
+-----------------------------------------------------------------------------*/
+li.left div.ico_sider_l {
+	right								: 0px;
+}
+
+li.left div.ico_sider_l span.ranking_num {
+	top								: -4px;
+	left								: 34px;
+}
+
+/*-----------------------------------------------------------------------------
+li.right 共通
+-----------------------------------------------------------------------------*/
+li.right div.ico_sider_l {
+	left								: 0px;
+}
+
+li.right div.ico_sider_l span.ranking_num {
+	top								: -4px;
+	left								: -35px;
+}
+
+li.object_icon div.ico_sider_l div.timeline_v_plate {
+	width								: 11px;
+	height							: 14px;
+	position							: absolute;
+	background-image				: url(../img/timeline_flame_s.png);
+}
+
+/*-----------------------------------------------------------------------------
+li.left 共通
+-----------------------------------------------------------------------------*/
+li.left div.ico_sider_l div.timeline_v_plate {
+	left								: -1px;
+	background-position			: 11px 0px;
+}
+
+/*-----------------------------------------------------------------------------
+li.right 共通
+-----------------------------------------------------------------------------*/
+li.right div.ico_sider_l div.timeline_v_plate {
+	left								: -10px;
+	background-position			: 0px 0px;
+}
+
+/*-----------------------------------------------------------------------------
+li.left 共通
+-----------------------------------------------------------------------------*/
+li.left div.ico_sider_l img.timeline_icon {
+	left								: 21px;
+	right								: 0px;
+}
+
+li.left div.ico_sider_l img.timeline_badge {
+	left								: -2px;
+	right								: 0px;
+}
+
+/*-----------------------------------------------------------------------------
+li.right 共通
+-----------------------------------------------------------------------------*/
+li.right div.ico_sider_l img.timeline_icon {
+	left								: -47px;
+}
+
+li.right div.ico_sider_l img.timeline_badge {
+	left								: -70px;
+}
+
+/*=============================================================================
+■li.object_vertical
+縦のサムネイルを表示するコンテンツ領域の設定
+=============================================================================*/
+ul#timeline_object li.object_vertical {
+	width								: 276px;
+	height							: auto;
+	position							: relative;
+   margin-bottom: -120px;
+}
+
+li.object_vertical div.app_evaluation_area {
+	margin-top: -20px;
+	width								: 100%;
+	height							: 102px;
+	padding							: 5px 0px;
+	text-align						: center;
+}
+
+/*-----------------------------------------------------------------------------
+縦方向中央配置にする
+-----------------------------------------------------------------------------*/
+li.object_vertical div.app_evaluation_area img {
+	vertical-align					: middle;
+}
+
+li.object_vertical div.app_thumbnail_area {
+	width								: 276px;
+	height							: 100%;
+}
+
+ul#timeline_object li.left div.app_thumbnail_area {
+	text-align						: right;
+}
+
+li.object_vertical div.app_thumbnail_area div.img_frame {
+	width								: 260px;
+	height							: auto;
+	padding							: 7px;
+	border-radius					: 16px;
+	border							: 1px solid #d0d0d0;
+	background-image				: url(../img/bg_frame.png);
+}
+
+li.object_vertical div.app_thumbnail_area div.img_frame img {
+/* 直接指定するようにしたので削除
+    width								: 260px;
+	height							: auto;
+*/
+	border-radius					: 5px;
+}
+
+/*-----------------------------------------------------------------------------
+div.app_info_area.height + 20 = 112
+-----------------------------------------------------------------------------*/
+li.object_vertical div.ico_sider_l {
+	position							: absolute;
+	top								: 112px;
+}
+
+li.object_vertical div.ico_sider_l div.timeline_v_plate {
+	width								: 11px;
+	height							: 14px;
+	position							: absolute;
+	background-image				: url(../img/timeline_flame_s.png);
+}
+
+/*=============================================================================
+■li.object_horizontal
+横のサムネイルを表示するコンテンツ領域の設定
+=============================================================================*/
+ul#timeline_object li.object_horizontal {
+	width								: 100%;
+	height							: auto;
+	padding							: 20px 0px;
+	position							: relative;
+	background						: url("../img/bg_image.png");
+   margin-top: 72px;
+   margin-bottom: 0px;
+}
+
+li.object_horizontal div.app_thumbnail_area {
+	width								: 496px;
+	height							: auto;
+	margin							: 0px auto;
+}
+
+li.object_horizontal div.app_thumbnail_area div.img_frame {
+	width								: 480px;
+	height							: auto;
+	padding							: 7px;
+	border-radius					: 16px;
+	border							: 1px solid #d0d0d0;
+	background-image				: url(../img/bg_frame.png);
+}
+
+li.object_horizontal div.app_thumbnail_area div.img_frame img {
+/* 直接指定するようにしたので削除
+	width								: 480px;
+	height							: auto;
+*/
+	border-radius					: 5px;
+}
+
+li.object_horizontal div.app_info_area {}
+
+/*-----------------------------------------------------------------------------
+アプリ情報の左側の設定
+-----------------------------------------------------------------------------*/
+li.object_horizontal div.app_info_area div.app_info_left {
+	width								: 276px;
+	margin-right					: 64px;
+	text-align						: right;
+	display							: inline-block;
+}
+
+/*-----------------------------------------------------------------------------
+アプリ情報の右側の設定
+-----------------------------------------------------------------------------*/
+li.object_horizontal div.app_info_area div.app_info_right {
+	width								: 276px;
+	text-align						: left;
+	float								: right;
+	clear								: right;
+}
+
+li.object_horizontal div.app_info_area div.app_info_right > div {
+	width								: 276px;
+/* 	height							: 41px; */
+	padding							: 0px;
+/* 	line-height						: 41px; */
+}
+
+li.object_horizontal div.app_info_area div.app_info_right div.app_name {
+	font-weight						: bold;
+	color								: #333333;
+	font-size						: 18pt;
+}
+
+li.object_horizontal div.app_info_area div.app_info_right div.app_category {
+}
+
+/*-----------------------------------------------------------------------------
+縦中央に表示
+-----------------------------------------------------------------------------*/
+li.object_horizontal div.app_info_area img {
+	vertical-align					: middle;
+}
+
+/*-----------------------------------------------------------------------------
+水平の中央に表示させる
+-----------------------------------------------------------------------------*/
+li.object_horizontal div.ico_sider_l {
+	position							: absolute;
+	top								: 20px;
+	left								: 300px;
+}
+
+li.object_horizontal div.ico_sider_l div.timeline_v_plate {
+	width								: 15px;
+	height							: 14px;
+	top								: -10px;
+	left								: 2px;
+	position							: absolute;
+	background-image				: url(../img/timeline_flame_s_hl.png);
+}
+
+/*-----------------------------------------------------------------------------
+横専用設定
+-----------------------------------------------------------------------------*/
+li.object_horizontal div.ico_sider_l img.timeline_icon {
+	width								: 36px;
+	height							: 52px;
+	position							: absolute;
+	top								: -68px;
+	left								: -8px;
+}
+
+li.object_horizontal div.ico_sider_l img.timeline_badge {
+	top								: -84px;
+	left								: -26px;
+}
+
+li.object_horizontal div.ico_sider_l span.ranking_num {
+	position							: absolute;
+	font-size						: 24pt;
+	font-weight						: bold;
+	color								: white;
+	top								: -59px;
+	left								: 10px;
+}
+
+/*=============================================================================
+ランキングの２桁、３桁で字の大きさを変える用
+=============================================================================*/
+div.ico_sider_l .ranking_num_xx {
+   margin-top: 4px;
+	font-size						: 20pt !important;
+}
+
+div.ico_sider_l .ranking_num_xxx {
+   margin-top: 6px;
+	font-size						: 16pt !important;
+}
+
+
+/*=============================================================================
+■ul#timeline_object li.empty
+空のコンテンツ領域の設定
+=============================================================================*/
+ul#timeline_object li.object_empty {
+	width								: 276px;
+	height							: 100px;
+	margin-bottom					: 45px;
+}
+
+
+/*
+div.child {
+	width: 70px;
+	height: 100px;
+	display: inline-block;
+	border: solid blue 1px;
+}
+*/
+
+/** 
+ * 次のページを読み込む
+ */
+div.timeline_pagerize {
+	margin: 120px 10px 10px 10px;
+   padding: 20px 120px;
+	border-radius: 8px;
+	clear: both;
+	widht: 620px;
+	border: 2px dashed #bbb;
+	text-align: center;
+}
+
+div.timeline_pagerize a {
+   font-size: 22pt;
+   color: #888888;
+}
+   

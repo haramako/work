@@ -9,26 +9,28 @@ class Runner
     @stack = []
 
     @vars = Hash.new
-    @compiler.func.each do |func_id,f|
-      f.block.vars.each do |id,v|
+    @compiler.module.lambdas.each do |lmd|
+      lmd.vars.each do |id,v|
         @vars[v] = new_var( v.type )
       end
     end
 
     @labels = Hash.new
-    @compiler.func.each do |id,f|
-      f.block.ops.each_with_index do |op,i|
-        @labels[f.block.id.to_s+op[1]] = [id,i] if op[0] == :label
+    @compiler.module.lambdas.each do |lmd|
+      lmd.ops.each_with_index do |op,i|
+        @labels[lmd.id.to_s+op[1]] = [lmd.id,i] if op[0] == :label
       end
     end
 
-    @block = @compiler.func[:main].block
+    main = @compiler.module.lambdas.find { |lmd| lmd.id == :main }
+
+    @block = main
     @pc = 0
     @ret = nil
   end
 
   def new_var( type )
-    case type.type
+    case type.kind
     when :int
       0
     when :array
@@ -43,7 +45,7 @@ class Runner
   def run
     while true
       run_one
-      break unless @block.ops[@pc]
+      break unless @block and @block.ops[@pc]
     end
     show
   end
@@ -79,7 +81,7 @@ class Runner
     when :call
       unless @ret
         if op[2].id == :print
-          puts "OUTPUT: #{get(op[2].block.vars[:i])}"
+          puts "OUTPUT: #{get(op[3])}"
         else
           @stack << [@block,@pc-1]
           @block = op[2].block
@@ -101,19 +103,21 @@ class Runner
 
   def get( val )
     if val.id
-      @vars[val]
+      @vars[val.id]
     else
       val.val
     end
   end
 
   def put( var, v )
-    @vars[var] = v
+    @vars[var.id] = v
   end
 
   def show
     puts "STACK:"
-    puts "  #{@block.id}:#{@pc}: #{@block.ops[@pc] || 'finished' }"
+    if @block 
+      puts "  #{@block.id}:#{@pc}: #{@block.ops[@pc] || 'finished' }"
+    end
     @stack.each do |s|
       puts "  #{s[0].id}:#{s[1]}: #{s[0].ops[s[1]]}"
     end

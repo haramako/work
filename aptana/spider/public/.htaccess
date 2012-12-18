@@ -1,0 +1,9 @@
+<IfModule mod_rewrite.c>
+    RewriteBase /~makoto/spider/
+    RewriteEngine on
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>

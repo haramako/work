@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/auth/classes/auth/login
+END
+driver.php
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/auth/classes/auth/login/driver.php
+END
+simpleauth.php
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/auth/classes/auth/login/simpleauth.php
+END

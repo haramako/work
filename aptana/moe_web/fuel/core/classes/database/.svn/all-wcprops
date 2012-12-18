@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database
+END
+exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database/exception.php
+END
+result.php
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database/result.php
+END
+connection.php
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database/connection.php
+END
+expression.php
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database/expression.php
+END
+query.php
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database/query.php
+END
+transaction.php
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/classes/database/transaction.php
+END

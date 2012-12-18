@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/cache/handler
+END
+json.php
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/cache/handler/json.php
+END
+driver.php
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/cache/handler/driver.php
+END
+serialized.php
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/cache/handler/serialized.php
+END
+string.php
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/cache/handler/string.php
+END

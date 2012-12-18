@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:id="@+id/moe_main_view"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+
+	<FrameLayout
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1">
+
+		<!-- メニュー -->
+		<LinearLayout
+			android:id="@+id/menu_frame"
+			android:orientation="horizontal"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:background="#ff262626" >
+
+			<LinearLayout
+				android:orientation="horizontal"
+				android:layout_width="0dp"
+				android:layout_height="match_parent"
+				android:layout_weight="3"/>
+			<ListView
+				android:id="@+id/menu_list"
+				android:layout_width="0dp"
+				android:layout_height="match_parent"
+				android:layout_weight="7"
+				android:cacheColorHint="#00000000"
+				android:background="@drawable/menu_background" />
+		</LinearLayout>
+
+		<LinearLayout
+			android:id="@+id/parent_view"
+			android:orientation="vertical"
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+
+			<!-- ナビゲーションバー -->
+			<LinearLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:background="@drawable/bar"
+				android:orientation="horizontal"
+				android:paddingLeft="5dp"
+				android:paddingRight="5dp"
+				android:gravity="center_vertical"
+				android:onClick="onClickEmpty" >
+				<!-- 戻るボタン -->
+				<Button
+					android:id="@+id/do_back"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:background="@drawable/back_button"
+					android:onClick="titleChange"
+					android:visibility="invisible"/>
+				<!-- 画面名 -->
+				<FrameLayout
+					android:id="@+id/bar_tilte"
+					android:layout_width="0dp"
+					android:layout_height="wrap_content"
+					android:layout_weight="1" >
+					<!-- 画面名 -->
+					<include
+						layout="@layout/moe_title_name"
+						android:id="@+id/navbar_title"/>
+				</FrameLayout>
+
+				<Button
+					android:id="@+id/do_menu"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_alignParentRight="true"
+					android:background="@drawable/menu_button"
+					android:layout_centerVertical="true"/>
+			</LinearLayout>
+
+			<FrameLayout
+				android:id="@+id/main_layout"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent">
+
+				<LinearLayout
+					android:orientation="vertical"
+					android:layout_width="match_parent"
+					android:layout_height="match_parent">
+
+					<com.viewpagerindicator.TitlePageIndicator
+						android:id="@+id/indicator"
+						android:padding="10dip"
+						android:layout_height="wrap_content"
+						android:layout_width="fill_parent"
+						android:background="@drawable/titleindicator_background_repeat" />
+
+					<FrameLayout
+						android:id="@+id/timeline_view"
+						android:orientation="vertical"
+						android:layout_width="match_parent"
+						android:layout_height="match_parent">
+
+						<!-- 新着萌えアプリ -->
+						<android.support.v4.view.ViewPager
+							android:id="@+id/latest_app_view"
+							android:layout_width="match_parent"
+							android:layout_height="match_parent"
+							android:background="@drawable/titleindicator_background_repeat"/>
+
+						<!-- ランキング -->
+						<android.support.v4.view.ViewPager
+							android:id="@+id/ranking_app_view"
+							android:layout_width="match_parent"
+							android:layout_height="match_parent"
+							android:background="@drawable/titleindicator_background_repeat"
+							android:visibility="invisible"/>
+					</FrameLayout>
+				</LinearLayout>
+
+				<!-- もプリたんについて -->
+<!-- 				<include
+					layout="@layout/webview_applist"
+					android:id="@+id/mopuritan_webview_layout"/> -->
+
+				<!-- マイ萌えアプリ -->
+				<include
+					layout="@layout/webview_applist"
+					android:id="@+id/mymoe_webview_layout"/>
+
+				<!-- その他画面 -->
+				<include
+					layout="@layout/moe_setting"
+					android:id="@+id/setting_layout"/>
+
+				<!-- アプリ情報 -->
+				<include
+					layout="@layout/webview_applist"
+					android:id="@+id/appinfo_webview_layout"/>
+
+				<LinearLayout
+					android:id="@+id/cover"
+					android:orientation="horizontal"
+					android:layout_width="match_parent"
+					android:layout_height="match_parent"
+					android:background="#99000000"
+					android:gravity="center"
+					android:onClick="onClickEmpty"
+					android:visibility="invisible"/>
+			</FrameLayout>
+		</LinearLayout>
+
+		<!-- 読み込み中表示 -->
+		<FrameLayout
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+
+			<LinearLayout
+				android:id="@+id/progress_view"
+				android:orientation="horizontal"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:background="#99000000"
+				android:gravity="center"
+				android:onClick="onClickEmpty"
+				android:visibility="invisible">
+
+				<ProgressBar
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_marginRight="20dp"/>
+
+				<TextView
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:text="読み込み中です・・・"
+					android:textSize="16dp"/>
+			</LinearLayout>
+		</FrameLayout>
+
+		<!-- もプリたんと吹き出し -->
+		<FrameLayout
+			android:layout_width="match_parent"
+			android:layout_height="match_parent">
+
+			<LinearLayout
+				android:id="@+id/mopuritan_cover_view"
+				android:orientation="vertical"
+				android:layout_width="match_parent"
+				android:layout_height="match_parent"
+				android:background="#0f000000"
+				android:onClick="onClickMopuritan"
+				android:visibility="invisible"/>
+
+				<include
+					layout="@layout/moe_main_mopuritan"
+					android:id="@+id/mopuritan"/>
+		</FrameLayout>
+
+		<!-- デバッグ用起動回数 -->
+		<TextView
+			android:id="@+id/launch_count"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_margin="20dp"
+			android:gravity="bottom|right"
+			android:text="0"
+			android:textSize="40dp"
+			android:textColor="#80505050"
+			android:visibility="invisible"/>
+	</FrameLayout>
+
+<!-- 	<LinearLayout
+		android:id="@+id/ad_view"
+		android:orientation="vertical"
+		android:layout_width="match_parent"
+		android:layout_height="48dp"
+		android:gravity="bottom">
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:gravity="center"
+			android:text=""
+			android:textStyle="bold"
+			android:textSize="35dp" />
+
+		</LinearLayout> -->
+</LinearLayout>

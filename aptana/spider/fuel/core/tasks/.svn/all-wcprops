@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tasks
+END
+session.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tasks/session.php
+END
+install.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tasks/install.php
+END
+migrate.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/tasks/migrate.php
+END

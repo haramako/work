@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/email/classes/email/driver
+END
+sendmail.php
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/email/classes/email/driver/sendmail.php
+END
+mail.php
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/email/classes/email/driver/mail.php
+END
+smtp.php
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/email/classes/email/driver/smtp.php
+END

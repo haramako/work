@@ -74,6 +74,7 @@ class Client
                         puts 'login'
                         @game = new game.Game( msg.idx, [], {} )
                     when 'COM'
+                        puts msg.com
                         @game.progress msg.com
                     when 'CHOOSE_R'
                         # puts "comand accepted, id=#{msg.id}"

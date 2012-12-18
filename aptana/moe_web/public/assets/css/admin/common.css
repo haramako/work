@@ -1,0 +1,32 @@
+/* bootstrap.css の調整 */
+.form-actions {
+   padding-bottom: 0;
+   margin-bottom: 0;
+}
+
+/* bootstrap.css の調整(ここまで) */
+
+.container h1 {
+   margin: 15px 0;
+}
+
+.navbar-fixed-top .brand {
+   float: right;
+}
+
+.pagination {
+   text-align: center;
+}
+
+.mini-icon { width: 30px; height: 30px; margin: -6px 0px; /*-webkit-transition: all 0.2s;*/ }
+tr:hover .mini-icon { -webkit-transform: scale(2.0); }
+
+.togglable {
+   cursor: pointer;
+}
+
+#flash {
+   position: absolute;
+   z-index: 1000;
+}
+

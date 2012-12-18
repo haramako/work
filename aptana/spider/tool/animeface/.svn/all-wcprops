@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/!svn/ver/18437/trunk/php/app_spider/tool/animeface
+END
+lbpcascade_animeface.xml
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/!svn/ver/18437/trunk/php/app_spider/tool/animeface/lbpcascade_animeface.xml
+END
+animeface.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/!svn/ver/18437/trunk/php/app_spider/tool/animeface/animeface.cpp
+END
+README.md
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/!svn/ver/18437/trunk/php/app_spider/tool/animeface/README.md
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/!svn/ver/18437/trunk/php/app_spider/tool/animeface/Makefile
+END

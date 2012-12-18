@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/mopuritan_parent_view"
+	android:layout_width="match_parent"
+	android:layout_height="match_parent"
+	android:orientation="vertical">
+
+	<!-- 空白 -->
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="0dp"
+		android:layout_weight="1"
+		android:orientation="vertical"/>
+
+	<LinearLayout
+		android:id="@+id/mopuritan_balloon"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="20dp"
+		android:layout_marginLeft="45dp"
+		android:background="@drawable/dialog_balloon"
+		android:orientation="vertical"
+		android:visibility="invisible">
+
+		<ScrollView
+			android:layout_width="match_parent"
+			android:layout_height="0dp"
+			android:layout_weight="1"
+			android:fadingEdge="vertical"
+			android:fadingEdgeLength="5dp">
+
+			<TextView
+				android:id="@+id/comment"
+				android:layout_width="wrap_content"
+				android:layout_height="match_parent"
+				android:layout_marginBottom="5dp"
+				android:text="こんにちわ♪"
+				android:textSize="14sp"
+				android:textColor="#ff000000"/>
+		</ScrollView>
+
+		<LinearLayout
+			android:id="@+id/balloon_btn_view"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			android:gravity="center"/>
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="75dp"
+		android:orientation="vertical"
+		android:gravity="bottom"
+		android:layout_gravity="center_vertical"
+		android:paddingLeft="10dp">
+
+		<ImageView
+			android:id="@+id/character"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:src="@drawable/mopuritan"/>
+	</LinearLayout>
+</LinearLayout>
+
+
+

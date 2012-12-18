@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 46
+/!svn/ver/18437/trunk/php/app_spider/fuel/core
+END
+base.php
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/base.php
+END
+bootstrap.php
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/bootstrap.php
+END
+phpunit.xml
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/phpunit.xml
+END
+bootstrap_phpunit.php
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/bootstrap_phpunit.php
+END

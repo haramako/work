@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/oil/views/scaffolding/crud/actions
+END
+view.php
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/oil/views/scaffolding/crud/actions/view.php
+END
+delete.php
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/oil/views/scaffolding/crud/actions/delete.php
+END
+create.php
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/oil/views/scaffolding/crud/actions/create.php
+END
+edit.php
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/oil/views/scaffolding/crud/actions/edit.php
+END
+index.php
+K 25
+svn:wc:ra_dav:version-url
+V 92
+/!svn/ver/17987/trunk/php/moe_web/fuel/packages/oil/views/scaffolding/crud/actions/index.php
+END

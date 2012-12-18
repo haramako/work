@@ -4,7 +4,7 @@ all:
 
 .PHONY: test
 test: all
-	vows --no-color node_modules/*_test.coffee
+	vows --no-color node_modules/jan_test.coffee
 
 watch:
 	coffee -w -c . | grep --color line

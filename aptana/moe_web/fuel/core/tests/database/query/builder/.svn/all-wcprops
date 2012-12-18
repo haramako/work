@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder
+END
+where.php
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder/where.php
+END
+join.php
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder/join.php
+END
+select.php
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder/select.php
+END
+delete.php
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder/delete.php
+END
+update.php
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder/update.php
+END
+insert.php
+K 25
+svn:wc:ra_dav:version-url
+V 83
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/tests/database/query/builder/insert.php
+END

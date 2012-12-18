@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/!svn/ver/19307/trunk/php/moe_web/fuel/app/classes/spider
+END
+cache.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18193/trunk/php/moe_web/fuel/app/classes/spider/cache.php
+END
+filter.php
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/!svn/ver/18852/trunk/php/moe_web/fuel/app/classes/spider/filter.php
+END
+collector.php
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/18483/trunk/php/moe_web/fuel/app/classes/spider/collector.php
+END
+moe_words.txt
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/19307/trunk/php/moe_web/fuel/app/classes/spider/moe_words.txt
+END

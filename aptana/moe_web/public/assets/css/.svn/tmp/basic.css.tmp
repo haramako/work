@@ -1,0 +1,117 @@
+@charset "UTF-8";
+
+@import "compass/css3"
+
+$experimental-support-for-svg: true;
+
+/*=============================================================================
+初期化
+=============================================================================*/
+html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, code, del, dfn, em, img, q, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td, hr {
+	margin							: 0;
+	padding							: 0;
+	border							: 0;
+	font-weight						: inherit;
+	font-style						: inherit;
+	font-size						: 100%;
+	font-family						: inherit;
+	vertical-align					: baseline;
+	font-family						: 'MeiryoKe_PGothic', 'メイリオ', 'Meiryo', 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', 'Osaka', Arial, 'ＭＳ Ｐゴシック', sans-serif;
+	font-size-adjust				: none;
+	font-stretch					: normal;
+	font-style						: normal;
+	font-variant					: normal;
+	font-weight						: normal;
+	line-height						: 1.22;
+	letter-spacing					: 0px;
+}
+
+input, textarea, select {
+	margin							: 0;
+	padding							: 0;
+	font-weight						: inherit;
+	font-style						: inherit;
+	font-size						: 100%;
+	font-family						: inherit;
+	vertical-align					: baseline;
+	font-family						: 'MeiryoKe_PGothic', 'メイリオ', 'Meiryo', 'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ Pro W3', 'Osaka', Arial, 'ＭＳ Ｐゴシック', sans-serif;
+	font-size-adjust				: none;
+	font-stretch					: normal;
+	font-style						: normal;
+	font-variant					: normal;
+	font-weight						: normal;
+	line-height						: 1.22;
+	vertical-align					: middle;
+	letter-spacing					: 0px;
+}
+
+html {
+/*	width								: 640px; */
+}
+
+body {
+	font-size						: 12px;
+	background						: url("../img/bg_image.png");
+}
+
+body.padd {
+	padding							: 0 0 0 0;
+}
+
+table {
+	border-collapse				: collapse;
+	border-spacing					: 0;
+}
+
+caption, th, td {
+	text-align						: left;
+	font-weight						: 400;
+}
+
+blockquote:before, blockquote:after, q:before, q:after {
+	content							: ”";
+}
+
+blockquote, q {
+	quotes							: ”" “”;
+}
+
+img {
+vertical-align						: top;
+}
+
+
+a {
+	vertical-align					: middle;
+	text-decoration				: none;
+	color								: #222222;
+}
+
+a:hover {
+	text-decoration				: underline;
+}
+
+a img {
+	border							: none;
+}
+
+ul, li {
+	list-style-type		: none;
+}
+
+input[type="button"],
+input[type="submit"] {
+	padding 		: 1px 10px 1px 10px;
+}
+
+/* 萌えボタン */
+img.moe_button {
+   cursor: pointer;
+   width: 100px;
+   height: 100px;
+}
+
+img.moe_button_anim {
+   position: absolute;
+   z-index: 100;
+}

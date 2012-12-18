@@ -1,0 +1,18 @@
+include( "nes.fc" );
+include( "nes.asm" );
+include( "test/character.chr" );
+
+function init():void
+{
+	const pallet:int8[] = [15,61,16,48, 0,17,33,49, 0,18,34,50, 0,19,35,51];
+	ppu_put( 0x3f00, pallet, 16);
+	print_addr = 0x2000;
+}
+
+function main():void
+{
+	init();
+
+	print("hoge\nfuga");
+	exit(1);
+}

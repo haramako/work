@@ -130,7 +130,6 @@ pl = parseInt(args[1],10)
 pl = undefined if typeof(pl) != 'number' or isNaN(pl)
 
 # 牌譜/チート ファイルの読み込み
-haifuJson = undefined
 if not args[0]
     main {haifu:[]}, pl
 else if args[0].match(/\.cheat$/)

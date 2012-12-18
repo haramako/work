@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session
+END
+cookie.php
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/cookie.php
+END
+driver.php
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/driver.php
+END
+exception.php
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/exception.php
+END
+file.php
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/file.php
+END
+db.php
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/db.php
+END
+memcached.php
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/memcached.php
+END
+redis.php
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/session/redis.php
+END

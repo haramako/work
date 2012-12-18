@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 36
+/!svn/ver/20092/trunk/android/MoeMoe
+END
+.classpath
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/!svn/ver/18150/trunk/android/MoeMoe/.classpath
+END
+project.properties
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/!svn/ver/17991/trunk/android/MoeMoe/project.properties
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/!svn/ver/17991/trunk/android/MoeMoe/.project
+END
+proguard-project.txt
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/!svn/ver/17582/trunk/android/MoeMoe/proguard-project.txt
+END
+AndroidManifest.xml
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/!svn/ver/18742/trunk/android/MoeMoe/AndroidManifest.xml
+END
+ViewPagerIndicatorLibrary.zip
+K 25
+svn:wc:ra_dav:version-url
+V 66
+/!svn/ver/18191/trunk/android/MoeMoe/ViewPagerIndicatorLibrary.zip
+END
+takaya.keystore
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/!svn/ver/18567/trunk/android/MoeMoe/takaya.keystore
+END

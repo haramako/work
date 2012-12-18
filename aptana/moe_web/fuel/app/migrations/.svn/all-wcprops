@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/!svn/ver/18504/trunk/php/moe_web/fuel/app/migrations
+END
+.gitkeep
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/!svn/ver/17987/trunk/php/moe_web/fuel/app/migrations/.gitkeep
+END
+001_create_users.php
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/!svn/ver/18504/trunk/php/moe_web/fuel/app/migrations/001_create_users.php
+END

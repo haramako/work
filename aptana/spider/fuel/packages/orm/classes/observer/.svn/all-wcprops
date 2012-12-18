@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer
+END
+self.php
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer/self.php
+END
+slug.php
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer/slug.php
+END
+typing.php
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer/typing.php
+END
+validation.php
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer/validation.php
+END
+updatedat.php
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer/updatedat.php
+END
+createdat.php
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/!svn/ver/18437/trunk/php/app_spider/fuel/packages/orm/classes/observer/createdat.php
+END

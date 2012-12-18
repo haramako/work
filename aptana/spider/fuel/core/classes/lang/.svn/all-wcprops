@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang
+END
+json.php
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang/json.php
+END
+file.php
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang/file.php
+END
+ini.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang/ini.php
+END
+interface.php
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang/interface.php
+END
+yml.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang/yml.php
+END
+php.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/lang/php.php
+END

@@ -52,8 +52,17 @@ ins.differ { background-color: #faa; }
     <h2>code</h2>
     <pre class="code">
     <%- lmd.ops.each_with_index do |op,i| -%>
-      <%= "<font color='#aaa'>%04d:</font> %-6s %s"%[i, op[0], op[1..-1].join(", ")] %>
+<%= "<font color='#aaa'>%04d:</font> %-6s %s"%[i, op[0], CGI.escapeHTML(op[1..-1].join(", "))] %>
     <%- end %></pre>
+
+    <h2>asm</h2>
+    <pre class="code">
+	<%- if lmd.asm -%>  
+    <%- lmd.asm.each_with_index do |op,i| -%>
+<%= CGI.escapeHTML(op) %>
+    <%- end -%>
+	<% end %></pre>
+	
   <%- end -%>
 
 </div>

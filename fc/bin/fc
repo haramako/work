@@ -36,12 +36,16 @@ if $debug_info
 end
 
 if $run
-  require_relative 'runner'
+  require_relative '../lib/fc/runner'
   puts '====RUN===='
   runner = Runner.new( com )
   runner.run
   exit
 end
+
+#pp com
+#exit
+
 
 # 中間コードをアセンブラにコンパイルする
 op_com = Fc::Llc.new
@@ -53,11 +57,11 @@ if $debug_info
   end
 end
 
-template = File.read( File.dirname(__FILE__) + '/../share/nes.asm' ) 
+template = File.read( File.dirname(__FILE__) + '/../share/base.asm' ) 
 
-opt = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
-opt.merge! mod.opt
-opt_asm = opt.map{|k,v| "\t.#{k} #{v}" }
+options = { inesprg: 1, ineschr: 1, inesmir: 0, inesmap: 0 }
+options.merge! mod.options
+opt_asm = options.map{|k,v| "\t.#{k} #{v}" }
 chr_asm = []
 op_com.char_banks.each do |bank,asm|
   chr_asm << "\t.bank #{2+bank}"
@@ -76,7 +80,7 @@ end
 
 unless $asm
   # puts '====ASSEMBLE====' if $debug_info
-  result = `/Users/makoto/bin/nesasm #{base+'.asm'}`
+  result = `/Users/makoto/bin/nesasm -m -l3 #{base+'.asm'}`
   if /error/ === result
     puts result
     exit(1)

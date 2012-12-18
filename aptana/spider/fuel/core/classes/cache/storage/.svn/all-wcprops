@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/cache/storage
+END
+driver.php
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/cache/storage/driver.php
+END
+file.php
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/cache/storage/file.php
+END
+apc.php
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/cache/storage/apc.php
+END
+memcached.php
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/cache/storage/memcached.php
+END
+redis.php
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/cache/storage/redis.php
+END

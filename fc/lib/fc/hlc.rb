@@ -48,7 +48,9 @@ module Fc
         end
       elsif @scanner.scan(/"([^\\"]|\\.)*"/)
         # ""文字列
-        r = [:STRING, @scanner[0][1..-2]]
+        str = @scanner[0][1..-2]
+        str = str.gsub(/\\n/){"\n"}
+        r = [:STRING, str]
       elsif @scanner.scan(/'([^\\']|\\.)*'/)
         # ''文字列
         r = [:STRING, @scanner[0][1..-2]]
@@ -99,7 +101,6 @@ module Fc
       @@debug = 3
       @pos_info = Hash.new
       @src = Hash.new
-      @loops = []
     end
 
     def compile( filename )
@@ -149,7 +150,7 @@ module Fc
           else
             base_type = :int
           end
-          val_type = Type[[:array, val.length, base_type]]
+          val_type = Type[[:array, val[1].length, base_type]]
         elsif String === val
           val_type = Type[[:array, val.size, :uint8]]
         elsif Value === val
@@ -229,7 +230,11 @@ module Fc
       def compatible_type( a, b )
         return a if  a == b
         if a.kind == :int and b.kind == :int
-          if a.size > b.size then return a else return b end
+          if a.size == b.size
+            return (a.signed)?a:b
+          else
+            return (a.size>b.size)?a:b
+          end
         elsif a.kind == :pointer and b.kind == :array and a.base == b.base
           return a
         elsif a.kind == :array and b.kind == :array and a.base == b.base and a.length == nil
@@ -270,17 +275,19 @@ module Fc
         # update_pos( ast )
         case ast[0]
         when :options
-          @options.merge!( ast[1] )
+          @module.options.merge!( ast[1] )
 
         when :include
           filename = ast[1]
           if File.extname(filename) == '.asm'
             @module.includes << Fc::find_module( filename )
+          elsif File.extname(filename) == '.chr'
+            @module.include_chrs << Fc::find_module( filename )
           else
             mc = ModuleCompiler.new( filename )
             @module.vars.merge! mc.module.vars
             @module.lambdas.concat mc.module.lambdas
-            @module.opt.merge! mc.module.opt
+            @module.options.merge! mc.module.options
             @module.includes.concat mc.module.includes
             @pos_info.merge! mc.pos_info
           end
@@ -301,7 +308,7 @@ module Fc
             # type = Type[const_type_eval(type)]
             type = type_eval(type) if type
             compatible_type( type, init.type ) if type and init
-            add_var Identifier.new( :var, id, type, nil, opt )
+            add_var Identifier.new( :global_var, id, type, nil, opt )
           end
 
         when :const
@@ -350,6 +357,12 @@ module Fc
         @tmp_count = 0
         @scope_count = 0
         @scope = [Hash.new]
+        @loops = []
+
+        # 帰り値の追加
+        if @lmd.type.base.kind != :void
+          add_var Identifier.new( :result, :'$result', @lmd.type.base, nil, nil )
+        end
 
         # 引数の追加
         @lmd.args.each do |id,type|
@@ -362,8 +375,8 @@ module Fc
         if @lmd.ops[-1].nil? or @lmd.ops[-1][0] != :return
           if @lmd.type.base == Type[:void]
             emit :return
-          else
-            raise CompileError.new( "no return" )
+          #else
+          #  raise CompileError.new( "no return" )
           end
         end
       end
@@ -385,7 +398,8 @@ module Fc
           ast[1].each do |v|
             id, type, init, opt = v
             init = init && rval( const_eval(v[2]) )
-            type = guess_type( type_eval(type), init )
+            type = type_eval(type)
+            type = guess_type( type, init ) unless type
             compatible_type( type, init.type ) if type and init
             var = add_var Identifier.new( :var, id, type, nil, opt )
             emit :load, Value.new(var), init if init
@@ -578,20 +592,35 @@ module Fc
             emit :label, end_label
 
           when :call
-            lmd = find_var( ast[1] ).val
-            if lmd.type.base != Type[:void]
-              r = new_tmp( lmd.type.base )
+            if ast[1] == :printf
+              # printだけ特別扱い
+              ast[2].each do |arg|
+                arg = rval(arg)
+                # pp arg.type
+                if ( arg.type.kind == :pointer and arg.type.base == Type[:uint8] ) or
+                    ( arg.type.kind == :array and arg.type.base == Type[:uint8] )
+                  emit :call, nil, find_var(:print).val, arg
+                elsif arg.type.kind == :int
+                  emit :call, nil, find_var(:print_int16).val, arg
+                end
+              end
             else
-              r = nil
+              # 普通の関数コール
+              lmd = find_var( ast[1] ).val
+              if lmd.type.base != Type[:void]
+                r = new_tmp( lmd.type.base )
+              else
+                r = nil
+              end
+              raise CompileError.new("lambda #{func} has #{func.val.args.size} but #{ast[2].size}") if ast[2].size != lmd.args.size
+              args = []
+              ast[2].each_with_index do |arg,i|
+                v = rval(arg)
+                compatible_type( lmd.args[i][1], v.type )
+                args << v
+              end
+              emit :call, r, lmd, *args
             end
-            raise CompileError.new("lambda #{func} has #{func.val.args.size} but #{ast[2].size}") if ast[2].size != lmd.args.size
-            args = []
-            ast[2].each_with_index do |arg,i|
-              v = rval(arg)
-              compatible_type( lmd.args[i][1], v.type )
-              args << v
-            end
-            emit :call, r, lmd, *args
 
           when :index
             left = rval(ast[1])
@@ -650,6 +679,8 @@ module Fc
   # HTML出力用クラス
   ############################################
   class HtmlOutput
+    require 'cgi'
+
     def initialize
     end
 

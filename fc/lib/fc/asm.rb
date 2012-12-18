@@ -12,7 +12,7 @@ module Fc
       @module = nil
       @label_count = 0
       @asm = []
-      @address = 0x200
+      @address = 0x300
       @address_zeropage = 0x010
       @trim_table = Hash.new
       @char_banks = Hash.new {|h,k| h[k] = [] } # バンクごとのアセンブラ
@@ -57,13 +57,19 @@ module Fc
 
       # interruptがなかったら足す
       unless @module.vars[:interrupt]
-        @asm << "interrupt:"
-        @asm << "\trts"
+        # @asm << "interrupt:"
+        # @asm << "\trts"
       end
 
       # include(.asm)の処理
       @module.includes.each do |file|
         @asm << "\t.include \"#{file}\""
+      end
+
+      # include(.chr)の処理
+      @module.include_chrs.each do |file|
+        @asm << "\t.bank 2"
+        @asm << "\t.incbin \"#{file}\""
       end
 
     end
@@ -77,7 +83,7 @@ module Fc
           if Array === v.val
             r << "#{to_asm(v)}:"
             v.val.each_slice(16) do |slice|
-              r << "\t.db #{slice.join(',')}"
+              r << ".db #{slice.join(',')}"
             end
           elsif Lambda === v.val
             # DO NOTHING
@@ -153,20 +159,20 @@ module Fc
           r << "jmp #{op[1]}"
 
         when :return
-          # r.concat load( @lmd.result, op[1] ) if op[1]
+          r.concat load( lmd.vars[:'$result'], op[1] ) if op[1]
           r << "rts"
 
         when :call
-          size = 0
+          size = op[2].type.base.size
           op[3..-1].each_with_index do |from,i|
             to = op[2].args[i][1]
             if to.kind == :pointer and from.type.kind == :array 
               raise "can't convert from #{from} to #{to}" unless from.type.base == to.base
               # 配列からポインタに変換
               r << "lda #LOW(#{to_asm(from)})"
-              r << "sta #{size+0}+__STACK__,x"
+              r << "sta #{lmd.frame_size+size+0}+__STACK__,x"
               r << "lda #HIGH(#{to_asm(from)})"
-              r << "sta #{size+1}+__STACK__,x"
+              r << "sta #{lmd.frame_size+size+1}+__STACK__,x"
               size += 2
             else
               # 通常の代入
@@ -179,20 +185,23 @@ module Fc
                 elsif from.type.size == i
                   r << "lda #0"
                 end
-                r << "sta #{size}+__STACK__,x"
+                r << "sta #{lmd.frame_size+size}+__STACK__,x"
                 size += 1
               end
             end
           end
-          r << "txa"
-          r << "pha"
-          r << "clc"
-          r << "adc #10"
-          r << "tax"
-          r << "jsr #{to_asm(op[2])}"
-          r << "pla"
-          r << "tax"
-          # r.concat load( op[1], op[2].val.vars[:'0'] ) if op[1]
+          r << "__call #{to_asm(op[2])}, ##{lmd.frame_size}"
+          # 帰り値を格納する
+          if op[1]
+            op[1].type.size.times do |i|
+              if i < op[2].type.base.size
+                r << "lda __STACK__+#{lmd.frame_size}+#{i},x"
+              else
+                r << "lda #0"
+              end
+              r << store_a(op[1],i);
+            end
+          end
 
         when :load
           r.concat load( op[1], op[2] )
@@ -235,7 +244,7 @@ module Fc
 
         when :mul, :div, :mod
           # 定数で２の累乗の場合の最適化
-          if Numeric === op[3].val and [0,1,2,4,8,16,32,64,128,256].include?(op[3].val) and op[1].type.size == 1
+          if Numeric === op[3].val and [0,1,2,4,8,16,32,64,128].include?(op[3].val) and op[1].type.size == 1
             n = Math.log(op[3].val,2).to_i
             r << load_a( op[2], 0 )
             case op[0]
@@ -258,7 +267,7 @@ module Fc
               r << "and ##{op[3].val-1}"
             end
             r << store_a( op[1], 0 )
-          elsif Numeric === op[3].val and [0,1,2,4,8,16,32,64,128,256].include?(op[3].val) and op[1].type.size > 1
+          elsif Numeric === op[3].val and [0,1,2,4,8,16,32,64,128].include?(op[3].val) and op[1].type.size > 1
             n = Math.log(op[3].val,2).to_i
             size = op[1].type.size
             case op[0]
@@ -293,7 +302,11 @@ module Fc
               r << "sta __reg+2+#{i}"
             end
             if op[1].type.size == 1
-              r << "jsr __#{op[0]}_8"
+              if op[1].type.signed
+                r << "jsr __#{op[0]}_8s"
+              else
+                r << "jsr __#{op[0]}_8"
+              end
             else
               r << "jsr __#{op[0]}_16"
             end
@@ -558,7 +571,7 @@ module Fc
       elsif Identifier === v
         case v.kind
         when :var, :arg, :result, :temp
-          "__STACK__+#{0},x"
+          "__STACK__+#{v.address},x"
         when :const, :symbol
           mangle ".#{v.id}"
         when :global_const, :global_symbol, :global_var
@@ -605,16 +618,15 @@ module Fc
     # レジスター割り当て
     ############################################
     def alloc_register( lmd )
-      reg = []
-      lmd.args.each do |id,var|
-        reg << var
-      end
+      size = 0
       lmd.vars.each do |id,var|
-        if var.kind == :var or var.kind == :temp
-          reg << var
+        if var.kind == :var or var.kind == :temp or var.kind == :arg or var.kind == :result
+          var.address = size
+          size += var.type.size
         end
       end
-      pp reg
+      lmd.frame_size = size
+       # pp reg
     end
 
     ############################################

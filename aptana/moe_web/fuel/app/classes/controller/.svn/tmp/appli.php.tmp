@@ -1,0 +1,57 @@
+<?php
+
+class Controller_Appli extends Controller_Base
+{
+
+	/**
+	 * アプリの詳細画面.
+	 * @param string $id アプリケーションのID
+	 */
+	public function action_view( $id )
+	{
+		
+		$app = Model_Appli::find( $id );
+		$app->increment_view();
+
+		// TODO:
+		// なぜかviewの中でunserializeすると失敗する。
+		// 原因はよくわからないが viewに送られる時点で " が &quote; にされているような気がする
+		$screenshot = unserialize($app->screenshot);
+		
+		$app->description = preg_replace( '!<br/>|<br>!', "\n", $app->description );
+
+		$this->template->title = 'appli/view';
+        $this->template->content = View::forge('appli/view', array( 'app'=>$app, 'screenshot'=>$screenshot ) );
+	}
+
+	/**
+	 * 「萌え」ボタンが押された時のアクション.
+	 * @param string $id アプリケーションのID
+	 */
+	public function action_moe( $id )
+	{
+		$user_id = Session::get( 'user_id' );
+		Log::info( "BEFORE MOE!MOE! user_id={$user_id} app_id={$id}" );
+		if( !$user_id ) return new Response('login required',500);
+
+		$user = Model_User::find_by_pk( $user_id );
+
+		$app = Model_Appli::find( $id );
+		if( $app->increment_moe( $user ) ){
+			Log::info( "AFTER MOE!MOE! user_id={$user_id} app_id={$id}" );
+			return new Response('ok',200);
+		}else{
+			Log::info( "already moed. user_id={$user_id} app_id={$id}" );
+			return new Response('already moed', 500);
+		}
+	}
+
+	/** スクリーンショットの一覧を返す */
+	public function action_screenshot( $id )
+	{
+		$app = Model_Appli::find( $id );
+		$screenshot = unserialize( $app->screenshot );
+		return json_encode( $screenshot );
+	}
+	
+}

@@ -1,5 +1,5 @@
 /*
- * コマンドラインエミュレータ用の定義ファイル
+ * NES用の定義ファイル
  */
 
 /** PPUレジスタ */
@@ -14,3 +14,62 @@ var PPU_DATA    :int options (address:0x2007);
 var SPRITE_DMA  :int options (address:0x4014);
 var PAD_CTRL    :int options (address:0x4016);
 var PAD_DATA    :int options (address:0x4017);
+var vsync_flag:int;
+var ppu_addr:int16;
+var print_addr:int16;
+
+function print_int16( n:int16 ):void options( extern:true ){}
+
+function wait_vsync():void options( extern:true ) {}
+
+function print( str:int* ):void options( extern:true ) {}
+function ppu_put( addr:int16, data:int*, size:int ):void options( extern:true ) {}
+
+function puts( str:int* ):void
+{
+  const LF:int[2] = [10,0];
+  print( str );
+  print( LF );
+}
+
+function exit( code:int ):void
+{
+	print('exit(');
+	print_int16(code);
+	print(")\n");
+	PPU_CTRL1 = 0b11001000;
+	while(1){
+		wait_vsync();
+		PPU_SCROLL = 0;
+		PPU_SCROLL = 0;
+		PPU_CTRL1 = 0b11001000;
+		PPU_CTRL2 = 0b00001010;
+	}
+}
+
+function assert_true( a:int, message:int* ):void
+{
+  if( !a ){
+	  printf( "\nERROR: ", message, "  expects true but false\n" );
+	  exit(1);
+  }else{
+	  print('.');
+  }
+}
+
+function assert_equal( a:int16, b:int16, message:int* ):void
+{
+  if( a != b ){
+	  printf( "\nERROR: ", message,"  expects ", b , "  but ", a, "\n" );
+	  exit(1);
+  }else{
+	  print('.');
+  }
+}
+
+function init():void
+{
+	const pallet:int8[] = [15,61,16,48, 0,17,33,49, 0,18,34,50, 0,19,35,51];
+	ppu_put( 0x3f00, pallet, 16);
+	print_addr = 0x2000;
+}

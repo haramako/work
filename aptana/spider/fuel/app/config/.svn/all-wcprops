@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/!svn/ver/18519/trunk/php/app_spider/fuel/app/config
+END
+crypt.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/!svn/ver/18437/trunk/php/app_spider/fuel/app/config/crypt.php
+END
+routes.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/!svn/ver/18437/trunk/php/app_spider/fuel/app/config/routes.php
+END
+cache.php
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/!svn/ver/18437/trunk/php/app_spider/fuel/app/config/cache.php
+END
+session.php
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/!svn/ver/18437/trunk/php/app_spider/fuel/app/config/session.php
+END
+config.php
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/!svn/ver/18519/trunk/php/app_spider/fuel/app/config/config.php
+END
+db.php
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/!svn/ver/18437/trunk/php/app_spider/fuel/app/config/db.php
+END

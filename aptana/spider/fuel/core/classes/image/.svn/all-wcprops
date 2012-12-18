@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/image
+END
+gd.php
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/image/gd.php
+END
+driver.php
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/image/driver.php
+END
+imagemagick.php
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/image/imagemagick.php
+END
+imagick.php
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/!svn/ver/18437/trunk/php/app_spider/fuel/core/classes/image/imagick.php
+END

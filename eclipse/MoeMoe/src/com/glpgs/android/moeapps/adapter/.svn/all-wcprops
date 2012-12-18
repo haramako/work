@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/!svn/ver/20014/trunk/android/MoeMoe/src/com/glpgs/android/moeapps/adapter
+END
+MenuAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/!svn/ver/20014/trunk/android/MoeMoe/src/com/glpgs/android/moeapps/adapter/MenuAdapter.java
+END
+TimeLineAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/!svn/ver/19477/trunk/android/MoeMoe/src/com/glpgs/android/moeapps/adapter/TimeLineAdapter.java
+END
+RankingAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/!svn/ver/19477/trunk/android/MoeMoe/src/com/glpgs/android/moeapps/adapter/RankingAdapter.java
+END
+ScreenshotAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/!svn/ver/18906/trunk/android/MoeMoe/src/com/glpgs/android/moeapps/adapter/ScreenshotAdapter.java
+END
+SettingAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/!svn/ver/20014/trunk/android/MoeMoe/src/com/glpgs/android/moeapps/adapter/SettingAdapter.java
+END

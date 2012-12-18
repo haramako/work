@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/!svn/ver/17987/trunk/php/moe_web/fuel/core
+END
+base.php
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/base.php
+END
+bootstrap.php
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/bootstrap.php
+END
+phpunit.xml
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/phpunit.xml
+END
+bootstrap_phpunit.php
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/!svn/ver/17987/trunk/php/moe_web/fuel/core/bootstrap_phpunit.php
+END
