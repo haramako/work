@@ -1,0 +1,27 @@
+---
+pixiv.net:
+  /:
+    PHPSESSID: !ruby/object:Mechanize::Cookie
+      version: 0
+      port: 
+      discard: 
+      comment_url: 
+      expires: Sun, 24 Feb 2013 12:25:43 GMT
+      max_age: 
+      comment: 
+      secure: false
+      path: /
+      domain: pixiv.net
+      accessed_at: 2013-01-25 21:25:45.877235000 +09:00
+      created_at: 2013-01-25 21:25:45.874199000 +09:00
+      name: PHPSESSID
+      value: 2152768_44b9cec0fd59b7488b760f07752b5ab1
+      for_domain: true
+      domain_name: !ruby/object:DomainName
+        ipaddr: 
+        hostname: pixiv.net
+        uri_host: pixiv.net
+        tld: net
+        canonical_tld_p: true
+        domain: pixiv.net
+      session: false

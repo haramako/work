@@ -7,9 +7,6 @@
 static gc_tag _guard;
 static int _color = 0;
 static void (*_root_mark)(void);
-static void* _min_ptr;
-static void* _max_ptr;
-static gc_vtbl _auto_vtbl = { gc_mark_all, gc_null };
 
 void gc_init( void (*f)(void) )
 {
@@ -26,11 +23,6 @@ void* gc_malloc( size_t size, gc_vtbl *vtbl )
 	tag->next = _guard.next;
 	_guard.next = tag;
 	return ((char*)tag)+sizeof(gc_tag);
-}
-
-void *gc_new( size_t size )
-{
-	return gc_malloc( size, &_auto_vtbl );
 }
 
 void gc_mark( void *p )
@@ -51,14 +43,6 @@ void gc_run()
 	// printf( "start gc\n" );
 	_color = 1 - _color;
 
-	_min_ptr = (void*)UINTPTR_MAX;
-	_max_ptr = 0;
-	for(gc_tag *cur = _guard.next; cur != &_guard; cur = cur->next ){
-		if( _min_ptr > (void*)cur ) _min_ptr = (void*)cur;
-		if( _max_ptr < (void*)cur ) _max_ptr = (void*)cur;
-	}
-	_max_ptr += sizeof(gc_tag);
-	
 	// mark
 	_root_mark();
 
@@ -86,14 +70,3 @@ void gc_run()
 
 
 void gc_null( void *p ){}
-
-void gc_mark_all( void *p )
-{
-	void **tail = p + malloc_size(p-sizeof(gc_tag)) - sizeof(gc_tag);
-	for( void **cur = (void**)p; cur < tail; cur++ ){
-		if( *cur && (uintptr_t)*cur % sizeof(void*) == 0 && *cur >= _min_ptr && *cur <= _max_ptr ){
-			gc_mark( (void*)*cur );
-		}
-	}
-}
-

@@ -35,7 +35,7 @@ void node_free( void *_p )
 
 gc_vtbl Node_vtbl = { node_mark, node_free };
 
-#define MAX 10
+#define MAX 100
 
 void show_node( Node *n, int show )
 {
@@ -68,8 +68,7 @@ int main( int argc, char **argv )
 	
 	int i;
 	for( i=0; i<MAX; i++ ){
-		// n[i] = GC_MALLOC( Node );
-		n[i] = GC_NEW( Node );
+		n[i] = GC_MALLOC( Node );
 		n[i]->left = NULL;
 		n[i]->right = NULL;
 		n[i]->id = i;
