@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+
+require_relative 'walker'
+require 'daemon_spawn'
+
+command = ARGV.shift
+
+case command
+when 'one'
+  ARGV.each {|x| Handler.walk Project.default, x }
+
+when 'add'
+  ARGV.each { |x| Handler.add_url Project.new(x,x), x }
+
+when 'all'
+  Handler.walk_around
+
+when 'daemon'   # daemon化する
+  class WalkerDaemon < DaemonSpawn::Base
+    def start( args )
+      while true
+        Handler.walk_around
+        sleep 1
+      end
+    end
+    def stop
+      puts 'stoped'
+    end
+  end
+
+  opt = { 
+    log_file: '/var/walker/walker.log', 
+    pid_file:'/var/walker/walker.pid', 
+    sync_log: true,
+    working_dir: File.dirname(__FILE__)
+  }
+  WalkerDaemon.spawn! opt, ARGV
+
+when nil
+  puts "Usage: ww add|one|all"
+else
+  puts "unknown command #{command}"
+  exit 1
+end

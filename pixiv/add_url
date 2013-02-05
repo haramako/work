@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+require_relative 'walker'
+
+ARGV.each do |x|
+  Walker.add_url x
+end
