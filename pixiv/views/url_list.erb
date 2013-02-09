@@ -1,0 +1,29 @@
+<div class="row">
+  <div class="span12">
+	<h1>URL一覧</h1>
+
+	<table class="table table-borderd table-striped">
+	  <tr>
+		<th>ID</th>
+		<th>ProjID</th>
+		<th>URL</th>
+		<th>状態</th>
+		<th>expire</th>
+		<th>操作</th>
+	  </tr>
+	  <% @urls.each do |url|%>
+	  <tr>
+		<td><a href="/url/<%=url.id%>"><%= url.id %></a></td>
+		<td><a href="/project/<%=url.project_id%>"><%= url.project_id %></a></td>
+		<td><a href="<%=url.url%>"><%= url.url %></a></td>
+		<td><%= url.status %></a></td>
+		<td><%= url.expire_at %></a></td>
+		<td>
+		  <a class="btn btn-small" href="/url">変更</a>
+		  <a class="btn btn-danger btn-small" href="/url">削除</a>
+		</td>
+	  </tr>
+	  <% end %>
+	</table>
+  </div>
+</div>

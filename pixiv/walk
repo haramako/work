@@ -1,26 +1,31 @@
 #!/usr/bin/env ruby
 # -*- coding: utf-8 -*-
 
-require_relative 'walker'
+$LOAD_PATH << File.dirname(__FILE__)+'/lib'
+require 'webwalker'
 require 'daemon_spawn'
 
 command = ARGV.shift
 
 case command
 when 'one'
-  ARGV.each {|x| Handler.walk Project.default, x }
+  ARGV.each {|x| obj = WebWalker::Handler.walk x; pp obj.result }
 
 when 'add'
-  ARGV.each { |x| Handler.add_url Project.new(x,x), x }
+  ARGV.each { |x| WebWalker::Handler.add_url WebWalker::Project.new(x,x), x }
+
+when 'do_one'
+  ARGV.each { |x| WebWalker::Handler.walk_one x.to_i }
 
 when 'all'
-  Handler.walk_around
+  WebWalker::Handler.walk_around
 
 when 'daemon'   # daemon化する
   class WalkerDaemon < DaemonSpawn::Base
     def start( args )
+      puts 'start'
       while true
-        Handler.walk_around
+        WebWalker::Handler.walk_around
         sleep 1
       end
     end
@@ -38,7 +43,7 @@ when 'daemon'   # daemon化する
   WalkerDaemon.spawn! opt, ARGV
 
 when nil
-  puts "Usage: ww add|one|all"
+  puts "Usage: ww add|one|all|daemon"
 else
   puts "unknown command #{command}"
   exit 1

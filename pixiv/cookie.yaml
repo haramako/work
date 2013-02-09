@@ -6,16 +6,16 @@ pixiv.net:
       port: 
       discard: 
       comment_url: 
-      expires: Sun, 24 Feb 2013 12:25:43 GMT
+      expires: Thu, 07 Mar 2013 10:48:12 GMT
       max_age: 
       comment: 
       secure: false
       path: /
       domain: pixiv.net
-      accessed_at: 2013-01-25 21:25:45.877235000 +09:00
-      created_at: 2013-01-25 21:25:45.874199000 +09:00
+      accessed_at: 2013-02-05 19:48:25.483206000 +09:00
+      created_at: 2013-02-05 19:48:25.480139000 +09:00
       name: PHPSESSID
-      value: 2152768_44b9cec0fd59b7488b760f07752b5ab1
+      value: 2152768_85a8ed2c6d4a5322288dfdfbbcf1c4ab
       for_domain: true
       domain_name: !ruby/object:DomainName
         ipaddr: 

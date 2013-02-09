@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="span12">
+	<h2>プロジェクト一覧</h2>
+
+	<form method="POST" action="/project/create" class="well form-inline">
+	  URL: <input name="url" type="text" class="input-xxlarge"></input>
+	  <button type="submit" class="btn btn-primary">追加</button>
+	</form>
+	
+	<table class="table table-borderd table-striped">
+	  <tr>
+		<th>ID</th>
+		<th>名前</th>
+		<th>操作</th>
+	  </tr>
+	  <% @projects.each do |proj|%>
+	  <tr>
+		<td><%= proj['id'] %></td>
+		<td><a href="<%=proj.url%>"><%= proj.name %></a></td>
+		<td>
+		  <a class="btn btn-small" href="/project/<%=proj['id']%>">詳細</a>
+		  <a class="btn btn-danger btn-small" href="/project/delete/<%=proj['id']%>">削除</a>
+		</td>
+	  </tr>
+	  <% end %>
+	</table>
+  </div>
+</div>

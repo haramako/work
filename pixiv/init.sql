@@ -17,7 +17,8 @@ CREATE TABLE urls (
 	status VARCHAR(1) NOT NULL DEFAULT '',
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	created_at TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00',
-	UNIQUE INDEX ( url ),
+	UNIQUE INDEX ( project_id, url ),
+	INDEX ( url ),
 	INDEX ( status, expire_at ),
 	INDEX ( project_id )
 );

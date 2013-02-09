@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <title><%= @title || 'untitled' %> | WebWalker</title>
+  <link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+</head>
+<body>
+
+<!-- navigation bar -->
+<div class="navbar navbar-inverse">
+  <div class="navbar-inner">
+  <ul class="nav">
+	<li><a href="/project">プロジェクト一覧</a></li>
+	<li><a href="/url">URL一覧</a></li>
+  </ul>
+  </div>
+</div>
+
+<!-- main content -->
+<div class="container">
+<%=yield%>
+</div>
+
+<!-- footer -->
+<script src="/javascripts/jquery-1.9.1.min.js"></script>
+<script src="/bootstrap/js/bootstrap.min.js"></script>
+
+</body>
+</html>
+<html>
