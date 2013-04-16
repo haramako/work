@@ -44,7 +44,7 @@ module WebWalker
     end
 
     def add_url( project, url )
-      new_url = Url.new( project: project, url: url )
+      new_url = Url.new( project_id: project.id, url: url, expire_at: Time.now )
       new_url.save!
     end
 
@@ -165,7 +165,7 @@ end
 
 # require_relative 'taikai'
 require_relative 'pixiv'
-# require_relative 'e-hentai'
+require_relative 'e-hentai'
 
 class Mechanize::Image
   def to_s
