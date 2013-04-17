@@ -6,11 +6,16 @@ import (
 	"math"
 )
 
+type Watcher interface {
+	OnCheck( Node )
+}
+
 type Param struct {
 	Limit int
 	Level int
 	MaxLevel int
 	Sign int
+	Watcher Watcher
 }
 
 type Node interface {
@@ -27,6 +32,8 @@ type Walker interface {
 
 func solvNode( param Param, node Node ) ( []string, int ) {
 	//fmt.Printf( "%ssolving: %s alpha:%d\n", strings.Repeat("  ", param.Level), node, param.Limit )
+	if param.Watcher != nil { param.Watcher.OnCheck( node ) }
+	
 	choices := node.Choices()
 	var r_choices []string
 	var r_point int
@@ -58,7 +65,9 @@ func solvNode( param Param, node Node ) ( []string, int ) {
 	return r_choices, r_point
 }
 
-func Solv( node Node ) ([]string, int) {
-	param := Param{math.MaxInt32,0,10,1}
+func Solv( node Node, level int, positive bool, watcher Watcher) ([]string, int) {
+	sign := 1
+	if !positive { sign = -1 }
+	param := Param{math.MaxInt32,0,level,sign,watcher}
 	return solvNode( param, node )
 }

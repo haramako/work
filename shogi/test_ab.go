@@ -84,6 +84,6 @@ func main() {
 	node, err := jsonToTestNode( []byte(`[ [[1,3],[4,2]], [[2,1],[3,5]] ]`) )
 	if err != nil { fmt.Println( err ) }
 	fmt.Println( node )
-	solv, point := Solv( node )
+	solv, point := Solv( node, 10, true )
 	fmt.Println( "result:", solv, point )
 }

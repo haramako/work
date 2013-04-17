@@ -15,6 +15,14 @@ func NewBoard() *Board {
 	return new(Board)
 }
 
+func (b *Board) Clone() *Board {
+	r := new(Board)
+	copy( r.cell[:], b.cell[:] )
+	copy( r.moti[:], b.moti[:] )
+	r.Teban = b.Teban
+	return r
+}
+
 func (b *Board) Cell( pos Pos ) Koma {
 	return b.cell[pos.Int()]
 }

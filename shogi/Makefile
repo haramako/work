@@ -11,6 +11,9 @@ net:
 cli:
 	GOPATH=`pwd` go run cli.go
 
+endless_zako:
+	GOPATH=`pwd` go run endless_zako.go
+
 test:
 	GOPATH=`pwd` go test shogi shogi/kifu
 
