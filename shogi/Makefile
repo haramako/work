@@ -14,7 +14,7 @@ cli:
 test:
 	GOPATH=`pwd` go test shogi shogi/kifu
 
-csatest:
-	GOPATH=`pwd` go run csatest.go ~/Downloads/2chkifu/00001
+kifutest:
+	GOPATH=`pwd` go run kifutest.go misc
 
 

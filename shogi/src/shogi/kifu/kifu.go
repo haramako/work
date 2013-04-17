@@ -6,6 +6,7 @@ import (
 	"math"
 	"path"
 	"strings"
+	"io/ioutil"
 	iconv "github.com/djimenez/iconv-go"
 	. "shogi"
 )
@@ -77,12 +78,19 @@ func AddLoader( ld Loader ) {
 	loaders = append( loaders, ld )
 }
 
-func LoadAuto( file string, src string ) (Kifu, error) {
+func LoadAuto( file string ) (Kifu, error) {
+	
+	src, err := ioutil.ReadFile( file )
+	if err != nil { return nil, err }
+	
+	src, err = ConvertEncodingAuto( src )
+	if err != nil { return nil, err }
+	
 	ext := strings.ToLower( path.Ext(file) )
 	for _, ld := range loaders {
 		for _, ld_ext := range ld.Ext {
 			if ext == ld_ext {
-				return ld.Load( src )
+				return ld.Load( string(src) )
 			}
 		}
 	}
@@ -103,6 +111,7 @@ type KifuBase struct {
 	AInfo map[string]string
 	ACommands []Command
 	AHumanCommands []HumanKifu
+	ABoard *Board
 }
 
 func (k *KifuBase) Format() string {

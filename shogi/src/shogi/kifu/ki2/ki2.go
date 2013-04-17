@@ -12,11 +12,7 @@ type Ki2Kifu struct {
 	KifuBase
 }
 
-func Load( src string ) (Kifu, error) {
-	return Parse( src )
-}
-
-func Parse( str string ) (*Ki2Kifu, error) {
+func Parse( str string ) (Kifu, error) {
 	r := new(Ki2Kifu)
 	r.AInfo = map[string]string{}
 	src := strings.Split( str, "\n" )

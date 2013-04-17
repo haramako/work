@@ -11,16 +11,8 @@ func atoi( c uint8 ) int {
 	return int(c) - '0'
 }
 
-func Load( str string ) (kifu.Kifu, error) {
-	return Parse( str )
-}
-
 func Parse( str string ) ( kifu.Kifu, error ) {
-	return nil, nil
-}
-
-func ParseCsa( str string ) ( *Board, []Command ) {
-	var coms []Command
+	coms := []Command{}
 	b := new(Board)
 	
 	src := strings.Split( str, "\n" )
@@ -78,5 +70,9 @@ func ParseCsa( str string ) ( *Board, []Command ) {
 		}
 	}
 	_ = version
-	return b, coms
+
+	r := new(kifu.KifuBase)
+	r.ACommands = coms
+	r.ABoard = b
+	return r, nil
 }
