@@ -53,6 +53,26 @@ var KomaFunari = []KomaKind{
 var KomaReadableString = []string{"  ","歩","香","桂","銀","金","角","飛","王","と","成香","成桂","成銀","馬","龍"}
 var KomaString = []string{"  ","FU","KY","KE","GI","KI","KA","HI","OU","TO","NY","NK","NG","UM","RY"}
 
+var KomaFromReadableString = map[string]KomaKind{
+	"歩":FU,
+	"香":KY,
+	"桂":KE,
+	"銀":GI,
+	"金":KI,
+	"角":KA,
+	"飛":HI,
+	"王":OU,
+	"玉":OU, // 重複
+	"と":TO,
+	"成香":NY,
+	"成桂":NK,
+	"成銀":NG,
+	"馬":UM,
+	"龍":RY,
+	"竜":RY, // 重複
+}
+
+
 func (k KomaKind) String() string {
 	return KomaString[k]
 }

@@ -55,7 +55,7 @@ func (b *Board) String() string {
 		r += PlayerReadableString[pl] + ": "
 		for kind, num := range moti {
 			if num > 0 {
-				r += KomaKind(kind).String() + "x" + strconv.Itoa(int(num)) + ","
+				r += KomaKind(kind).ReadableString() + "x" + strconv.Itoa(int(num)) + ","
 			}
 		}
 		r += "\n"
@@ -128,6 +128,10 @@ func movable( koma Koma, pos Pos ) bool {
 // プレイヤーの選択肢のコマンドをすべて取得する。
 // 二歩、動けない場所への移動、のチェックはここで行う。
 func (b *Board) ListMovableAll( pl Player) []Command {
+	return b.ListMovableAllWith( pl, false )
+}
+
+func (b *Board) ListMovableAllWith( pl Player, allow_nifu bool ) []Command {
 	r := make( []Command, 0, 256 )
 	
 	// 通常の移動
@@ -144,7 +148,7 @@ func (b *Board) ListMovableAll( pl Player) []Command {
 					}
 					// 成れる場合は、その選択肢も追加
 					if KomaNari[ koma.Kind() ] != NN {
-						if fromTop(pl,to_pos.Y()) <= 3 {
+						if fromTop(pl,to_pos.Y()) <= 3 || fromTop(pl,pos.Y()) <= 3 {
 							com := MakeCommand(pl, pos, to_pos, KomaNari[koma.Kind()] )
 							r = append( r, com )
 						}
@@ -159,11 +163,13 @@ func (b *Board) ListMovableAll( pl Player) []Command {
 		
 		// 二歩チェックリスト作成
 		nifu := false
-		for y:=1; y<=BoardSize; y++ {
-			koma := b.Cell(MakePos(x,y))
-			if koma.Kind() == FU && koma.Player() == pl {
-				nifu = true
-				break;
+		if !allow_nifu {
+			for y:=1; y<=BoardSize; y++ {
+				koma := b.Cell(MakePos(x,y))
+				if koma.Kind() == FU && koma.Player() == pl {
+					nifu = true
+					break;
+				}
 			}
 		}
 
@@ -182,6 +188,33 @@ func (b *Board) ListMovableAll( pl Player) []Command {
 		}
 	}
 	return r
+}
+
+func InitBoard() *Board {
+	b := new(Board)
+	b.Init()
+	return b
+}
+
+func (b *Board) Init() {
+	for i:=0; i<2; i++ {
+		pl := Player(i)
+		dir := pl.Dir()
+		b.SetCell( MakePos(1,5-dir*4), MakeKoma(KY,pl) )
+		b.SetCell( MakePos(2,5-dir*4), MakeKoma(KE,pl) )
+		b.SetCell( MakePos(3,5-dir*4), MakeKoma(GI,pl) )
+		b.SetCell( MakePos(4,5-dir*4), MakeKoma(KI,pl) )
+		b.SetCell( MakePos(5,5-dir*4), MakeKoma(OU,pl) )
+		b.SetCell( MakePos(6,5-dir*4), MakeKoma(KI,pl) )
+		b.SetCell( MakePos(7,5-dir*4), MakeKoma(GI,pl) )
+		b.SetCell( MakePos(8,5-dir*4), MakeKoma(KE,pl) )
+		b.SetCell( MakePos(9,5-dir*4), MakeKoma(KY,pl) )
+		b.SetCell( MakePos(5-dir*3,5-dir*3), MakeKoma(KA,pl) )
+		b.SetCell( MakePos(5+dir*3,5-dir*3), MakeKoma(HI,pl) )
+		for x:=1; x<=9; x++ {
+			b.SetCell( MakePos(x,5-dir*2), MakeKoma(FU,pl) )
+		}
+	}
 }
 
 func (b *Board) Progress( com Command ) {

@@ -73,7 +73,13 @@ func TestMovableList(t *testing.T) {
 	// 打ちゴマ、二歩
 	b = initBoard( "+0100FU\n+0191FU\n-0112FU" )
 	if len(b.ListMovableAll(Sente)) != 63 {
-		t.Error( "move to invalid" )
+		t.Error( "check utigoma, nifu" )
 	}
-	
+
+	// 戻り成り
+	b = initBoard( "+0113GI" )
+	if comsString(b.ListMovableAll(Sente)) != "+1312GI,+1312NG,+1322GI,+1322NG,+1324GI,+1324NG" {
+		t.Error( "move back nari" )
+	}
+
 }
