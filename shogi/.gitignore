@@ -1,0 +1,5 @@
+*.exe
+/pkg/*
+*.prof
+/src/github.com
+

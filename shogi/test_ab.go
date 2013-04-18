@@ -12,17 +12,17 @@ import (
 var nameIdx = 0
 
 type TestNode struct {
-	point int
+	point float64
 	children map[string]*TestNode
 	name string
 }
 
-func (n *TestNode) Point() int {
+func (n *TestNode) Point() float64 {
 	return n.point
 }
 
 func (n *TestNode) Stop() bool {
-	return n.point != 0
+	return false
 }
 
 func (n *TestNode) Choices() []string {
@@ -35,15 +35,15 @@ func (n *TestNode) Choices() []string {
 	return r
 }
 
-func (n *TestNode) Choose(choice string) Node {
-	return n.children[choice]
+func (n *TestNode) Choose(choice string) (Node, float64) {
+	return n.children[choice], 1.0
 }
 
 func (n *TestNode) String() string {
 	if len(n.children) != 0 {
 		return fmt.Sprintf("{%s %v}", n.name, n.children)
 	}else{
-		return fmt.Sprintf("{%s %d}", n.name, n.point )
+		return fmt.Sprintf("{%s %1.0f}", n.name, n.point )
 	}
 	return ""
 }
@@ -64,7 +64,7 @@ func unmarshalTestNode( val interface{} ) (*TestNode, error) {
 	// fmt.Println( val, reflect.TypeOf(val) )
 	switch reflect.TypeOf(val).Kind() {
 	case reflect.Float64:
-		r.point = int( reflect.ValueOf(val).Float() )
+		r.point = reflect.ValueOf(val).Float()
 	case reflect.Slice:
 		array := val.([]interface{})
 		for i, v := range array {
@@ -84,6 +84,6 @@ func main() {
 	node, err := jsonToTestNode( []byte(`[ [[1,3],[4,2]], [[2,1],[3,5]] ]`) )
 	if err != nil { fmt.Println( err ) }
 	fmt.Println( node )
-	solv, point := Solv( node, 10, true )
+	solv, point := Solv( node, 10, true, nil )
 	fmt.Println( "result:", solv, point )
 }

@@ -1,9 +1,10 @@
 package shogi
 
 import (
-	"strconv"
+	// "strconv"
 	"strings"
 	"errors"
+	"fmt"
 )
 
 const BoardSize = 9
@@ -54,6 +55,21 @@ var KomaReadableString = []string{"  ","歩","香","桂","銀","金","角","飛"
 var KomaString = []string{"  ","FU","KY","KE","GI","KI","KA","HI","OU","TO","NY","NK","NG","UM","RY"}
 
 var KomaFromReadableString = map[string]KomaKind{
+	"":NN,
+	"FU":FU,
+	"KY":KY,
+	"KE":KE,
+	"GI":GI,
+	"KI":KI,
+	"KA":KA,
+	"HI":HI,
+	"OU":OU,
+	"TO":TO,
+	"NY":NY,
+	"NK":NK,
+	"NG":NG,
+	"UM":UM,
+	"RY":RY,
 	"歩":FU,
 	"香":KY,
 	"桂":KE,
@@ -86,10 +102,7 @@ func (k KomaKind) KifuString() string {
 }
 
 func KomaFromString(str string) KomaKind {
-	for n, koma_str := range KomaString {
-		if str == koma_str { return KomaKind(n) }
-	}
-	return NN
+	return KomaFromReadableString[str]
 }
 
 // 盤上の駒
@@ -169,11 +182,19 @@ func (p Pos) Int() int {
 }
 
 func (p Pos) KifuString() string {
-	return strconv.Itoa(p.X())+strconv.Itoa(p.Y())
+	var r [2]uint8
+	r[0] = uint8('0'+p.X())
+	r[1] = uint8('0'+p.Y())
+	return string(r[:])
+	//return strconv.Itoa(p.X())+strconv.Itoa(p.Y())
 }
 
 func (p Pos) String() string {
-	return strconv.Itoa(p.X())+strconv.Itoa(p.Y())
+	var r [2]uint8
+	r[0] = uint8('0'+p.X())
+	r[1] = uint8('0'+p.Y())
+	return string(r[:])
+	//return strconv.Itoa(p.X())+strconv.Itoa(p.Y())
 }
 
 // "１一".."９九"の文字列を返す
@@ -214,9 +235,11 @@ func ParseCommand(str string) (Command, error) {
 
 func ParseCommands(str string) ([]Command, error) {
 	r := []Command{}
+	fmt.Println(str)
 	for _, line := range strings.Split(str,"\n") {
 		if len(line) == 0 { continue }
 		com, err := ParseCommand(line)
+		fmt.Println( com )
 		if err != nil { return nil, err }
 		r = append( r, com )
 	}

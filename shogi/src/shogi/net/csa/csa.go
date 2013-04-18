@@ -101,9 +101,10 @@ func (c *Client) doCommand( line string ) error {
 				com, _ := shogi.ParseCommand( line )
 				c.board.Progress( com )
 				c.Play()
-			case '#':
+			case '#','%':
 				switch line {
-				case "#SENNICHITE":
+				case "%TORRYO":
+				case "#SENNICHITE","#RESIGN":
 				case "#ILLEGAL_MOVE","#LOSE","#WIN","#DRAW":
 					fmt.Println( c.board )
 					fmt.Printf( "%sの勝ち\n", shogi.PlayerReadableString[c.board.Teban.Switch()] )

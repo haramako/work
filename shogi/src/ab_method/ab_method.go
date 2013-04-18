@@ -11,18 +11,18 @@ type Watcher interface {
 }
 
 type Param struct {
-	Limit int
+	Limit float64
 	Level int
-	MaxLevel int
-	Sign int
+	RestLevel float64
+	Sign float64
 	Watcher Watcher
 }
 
 type Node interface {
 	String() string
 	Choices() []string
-	Choose( string ) Node
-	Point() int
+	Choose( string ) (Node, float64)
+	Point() float64
 	Stop() bool
 }
 
@@ -30,20 +30,23 @@ type Walker interface {
 	Inspect( Node )
 }
 
-func solvNode( param Param, node Node ) ( []string, int ) {
-	//fmt.Printf( "%ssolving: %s alpha:%d\n", strings.Repeat("  ", param.Level), node, param.Limit )
+func solvNode( param Param, node Node ) ( []string, float64 ) {
+	// fmt.Printf( "%ssolving: %s alpha:%d\n", strings.Repeat("  ", param.Level), node, param.Limit )
 	if param.Watcher != nil { param.Watcher.OnCheck( node ) }
 	
 	choices := node.Choices()
 	var r_choices []string
-	var r_point int
-	if param.Level < param.MaxLevel && !node.Stop() && len(choices) > 0 {
+	var r_point float64
+	if param.RestLevel >= 0 && !node.Stop() && len(choices) > 0 {
 		child_param := param
 		child_param.Level += 1
+		// child_param.RestLevel -= 1.0
 		child_param.Sign = -param.Sign
-		r_point = math.MinInt32
+		child_param.Limit = math.MaxInt32
+		r_point = -math.MaxFloat64
 		for _, choice := range choices {
-			child := node.Choose( choice )
+			child, use_level := node.Choose( choice )
+			child_param.RestLevel = param.RestLevel - use_level
 			result, point := solvNode( child_param, child )
 			point = -point
 			if r_point < point {
@@ -52,7 +55,8 @@ func solvNode( param Param, node Node ) ( []string, int ) {
 				child_param.Limit = -point
 				// アルファ/ベータカット
 				if point >= param.Limit { 
-					//fmt.Printf("%salpha/beta cut %v %d\n", strings.Repeat("  ", child_param.Level), child, point);
+					// fmt.Printf("%salpha/beta cut %v point:%d limit:%d\n",
+					// strings.Repeat("  ", child_param.Level), child, point, param.Limit);
 					break
 				}
 			}
@@ -61,13 +65,13 @@ func solvNode( param Param, node Node ) ( []string, int ) {
 		r_choices = []string{}
 		r_point = node.Point() * param.Sign
 	}
-	//fmt.Printf( "%ssolved: %s %d\n", strings.Repeat("  ", param.Level), r_choices, r_point )
+	// fmt.Printf( "%ssolved: %s %d\n", strings.Repeat("  ", param.Level), r_choices, r_point )
 	return r_choices, r_point
 }
 
-func Solv( node Node, level int, positive bool, watcher Watcher) ([]string, int) {
-	sign := 1
+func Solv( node Node, level float64, positive bool, watcher Watcher) ([]string, float64) {
+	sign := 1.0
 	if !positive { sign = -1 }
-	param := Param{math.MaxInt32,0,level,sign,watcher}
+	param := Param{9999999,0,level,sign,watcher}
 	return solvNode( param, node )
 }

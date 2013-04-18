@@ -82,4 +82,11 @@ func TestMovableList(t *testing.T) {
 		t.Error( "move back nari" )
 	}
 
+	// 王をとれる場合は、必ず取る
+	b = initBoard( "-0111OU\n+0112KI" )
+	if comsString(b.ListMovableAll(Sente)) != "+1211KI" {
+		t.Error( "must get OU" )
+	}
+	
+
 }

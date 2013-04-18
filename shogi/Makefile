@@ -9,7 +9,7 @@ net:
 	GOPATH=`pwd` go run net.go
 
 cli:
-	GOPATH=`pwd` go run cli.go
+	GOPATH=`pwd` go run cli.go --cpuprofile=profile.prof
 
 endless_zako:
 	GOPATH=`pwd` go run endless_zako.go

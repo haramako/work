@@ -1,7 +1,7 @@
 package shogi
 
 import (
-	"strconv"
+	// "strconv"
 )
 
 // 盤の状況
@@ -9,6 +9,7 @@ type Board struct {
 	cell [BoardSize*BoardSize]Koma
 	moti [MaxPlayer][MaxKomaKind]uint8
 	Teban Player
+	movableList []Command
 }
 
 func NewBoard() *Board {
@@ -28,10 +29,16 @@ func (b *Board) Cell( pos Pos ) Koma {
 }
 
 func (b *Board) SetCell( pos Pos, koma Koma ){
+	b.movableList = nil
 	b.cell[pos.Int()] = koma
 }
 
+func (b *Board) Moti() *[MaxPlayer][MaxKomaKind]uint8 {
+	return &b.moti
+}
+
 func (b *Board) String() string {
+	/*
 	r := "  ９   ８   ７   ６   ５   ４   ３   ２   １  \n"
 	for y:=1; y<=BoardSize; y++ {
 		r += "+----+----+----+----+----+----+----+----+----+\n"
@@ -69,6 +76,8 @@ func (b *Board) String() string {
 		r += "\n"
 	}
 	return r
+	*/
+	return ""
 }
 
 func (b *Board) moveStraight(list *[]Pos, pos Pos, player Player, dy int, dx int ) {
@@ -139,7 +148,9 @@ func (b *Board) ListMovableAll( pl Player) []Command {
 	return b.ListMovableAllWith( pl, false )
 }
 
-func (b *Board) ListMovableAllWith( pl Player, allow_nifu bool ) []Command {
+func (b *Board) ListMovableAllWith( pl Player, allow_invalid bool ) []Command {
+	if b.movableList != nil { return b.movableList }
+	
 	r := make( []Command, 0, 256 )
 	
 	// 通常の移動
@@ -161,6 +172,13 @@ func (b *Board) ListMovableAllWith( pl Player, allow_nifu bool ) []Command {
 							r = append( r, com )
 						}
 					}
+					// 王をとれる場合は、それのみを返す
+					if !allow_invalid {
+						to_cell := b.Cell(to_pos)
+						if to_cell.Kind() == OU {
+							return []Command{ com }
+						}
+					}
 				}
 			}
 		}
@@ -171,7 +189,7 @@ func (b *Board) ListMovableAllWith( pl Player, allow_nifu bool ) []Command {
 		
 		// 二歩チェックリスト作成
 		nifu := false
-		if !allow_nifu {
+		if !allow_invalid {
 			for y:=1; y<=BoardSize; y++ {
 				koma := b.Cell(MakePos(x,y))
 				if koma.Kind() == FU && koma.Player() == pl {
@@ -195,6 +213,8 @@ func (b *Board) ListMovableAllWith( pl Player, allow_nifu bool ) []Command {
 			}
 		}
 	}
+
+	b.movableList = r
 	return r
 }
 
