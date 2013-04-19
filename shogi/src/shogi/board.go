@@ -1,7 +1,7 @@
 package shogi
 
 import (
-	// "strconv"
+	"strconv"
 )
 
 // 盤の状況
@@ -25,12 +25,14 @@ func (b *Board) Clone() *Board {
 }
 
 func (b *Board) Cell( pos Pos ) Koma {
-	return b.cell[pos.Int()]
+	// BEFORE-INLINE: return b.cell[pos.Int()]
+	return b.cell[(int(pos>>4)-1) * BoardSize + int(pos&15)-1]
 }
 
 func (b *Board) SetCell( pos Pos, koma Koma ){
 	b.movableList = nil
-	b.cell[pos.Int()] = koma
+	// BEFORE-INLINE: b.cell[pos.Int()] = koma
+	b.cell[(int(pos>>4)-1) * BoardSize + int(pos&15)-1] = koma
 }
 
 func (b *Board) Moti() *[MaxPlayer][MaxKomaKind]uint8 {
@@ -38,7 +40,6 @@ func (b *Board) Moti() *[MaxPlayer][MaxKomaKind]uint8 {
 }
 
 func (b *Board) String() string {
-	/*
 	r := "  ９   ８   ７   ６   ５   ４   ３   ２   １  \n"
 	for y:=1; y<=BoardSize; y++ {
 		r += "+----+----+----+----+----+----+----+----+----+\n"
@@ -76,8 +77,6 @@ func (b *Board) String() string {
 		r += "\n"
 	}
 	return r
-	*/
-	return ""
 }
 
 func (b *Board) moveStraight(list *[]Pos, pos Pos, player Player, dy int, dx int ) {
@@ -92,7 +91,10 @@ func (b *Board) moveStraight(list *[]Pos, pos Pos, player Player, dy int, dx int
 }
 
 func (b *Board) ListMovable(pos Pos) []Pos {
-	r := make([]Pos, 0, 20)
+	return b.ListMovableInto( pos,  make([]Pos, 0, 20) )
+}
+
+func (b *Board) ListMovableInto(pos Pos, r []Pos ) []Pos {
 	koma := b.Cell( pos )
 	if koma.Kind() == NN { return r }
 
@@ -154,29 +156,29 @@ func (b *Board) ListMovableAllWith( pl Player, allow_invalid bool ) []Command {
 	r := make( []Command, 0, 256 )
 	
 	// 通常の移動
+	var temp_pos [32]Pos
 	for y:=1; y<=BoardSize; y++ {
 		for x:=1; x<=BoardSize; x++ {
 			pos := MakePos(x,y)
 			koma := b.Cell( pos )
 			if koma != Blank && koma.Player() == pl {
-				for _,to_pos := range b.ListMovable( pos ) {
-					com := MakeCommand(pl, pos, to_pos, koma.Kind() )
-					// 動けない場所でないならでないなら追加
+				for _,to_pos := range b.ListMovableInto( pos, temp_pos[0:0] ) {
+					// 王をとれる場合は、それのみを返す
+					if !allow_invalid {
+						to_cell := b.Cell(to_pos)
+						if to_cell.Kind() == OU {
+							return []Command{ MakeCommand(pl, pos, to_pos, koma.Kind() ) }
+						}
+					}
+					// 動けない場所でないなら追加
 					if movable( koma, to_pos ) {
-						r = append( r, com )
+						r = append( r, MakeCommand(pl, pos, to_pos, koma.Kind() ) )
 					}
 					// 成れる場合は、その選択肢も追加
 					if KomaNari[ koma.Kind() ] != NN {
 						if fromTop(pl,to_pos.Y()) <= 3 || fromTop(pl,pos.Y()) <= 3 {
 							com := MakeCommand(pl, pos, to_pos, KomaNari[koma.Kind()] )
 							r = append( r, com )
-						}
-					}
-					// 王をとれる場合は、それのみを返す
-					if !allow_invalid {
-						to_cell := b.Cell(to_pos)
-						if to_cell.Kind() == OU {
-							return []Command{ com }
 						}
 					}
 				}

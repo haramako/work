@@ -18,7 +18,7 @@ import (
 
 func mainloop() error {
 	name := fmt.Sprintf( "hoge%d", rand.Intn(1000) )
-	cli, err := csa.NewClient(name,name,"192.168.11.4:4081")
+	cli, err := csa.NewClient(name,name,"10.211.55.2:4081")
 	if err != nil { return err }
 	cli.SetCallback( new(MyClient) )
 	return cli.Run()
@@ -40,7 +40,6 @@ func main(){
 
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	/*
 	b := new(AbBoard)
 	b.board = NewBoard()
 	// b.board.ProgressString("+0199OU\n-0198KI\n-0197KI\n-0111OU")
@@ -48,21 +47,20 @@ func main(){
 	b.board.Init()
 	b.board.Teban = Gote
 	watcher := &MyWatcher{0,0,-9999,9999}
-	history, point := ab_method.Solv( b, 4, b.board.Teban == Sente, watcher )
+	history, point := ab_method.Solv( b, 3, b.board.Teban == Sente, watcher )
 	fmt.Println( history, point )
 	fmt.Printf( "COM: %s POINT: %4.1f (%3.0f..%3.0f) COUNT: %4d / %3.1f\n",
 		history[0], point, watcher.max, watcher.min, watcher.count, 
 		float64(watcher.comsSum)/float64(watcher.count) )
 
 	return
-	*/
 
 	for {
 		err := mainloop()
 		if err != nil {
 			fmt.Printf( "error: %s\n", err )
 		}
-		//break
+		break
 	}
 
 }
@@ -89,7 +87,7 @@ func (c *MyClient) Play( b *Board ) (string, error) {
 	node := &(AbBoard{nil,math.MinInt32})
 	node.board = b.Clone()
 	watcher := &MyWatcher{0,0,-9999,9999}
-	history, point := ab_method.Solv( node, 3, b.Teban == Sente, watcher )
+	history, point := ab_method.Solv( node, 2, b.Teban == Sente, watcher )
 	com := history[0]
 	fmt.Printf( "COM: %s POINT: %4.1f (%3.0f..%3.0f) COUNT: %4d/%4d, TEBAN:%d\n",
 		com, point, watcher.max, watcher.min, watcher.count, 

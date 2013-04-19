@@ -97,10 +97,6 @@ func (k KomaKind) ReadableString() string {
 	return KomaReadableString[k]
 }
 
-func (k KomaKind) KifuString() string {
-	return KomaString[k]
-}
-
 func KomaFromString(str string) KomaKind {
 	return KomaFromReadableString[str]
 }
@@ -178,15 +174,7 @@ func (p Pos) Y() int {
 }
 
 func (p Pos) Int() int {
-	return int((p.Y()-1) * BoardSize + p.X()-1)
-}
-
-func (p Pos) KifuString() string {
-	var r [2]uint8
-	r[0] = uint8('0'+p.X())
-	r[1] = uint8('0'+p.Y())
-	return string(r[:])
-	//return strconv.Itoa(p.X())+strconv.Itoa(p.Y())
+	return (int(p>>4)-1) * BoardSize + int(p&15)-1
 }
 
 func (p Pos) String() string {
@@ -194,7 +182,6 @@ func (p Pos) String() string {
 	r[0] = uint8('0'+p.X())
 	r[1] = uint8('0'+p.Y())
 	return string(r[:])
-	//return strconv.Itoa(p.X())+strconv.Itoa(p.Y())
 }
 
 // "１一".."９九"の文字列を返す
@@ -204,7 +191,8 @@ func (p Pos) ReadableString() string {
 
 // 盤上に含まれれていれば、trueを返す
 func (p Pos) InSide() bool {
-	return (p.Y()>=1 && p.Y()<=BoardSize) && (p.X()>=1 && p.X()<=BoardSize)
+	// BEFORE-INLINE: return (p.Y()>=1 && p.Y()<=BoardSize) && (p.X()>=1 && p.X()<=BoardSize)
+	return (int(p>>4)>=1 && int(p>>4)<=BoardSize && int(p&15)>=1 && int(p&15)<=BoardSize)
 }
 
 // 一手を表す
@@ -220,7 +208,7 @@ func MakeCommand( p Player, from Pos, to Pos, koma KomaKind ) Command {
 }
 
 func (s Command) String() string {
-	return PlayerString[s.Player] + s.From.KifuString() + s.To.KifuString() + s.Koma.KifuString()
+	return PlayerString[s.Player] + s.From.String() + s.To.String() + s.Koma.String()
 }
 
 func ParseCommand(str string) (Command, error) {
