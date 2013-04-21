@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"shogi/kifu"
-	"shogi/kifu/ki2"
-	"shogi/kifu/csa"
+	_ "shogi/kifu/ki2"
+	_ "shogi/kifu/csa"
 )
 
 func main() {
@@ -14,9 +14,6 @@ func main() {
 		println( "./shogi [dir] ..." )
 		os.Exit(0)
 	}
-
-	kifu.AddLoader( kifu.Loader{ []string{".ki2"}, ki2.Parse } )
-	kifu.AddLoader( kifu.Loader{ []string{".csa"}, csa.Parse } )
 
 	for _, path := range os.Args[1:] {
 		err := filepath.Walk( path, func( path string, info os.FileInfo, err error ) error {

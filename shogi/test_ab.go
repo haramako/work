@@ -25,8 +25,8 @@ func (n *TestNode) Stop() bool {
 	return false
 }
 
-func (n *TestNode) Choices() []string {
-	r := make([]string, len(n.children))
+func (n *TestNode) Choices() []interface{} {
+	r := make([]interface{}, len(n.children))
 	i := 0
 	for k, _ := range n.children {
 		r[i] = k
@@ -35,8 +35,8 @@ func (n *TestNode) Choices() []string {
 	return r
 }
 
-func (n *TestNode) Choose(choice string) (Node, float64) {
-	return n.children[choice], 1.0
+func (n *TestNode) Choose(choice interface{}) (Node, float64) {
+	return n.children[choice.(string)], 1.0
 }
 
 func (n *TestNode) String() string {

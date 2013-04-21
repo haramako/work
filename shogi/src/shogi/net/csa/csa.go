@@ -93,14 +93,16 @@ func (c *Client) doCommand( line string ) error {
 			kifu, err := csa.Parse( c.position )
 			if err != nil { return err }
 			c.board = kifu.Board()
-			c.Play()
+			err = c.Play()
+			if err != nil { return err }
 		case "LOGIN":
 		default:
 			switch line[0] {
 			case '+', '-':
 				com, _ := shogi.ParseCommand( line )
 				c.board.Progress( com )
-				c.Play()
+				err := c.Play()
+				if err != nil { return err }
 			case '#','%':
 				switch line {
 				case "%TORRYO":
@@ -174,10 +176,12 @@ func (c *Client) doChunkCommand( chunk *Chunk ) error {
 	return nil
 }
 
-func (c *Client) Play(){
+func (c *Client) Play() error {
 	if c.board.Teban == c.myTeban {
-		com, _ := c.callback.Play( c.board )
+		com, err := c.callback.Play( c.board )
+		if err != nil { return err }
 		c.Send( com )
 	}
+	return nil
 }
 

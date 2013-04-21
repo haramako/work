@@ -7,6 +7,8 @@ import (
 	"shogi/kifu"
 )
 
+var registered = kifu.AddLoader( kifu.Loader{ []string{".csa"}, Parse } )
+
 func atoi( c uint8 ) int {
 	return int(c) - '0'
 }

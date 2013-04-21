@@ -88,5 +88,28 @@ func TestMovableList(t *testing.T) {
 		t.Error( "must get OU" )
 	}
 	
+}
 
+func TestSerialize(t *testing.T) {
+	b := NewBoard()
+	b.Init()
+	data := b.Serialize()
+	
+	b2 := NewBoard()
+	err := b2.Deserialize( data )
+	if err != nil { t.Errorf( "serialize error: %s", err ) }
+	
+	if b2.Cell(MakePos(5,1)) != MakeKoma(OU,Gote) { t.Error( "serialize" ) }
+}
+
+func TestSerializeHex(t *testing.T) {
+	b := NewBoard()
+	b.Init()
+	data := b.SerializeHex()
+	
+	b2 := NewBoard()
+	err := b2.DeserializeHex( data )
+	if err != nil { t.Errorf( "serialize error: %s", err ) }
+	
+	if b2.Cell(MakePos(5,1)) != MakeKoma(OU,Gote) { t.Error( "serialize" ) }
 }

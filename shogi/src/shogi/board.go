@@ -2,6 +2,9 @@ package shogi
 
 import (
 	"strconv"
+	"bytes"
+	"encoding/hex"
+	"encoding/binary"
 )
 
 // 盤の状況
@@ -37,6 +40,39 @@ func (b *Board) SetCell( pos Pos, koma Koma ){
 
 func (b *Board) Moti() *[MaxPlayer][MaxKomaKind]uint8 {
 	return &b.moti
+}
+
+func (b *Board) Serialize() []byte {
+	var buf [256]byte
+	writer := bytes.NewBuffer( buf[0:0] )
+	binary.Write( writer, binary.BigEndian, b.cell )
+	binary.Write( writer, binary.BigEndian, b.moti )
+	binary.Write( writer, binary.BigEndian, b.Teban )
+	return writer.Bytes()
+}
+
+func (b *Board) SerializeHex() string {
+	return hex.EncodeToString( b.Serialize() )
+}
+
+func (b *Board) Deserialize( src []byte ) error {
+	reader := bytes.NewBuffer( src[0:len(src)] )
+	
+	err := binary.Read( reader, binary.BigEndian, &b.cell )
+	if err != nil { return err }
+	
+	err = binary.Read( reader, binary.BigEndian, &b.moti )
+	if err != nil { return err }
+	
+	err = binary.Read( reader, binary.BigEndian, &b.Teban )
+	if err != nil { return err }
+	return nil
+}
+
+func (b *Board) DeserializeHex( src string ) error {
+	buf, err := hex.DecodeString( src )
+	if err != nil { return err }
+	return b.Deserialize(buf)
 }
 
 func (b *Board) String() string {
@@ -187,26 +223,26 @@ func (b *Board) ListMovableAllWith( pl Player, allow_invalid bool ) []Command {
 	}
 	
 	// 打ち駒
-	for x:=1; x<=BoardSize; x++ {
+	for kk:= FU; kk<OU; kk++ {
+		if b.moti[pl][kk] <= 0 { continue }
+		for x:=1; x<=BoardSize; x++ {
 		
-		// 二歩チェックリスト作成
-		nifu := false
-		if !allow_invalid {
-			for y:=1; y<=BoardSize; y++ {
-				koma := b.Cell(MakePos(x,y))
-				if koma.Kind() == FU && koma.Player() == pl {
-					nifu = true
-					break;
+			// 二歩チェックリスト作成
+			nifu := false
+			if !allow_invalid && kk == FU {
+				for y:=1; y<=BoardSize; y++ {
+					koma := b.Cell(MakePos(x,y))
+					if koma.Kind() == FU && koma.Player() == pl {
+						nifu = true
+						break;
+					}
 				}
 			}
-		}
 
-		for y:=1; y<=BoardSize; y++ {
-			// 打てる場所を探す
-			to_pos := MakePos(x,y)
-			if b.Cell(to_pos).Kind() != NN { continue }
-			for kk:= FU; kk<OU; kk++ {
-				if b.moti[pl][kk] <= 0 { continue }
+			for y:=1; y<=BoardSize; y++ {
+				// 打てる場所を探す
+				to_pos := MakePos(x,y)
+				if b.Cell(to_pos) != Blank { continue }
 				if kk == FU && nifu { continue } // 二歩チェック
 				// 動けない場所でないならでないなら追加
 				if movable( MakeKoma(kk,pl), to_pos ) {

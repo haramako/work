@@ -74,8 +74,9 @@ type Loader struct {
 
 var loaders = []Loader{}
 
-func AddLoader( ld Loader ) {
+func AddLoader( ld Loader ) bool {
 	loaders = append( loaders, ld )
+	return true
 }
 
 func LoadAuto( file string ) (Kifu, error) {

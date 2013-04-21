@@ -8,6 +8,8 @@ import (
 	. "shogi/kifu"
 )
 
+var registered = AddLoader( Loader{ []string{".ki2"}, Parse } )
+
 type Ki2Kifu struct {
 	KifuBase
 }
