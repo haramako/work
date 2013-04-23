@@ -3,14 +3,17 @@ package shogi
 import (
 	"strconv"
 	"bytes"
+	"unsafe"
 	"encoding/hex"
 	"encoding/binary"
+	"hash/fnv"
 )
 
 // 盤の状況
 type Board struct {
 	cell [BoardSize*BoardSize]Koma
 	moti [MaxPlayer][MaxKomaKind]uint8
+	hash uint64
 	Teban Player
 	movableList []Command
 }
@@ -33,6 +36,7 @@ func (b *Board) Cell( pos Pos ) Koma {
 }
 
 func (b *Board) SetCell( pos Pos, koma Koma ){
+	b.hash = 0
 	b.movableList = nil
 	// BEFORE-INLINE: b.cell[pos.Int()] = koma
 	b.cell[(int(pos>>4)-1) * BoardSize + int(pos&15)-1] = koma
@@ -40,6 +44,21 @@ func (b *Board) SetCell( pos Pos, koma Koma ){
 
 func (b *Board) Moti() *[MaxPlayer][MaxKomaKind]uint8 {
 	return &b.moti
+}
+
+var hash = fnv.New64a()
+
+func (b *Board) Hash() uint64 {
+	if b.hash == 0 {
+		hash.Reset()
+		hash.Write( (*[int(BoardSize*BoardSize)]byte)(unsafe.Pointer(&b.cell))[:] )
+		hash.Write( (*[int(MaxPlayer)*int(MaxKomaKind)]byte)(unsafe.Pointer(&b.moti))[:] )
+		//binary.Write( hash, binary.BigEndian, b.cell )
+		//binary.Write( hash, binary.BigEndian, b.moti )
+		binary.Write( hash, binary.BigEndian, b.Teban )
+		b.hash = hash.Sum64()
+	}
+	return b.hash
 }
 
 func (b *Board) Serialize() []byte {

@@ -12,13 +12,14 @@ import (
 	"bufio"
 	"strconv"
 	"runtime/pprof"
-	"os/exec"
+	//"runtime"
+	"sync"
+	//"os/exec"
 	"strings"
-	. "shogi"
+	"shogi"
 	"shogi/kifu"
 	_ "shogi/kifu/csa"
 	_ "shogi/kifu/ki2"
-	"ab_method"
 )
 
 func showHelp(){
@@ -84,25 +85,26 @@ func boardMode( filename string, level_str string ) error {
 	kif, err := kifu.LoadAuto( filename )
 	if err != nil { return err }
 	
-	b := new(AbBoard)
-	b.board = kif.Board()
-	b.board.ProgressCommands( kif.Commands() )
+	b := new(Node)
+	b.Board = *kif.Board()
+	b.ProgressCommands( kif.Commands() )
 
-	fmt.Println( b.board )
+	fmt.Println( b )
 
-	watcher := NewWatcher()
-	history, point := ab_method.Solv( b, float64(level), b.board.Teban == Sente, *parallel, watcher )
+	//watcher := NewWatcher()
+	history, point := Solv( b, level, b.Teban.Dir()*-1, *parallel )
 	fmt.Println( history )
-	fmt.Printf( "COM: %s POINT: %4.1f %s\n", history[0], point, watcher )
+	fmt.Printf( "COM: %s POINT: %d\n", history[0], point)
 
-	b.board.Progress( history[0].(Command) )
+	b.Progress( history[0] )
 	
-	fmt.Println( b.board )
+	// fmt.Println( b )
 	
 	return nil
 }
 
 func pipe() error {
+	// runtime.GOMAXPROCS( *parallel )
 	in := bufio.NewReader( os.Stdin )
 	for {
 		line, _, err := in.ReadLine()
@@ -112,30 +114,30 @@ func pipe() error {
 
 		var hex string
 		var level, sign int
-		var rest_level, limit float64
+		var rest_level, limit int 
 		n, err := fmt.Sscan( string(line), &hex, &level, &rest_level, &limit, &sign )
 		if n != 5 { return nil }
 		if err != nil { return err }
 
-		node := new(AbBoard)
+		node := new(Node)
 		node.point = math.MinInt32
-		node.board = NewBoard()
-		node.board.DeserializeHex( hex )
+		node.DeserializeHex( hex )
 
 
-		watcher := NewWatcher()
-		param := ab_method.Param{limit,level,rest_level,float64(sign),watcher,*parallel}
-		result, point := ab_method.SolvNode( param, node )
+		//watcher := NewWatcher()
+		//result, point := ab_method.SolvNode( param, node )
+		result, point := Solv( node, rest_level, sign, *parallel )
 
 		result_str := []string{}
 		for _,x:= range result { result_str = append( result_str, fmt.Sprintf("%s",x) ) }
-		fmt.Printf( "%s %f\n", strings.Join(result_str,","), point )
+		fmt.Printf( "%s %d\n", strings.Join(result_str,","), point )
 	}
 	return nil
 }
 
 //-----------------------------------------------------------
 
+/*
 type MyWatcher struct {
 	count int
 	comsSum int
@@ -147,8 +149,8 @@ func NewWatcher() *MyWatcher {
 	return &MyWatcher{0,0,-9999,9999}
 }
 
-func (w *MyWatcher) OnCheck(node ab_method.Node) {
-	b := node.(*AbBoard)
+func (w *MyWatcher) OnCheck(node Node) {
+	b := node
 	w.count += 1
 	w.comsSum += len(b.board.ListMovableAll(b.board.Teban))
 	p := float64(b.Point())
@@ -161,73 +163,79 @@ func (w *MyWatcher) String() string {
 		w.max, w.min, w.count, 
 		float64(w.comsSum)/float64(w.count) )
 }
+*/
 
 //-----------------------------------------------------------
 
-type AbBoard struct {
-	board *Board
-	point float64
+type Node struct {
+	shogi.Board
+	point int
 }
 
-func (b *AbBoard) Clone() *AbBoard {
-	return &AbBoard{b.board,math.MinInt32}
+var POINT = []int {
+	//NN;  FU;  KY;  KE;  GI;  KI;  KA;  HI;   OU;  TO;  NY;  NK;  NG;  UM;  RY
+        0, 10,  20,  20,  40,  50,  80, 100,99999,  60,  50,  50,  50, 100, 120,
 }
 
-var POINT = []float64 {
-	//NN; FU; KY; KE; GI; KI; KA; HI;  OU; TO; NY; NK; NG; UM; RY
-        0, 1,  2,  2,  4,  5,  8, 10,9999,  6,  5,  5,  5, 12, 14,
+func NewNode() (*Node) {
+	n := new(Node)
+	n.point = math.MinInt32
+	return n
 }
 
-func (n *AbBoard) Point() float64 {
+func (n *Node) Clone() *Node {
+	r := NewNode()
+	*r = *n
+	r.point = math.MinInt32
+	return r
+}
+
+func (n *Node) Point() int {
 	if n.point != math.MinInt32 { return n.point }
-	b := n.board
-	p := 0.0
+	p := 0
 	for y:=1; y<=9; y++ {
 		for x:=1; x<=9; x++ {
-			koma := b.Cell( MakePos(x,y) )
-			if koma == Blank { continue }
-			p += POINT[koma.Kind()] * float64(-koma.Player().Dir())
+			koma := n.Cell( shogi.MakePos(x,y) )
+			if koma == shogi.Blank { continue }
+			p += POINT[koma.Kind()] * -koma.Player().Dir()
 		}
 	}
-	for pl:=Sente; pl<=Gote; pl++ {
-		for koma, num := range b.Moti()[pl] {
-			p += POINT[koma] * float64(-pl.Dir() * int(num))
+	for pl:=shogi.Sente; pl<=shogi.Gote; pl++ {
+		for koma, num := range n.Moti()[pl] {
+			p += POINT[koma] * -pl.Dir() * int(num)
 		}
 	}
 	n.point = p // + rand.Float64() - 0.5
 	return p
 }
 
-func (b *AbBoard) Stop() bool {
-	if math.Abs(float64(b.Point())) > 10000 { return true }
+func (n *Node) Stop() bool {
+	if math.Abs(float64(n.Point())) > 100000 { return true }
 	return false
 }
 
-func (b *AbBoard) Choices() []interface{} {
-	coms := b.board.ListMovableAll(b.board.Teban)
-	r := make([]interface{},len(coms))
-	for i, com := range coms {
-		r[i] = com
-	}
-	return r
-}
-
-func (n *AbBoard) Choose( choice interface{} ) (ab_method.Node, float64) {
-	r := new(AbBoard)
-	r.board = n.board.Clone()
-	r.point = math.MinInt32
-	com := choice.(Command)
-	level := 1.0
-	if r.board.Cell( com.To ) != Blank { level = 0.5 }
-	r.board.Progress( com )
+func (n *Node) Choose( choice shogi.Command ) (*Node, int) {
+	r := n.Clone()
+	r.Progress( choice )
+	level := 8
+	// if r.board.Cell( choice.To ) != Blank { level = 0.5 }
 	return r, level
 }
 
-func (n *AbBoard) String() string {
-	return "Board"
-}
 
-func (n *AbBoard) SolvParallel(inch chan ab_method.SolvInChan, outch chan ab_method.SolvOutChan ) {
+/*
+func (n *Node) SolvParallel(inch chan SolvInChan, outch chan SolvOutChan ) {
+	for {
+		in := <- inch
+		if in.Finish { break }
+		result, point := SolvNode( in.Param, in.Node )
+		outch <- SolvOutChan{append([]shogi.Command{in.Choice},result...),point,nil}
+	}
+}
+*/
+
+/*
+func (n *Node) SolvParallel(inch chan ab_method.SolvInChan, outch chan ab_method.SolvOutChan ) {
 	err := func( inch chan ab_method.SolvInChan, outch chan ab_method.SolvOutChan ) error {
 		// fmt.Println( "thinkiing" )
 		pipe := exec.Command( "./think", "pipe" )
@@ -249,7 +257,7 @@ func (n *AbBoard) SolvParallel(inch chan ab_method.SolvInChan, outch chan ab_met
 			// fmt.Printf( "thinkiing %s\n", in.Choice )
 			// fmt.Println( "solv", p.choice )
 
-			n := in.Node.(*AbBoard)
+			n := in.Node.(*Node)
 			str := fmt.Sprintf( "%s %d %f %f %d\n",
 				n.board.SerializeHex(),
 				in.Param.Level, in.Param.RestLevel, in.Param.Limit, int(in.Param.Sign) )
@@ -279,4 +287,162 @@ func (n *AbBoard) SolvParallel(inch chan ab_method.SolvInChan, outch chan ab_met
 	}( inch, outch )
 	if err != nil { fmt.Printf( "error: %s\n", err ) }
 }
+*/
 
+//-----------------------------------------------------------
+
+type Param struct {
+	Parallel int
+	Cache map[uint64]*CacheItem
+}
+
+type SolvInChan struct {
+	Finish bool
+	Param Param
+	Node *Node
+	Choice shogi.Command
+}
+
+type SolvOutChan struct {
+	Result []shogi.Command
+	Point int
+	Err error
+}
+
+type CacheItem struct {
+	RestLevel int
+	Point int
+	Choices []shogi.Command
+}
+
+// solvNodeの並列化バージョン
+/*
+func solvNodeParallel( param Param, node *Node, choices []shogi.Command ) ( []shogi.Command, float64 ) {
+	var r_choices []shogi.Command
+	child_param := param
+	child_param.Level += 1
+	child_param.Sign = -param.Sign
+	child_param.Limit = math.MaxInt32
+	child_param.Parallel = 1
+	r_point := -math.MaxFloat64
+
+	inch := make(chan SolvInChan)
+	outch := make(chan SolvOutChan)
+
+	if param.Parallel > len(choices) { param.Parallel = len(choices) }
+
+	for i:=0; i<param.Parallel; i++ {
+		go node.SolvParallel(inch, outch)
+	}
+
+	num_sent := 0
+	num_buf := 0
+	for i:=0; i<len(choices); i++ {
+		for ; num_sent < len(choices) && num_buf < param.Parallel; {
+			child, use_level := node.Choose( choices[num_sent] )
+			child_param.RestLevel = param.RestLevel - use_level
+			inch <- SolvInChan{false,child_param, child, choices[num_sent] }
+			num_sent++
+			num_buf++
+		}
+		res := <- outch
+		num_buf--
+		result := res.Result
+		point := res.Point
+		point = -point
+		if r_point < point {
+			r_choices = result
+			r_point = point
+			child_param.Limit = -point
+			// アルファ/ベータカット
+			if point >= param.Limit { 
+				// fmt.Printf("%salpha/beta cut %v point:%d limit:%d\n",
+				// strings.Repeat("  ", child_param.Level), child, point, param.Limit);
+				break
+			}
+		}
+	}
+
+	for i:=0; i<param.Parallel; i++ {
+		inch <- SolvInChan{true,child_param, nil, shogi.Command{}}
+	}
+	
+	return r_choices, r_point
+}
+*/
+
+var mutex sync.Mutex
+
+func SolvNode( param *Param, node *Node, sign int, level int, rest_level int, limit int ) ( []shogi.Command, int ) {
+	var r_choices []shogi.Command
+	var r_point int
+
+	node.Hash()
+	//mutex.Lock()
+	//if param.Watcher != nil { param.Watcher.OnCheck( node ) }
+	item, exists := param.Cache[node.Hash()]
+	//mutex.Unlock()
+	if exists && item.RestLevel >= rest_level {
+		// キャッシュが利用できる
+		r_choices = item.Choices
+		r_point = item.Point
+	}else{
+		// キャッシュが利用できない
+		choices := node.ListMovableAll(node.Teban)
+		
+		if rest_level > 0 && !node.Stop() && len(choices) > 0 {
+			// 前回のベスト選択肢を先頭にする
+			best_exists := false
+			if exists && len(item.Choices)>0 {
+				best_exists = true
+				best_choice := item.Choices[0]
+				for i, com := range choices {
+					if best_choice == com {
+						choices[0], choices[i] = best_choice, choices[0]
+						break
+					}
+				}
+			}
+			//if param.Parallel > 1 {
+			//	r_choices, r_point = solvNodeParallel( param, node, choices )
+			//}else{
+			r_point = -math.MaxInt32
+			for _, choice := range choices {
+				child, use_level := node.Choose( choice )
+				if best_exists { use_level -= 4; best_exists = false }
+				result, point := SolvNode( param, child, -sign, level+1, rest_level-use_level, -r_point )
+				point = -point
+				if r_point < point {
+					r_choices = append( []shogi.Command{choice}, result... )
+					r_point = point
+					// アルファ/ベータカット
+					if point >= limit { break }
+				}
+			}
+			//}
+		}else{
+			r_choices = []shogi.Command{}
+			r_point = node.Point() * sign
+		}
+	}
+	
+	if len(param.Cache) < 10000000 {
+		//mutex.Lock()
+		param.Cache[node.Hash()] = &CacheItem{rest_level, r_point, r_choices}
+		//mutex.Unlock()
+	}
+
+	return r_choices, r_point
+}
+
+func Solv( node *Node, level int, sign int, parallel int) ([]shogi.Command, int) {
+	var a []shogi.Command
+	var b int
+	param := Param{parallel,nil}
+	param.Cache = make( map[uint64]*CacheItem, 10000000 )
+	for lv:=1; lv<=level; lv++ {
+		a, b = SolvNode( &param, node, sign, 0, lv*8, 99999999 )
+		println( "cachesize:", len(param.Cache) )
+	}
+	return a,b
+}

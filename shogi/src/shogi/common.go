@@ -4,7 +4,7 @@ import (
 	// "strconv"
 	"strings"
 	"errors"
-	"fmt"
+	//"fmt"
 )
 
 const BoardSize = 9
@@ -223,11 +223,9 @@ func ParseCommand(str string) (Command, error) {
 
 func ParseCommands(str string) ([]Command, error) {
 	r := []Command{}
-	fmt.Println(str)
 	for _, line := range strings.Split(str,"\n") {
 		if len(line) == 0 { continue }
 		com, err := ParseCommand(line)
-		fmt.Println( com )
 		if err != nil { return nil, err }
 		r = append( r, com )
 	}

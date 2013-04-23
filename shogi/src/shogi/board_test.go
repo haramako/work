@@ -113,3 +113,6 @@ func TestSerializeHex(t *testing.T) {
 	
 	if b2.Cell(MakePos(5,1)) != MakeKoma(OU,Gote) { t.Error( "serialize" ) }
 }
+
+func TestHash(t *testing.T) {
+}
