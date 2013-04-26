@@ -119,7 +119,7 @@ func (k Koma) Player() Player {
 // 文字列に変換する。Blankの場合は、"*"に変換する
 func (k Koma) String() string {
 	if k == Blank { return "*" }
-	return PlayerString[k.Player()] + KomaReadableString[k.Kind()]
+	return PlayerString[k.Player()] + KomaString[k.Kind()]
 }
 
 // ブランク駒

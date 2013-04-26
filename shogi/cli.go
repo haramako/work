@@ -21,8 +21,8 @@ import (
 
 func mainloop() error {
 	name := fmt.Sprintf( "hoge%d", rand.Intn(1000) )
-	cli, err := csa.NewClient(name,name,"10.211.55.2:4081")
-	//cli, err := csa.NewClient(name,name,"192.168.11.4:4081")
+	//cli, err := csa.NewClient(name,name,"10.211.55.2:4081")
+	cli, err := csa.NewClient(name,name,"192.168.11.4:4081")
 	if err != nil { return err }
 	mycli, err := NewMyClient()
 	if err != nil { return err }
@@ -65,7 +65,7 @@ func NewMyClient() (*MyClient, error) {
 }
 
 func (c *MyClient) Play( b *Board ) (string, error) {
-	cmd := exec.Command( "./think", "-p", "4", "pipe" )
+	cmd := exec.Command( "./think", "-p", "1", "pipe" )
 	pipeerr, err := cmd.StderrPipe()
 	if err != nil { return "", err }
 	go io.Copy( os.Stderr, pipeerr )
@@ -81,7 +81,7 @@ func (c *MyClient) Play( b *Board ) (string, error) {
 	if b.Teban == Gote { sign = -1 }
 
 	level := 0
-	rest_level := 5
+	rest_level := 4
 
 	str := fmt.Sprintf( "%s %d %d 9999999 %d\n", b.SerializeHex(), level, rest_level, sign)
 	fmt.Println( str )

@@ -1,0 +1,4 @@
+main.o: main.cpp shogi.h csa.h think.h
+shogi.o: shogi.cpp shogi.h
+csa.o: csa.cpp csa.h shogi.h
+think.o: think.cpp think.h shogi.h

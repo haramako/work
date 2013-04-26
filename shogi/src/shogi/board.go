@@ -6,7 +6,7 @@ import (
 	"unsafe"
 	"encoding/hex"
 	"encoding/binary"
-	"hash/fnv"
+	"crypto/md5"
 )
 
 // 盤の状況
@@ -25,7 +25,8 @@ func NewBoard() *Board {
 func (b *Board) Clone() *Board {
 	r := new(Board)
 	copy( r.cell[:], b.cell[:] )
-	copy( r.moti[:], b.moti[:] )
+	copy( r.moti[0][:], b.moti[0][:] )
+	copy( r.moti[1][:], b.moti[1][:] )
 	r.Teban = b.Teban
 	return r
 }
@@ -46,17 +47,14 @@ func (b *Board) Moti() *[MaxPlayer][MaxKomaKind]uint8 {
 	return &b.moti
 }
 
-var hash = fnv.New64a()
-
 func (b *Board) Hash() uint64 {
 	if b.hash == 0 {
-		hash.Reset()
+		hash := md5.New()
+		// 無理やり[]byteに変換してる
 		hash.Write( (*[int(BoardSize*BoardSize)]byte)(unsafe.Pointer(&b.cell))[:] )
 		hash.Write( (*[int(MaxPlayer)*int(MaxKomaKind)]byte)(unsafe.Pointer(&b.moti))[:] )
-		//binary.Write( hash, binary.BigEndian, b.cell )
-		//binary.Write( hash, binary.BigEndian, b.moti )
 		binary.Write( hash, binary.BigEndian, b.Teban )
-		b.hash = hash.Sum64()
+		b.hash = binary.BigEndian.Uint64(hash.Sum(nil))
 	}
 	return b.hash
 }
