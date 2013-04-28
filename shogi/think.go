@@ -213,7 +213,7 @@ func boardMode( filename string, level_str string ) error {
 	kif, err := kifu.LoadAuto( filename )
 	if err != nil { return err }
 	
-	b := new(Node)
+	b := NewNode()
 	b.Board = *kif.Board()
 	b.ProgressCommands( kif.Commands() )
 
@@ -445,7 +445,7 @@ func SolvNode( param *Param, node *Node, sign int, level int, rest_level int, li
 	}
 
 	// 悪すぎる場合は、どうせだめだろうということで読まない
-	diff := node.Point()*sign - param.BasePoint
+	diff := node.Point() - param.BasePoint
 	if diff < 0 { diff = -diff }
 	if diff > rest_level * 30 + 1000 {
 		return nil, node.Point() * sign
@@ -505,7 +505,7 @@ func SolvNode( param *Param, node *Node, sign int, level int, rest_level int, li
 func Solv( node *Node, level int, sign int, parallel int) ([]shogi.Command, int, *Param) {
 	if sign != 1 && sign != -1 { os.Exit(1) }
 
-	param := &Param{parallel,nil,0,make(chan SolvInChan, 32),node.Point()*sign}
+	param := &Param{parallel,nil,0,make(chan SolvInChan, 32),node.Point()}
 	runtime.GOMAXPROCS( param.Parallel )
 	
 	for i:=0; i<param.Parallel; i++ {

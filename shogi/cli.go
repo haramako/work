@@ -65,7 +65,8 @@ func NewMyClient() (*MyClient, error) {
 }
 
 func (c *MyClient) Play( b *Board ) (string, error) {
-	cmd := exec.Command( "./think", "-p", "1", "pipe" )
+	// cmd := exec.Command( "./think", "-p", "1", "pipe" )
+	cmd := exec.Command( "../cshogi/shogi", "pipe" )
 	pipeerr, err := cmd.StderrPipe()
 	if err != nil { return "", err }
 	go io.Copy( os.Stderr, pipeerr )

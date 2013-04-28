@@ -58,9 +58,9 @@ void test_mode(int argc, char **argv )
 	// cout << board->Hash() << endl;
 	
 	int i = 0;
-	// cout << board->ToString() << endl;
+	cout << board->ToString() << endl;
 	for( vector<Command>::const_iterator it=kifu->Commands().begin(); it!=kifu->Commands().end(); ++it,++i ){
-		// cout << i << ":" << string(*it) << "\n";
+		cout << i << ":" << string(*it) << "\n";
 		
 		Command com[600];
 		int clen = board->ListMovableAll( board->curPlayer, com );
@@ -79,8 +79,15 @@ void test_mode(int argc, char **argv )
 		}
 		
 		board->Progress( *it );
+		// cout << board->ToString() << endl;
 	}
-
+	{
+		Command com[600];
+		int clen = board->ListMovableAll( board->curPlayer, com );
+		for( int j=0; j<clen; j++ ){
+			cout << string(com[j]) << endl;
+		}
+	}
 }
 
 void board_mode(int argc, char **argv )
@@ -99,17 +106,57 @@ void board_mode(int argc, char **argv )
 	}
 	cout << node->ToString() << endl;
 
-	pair<Command,int> result = Solv( node, level, 1, 0 );
+	pair<Command,int> result = Solv( node, level, -PlayerDir(node->CurPlayer()), 0 );
 	cout << "point: " << result.second << " " << string(result.first) << endl;
 }
+
+std::string hex2bin(const std::string& str)
+{
+	std::ostringstream outputStream;
+	for(size_t i = 0; i + 1 <= str.size(); i += 2){
+		unsigned short s;
+		std::istringstream(str.substr(i, 2)) >> std::hex >> s;
+		outputStream << static_cast<unsigned char>(s);
+	}
+	return outputStream.str();
+}
+
+void pipe_mode(int argc, char **argv )
+{
+
+	string line;
+	while( cin && getline( cin, line ) ){
+		string hex;
+		int level = 0, rest_level = 0, limit = 0, sign = 0;
+		stringstream ss(line);
+		ss >> hex >> level >> rest_level >> limit >> sign;
+
+		Node *node = new Node();
+		stringstream bin(hex2bin(hex));
+		node->Deserialize( bin );
+		cerr << node->ToString() << endl;
+		
+		pair<Command,int> result = Solv( node, rest_level, sign, 0 );
+		
+		cerr << "point: " << result.second << " " << string(result.first) << endl;
+		cout << string(result.first) << " " << result.second << endl;
+		
+		delete node;
+	}
+}
+
 
 int main(int argc, char **argv )
 {
 	if( argc <= 1 ) help_mode();
 
+	srand(time(NULL));
+	
 	string mode(argv[1]);
 	if( mode == "board" ){
 		board_mode( argc-2, argv+2 );
+	}else if( mode == "pipe" ){
+		pipe_mode( argc-2, argv+2 );
 	}else if( mode == "test" ){
 		test_mode( argc-2, argv+2 );
 	}else{

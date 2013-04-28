@@ -132,12 +132,16 @@ class Board {
 	void Progress( Command com );
 	void Progress( const string &com ){ Progress( Command(com) ); }
 	
+	string Serialize() const;
+	void Deserialize(istream &in);
+	
 	Koma cell [BOARD_SIZE][BOARD_SIZE];
 	uint8_t hand[PLAYER_MAX][KOMA_KIND_MAX];
 	mutable int64_t hash;
 	Player curPlayer;
 	// vector<Command> movableList;
  private:
+ protected:
 	void Clear();
 	void Reset(){ hash = 0; }
 	Pos* MoveStraight(Pos* out_pos, Pos pos, Player player, int dx, int dy ) const;

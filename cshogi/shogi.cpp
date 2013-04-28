@@ -170,7 +170,9 @@ int64_t Board::Hash() const
 {
 	if( hash != 0 ) return hash;
 	boost::uuids::detail::sha1 sha1;
-	sha1.process_bytes( (unsigned char*)this, sizeof(Board) );
+	sha1.process_bytes( (unsigned char*)cell, sizeof(cell) );
+	sha1.process_bytes( (unsigned char*)hand, sizeof(hand) );
+	sha1.process_bytes( (unsigned char*)&curPlayer, sizeof(curPlayer) );
 	unsigned int digest[5];
 	sha1.get_digest( digest );
 	hash = *((int64_t*)digest);
@@ -224,9 +226,8 @@ Pos* Board::MoveStraight(Pos* out_pos, Pos pos, Player player, int dx, int dy ) 
 		pos = Pos( pos.X() + dx, pos.Y() + dy );
 		if( !pos.Inside() ) break;
 		Koma koma = GetCell( pos );
-		if( koma != BLANK && koma.GetPlayer() == player ) break;
 		*out_pos++ = pos;
-		if( koma != BLANK && koma.GetPlayer() != player ) break;
+		if( koma != BLANK ) break;
 	}
 	return out_pos;
 }
@@ -304,9 +305,10 @@ int Board::ListMovableAll( Player pl, Command *out_com, bool allow_invalid ) con
 			int len = ListMovable( pos, temp_pos );
 			for( int i =0; i<len; i++ ){
 				Pos to_pos = temp_pos[i];
+				Koma to_cell = GetCell(to_pos);
+				if( to_cell != BLANK && to_cell.GetPlayer() == pl ) continue;
 				// 王をとれる場合は、それのみを返す
 				if( !allow_invalid ){
-					Koma to_cell = GetCell(to_pos);
 					if( to_cell.GetKind() == OU ){
 						*out_com = Command( pl, pos, to_pos, koma.GetKind() );
 						return 1;
@@ -386,6 +388,24 @@ void Board::Progress( Command com )
 		SetCell( com.to, Koma( com.koma, com.player) );
 	}
 	curPlayer = PlayerSwitch(com.player);
+}
+
+string Board::Serialize() const
+{
+	return "";
+}
+
+void Board::Deserialize(istream &in)
+{
+	char buf[9][9];
+	in.read( (char*)&buf, sizeof(buf) );
+	for( int x=0; x<9; x++ ){
+		for( int y=0; y<9; y++ ){
+			cell[x][y] = *((Koma*)(&buf[y][x]));
+		}
+	}
+	in.read( (char*)&hand, sizeof(hand) );
+	in >> curPlayer;
 }
 
 void Board::Clear()

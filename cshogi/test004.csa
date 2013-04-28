@@ -1,0 +1,88 @@
+V2
+N+hoge768
+N-hoge7
+$EVENT:test+default-15000-0+hoge768+hoge7+20130428090715
+$START_TIME:2013/04/28 09:07:15
+P1-KY-KE-GI-KI-OU-KI-GI-KE-KY
+P2 * -HI *  *  *  *  * -KA * 
+P3-FU-FU-FU-FU-FU-FU-FU-FU-FU
+P4 *  *  *  *  *  *  *  *  * 
+P5 *  *  *  *  *  *  *  *  * 
+P6 *  *  *  *  *  *  *  *  * 
+P7+FU+FU+FU+FU+FU+FU+FU+FU+FU
+P8 * +KA *  *  *  *  * +HI * 
+P9+KY+KE+GI+KI+OU+KI+GI+KE+KY
++
+'rating:hoge768+b085862977694f3d0e67a1bce2f7ae88:hoge7+6518766cef598f84c842fd6b044a686f
++7776FU
+T1
+-3334FU
+T1
++8822UM
+T1
+-3122GI
+T1
++9998KY
+T2
+-0033KA
+T2
++4746FU
+T1
+-8242HI
+T1
++5968OU
+T1
+-1112KY
+T1
++9796FU
+T1
+-3399UM
+T1
++0066KA
+T1
+-9989UM
+T1
++4958KI
+T1
+-4131KI
+T2
++3736FU
+T1
+-0074KE
+T2
++6677KA
+T1
+-8998UM
+T1
++7978GI
+T1
+-0085KY
+T2
++5847KI
+T1
+-8587NY
+T1
++7887GI
+T1
+-9887UM
+T1
++7755KA
+T1
+-5354FU
+T2
++0053KY
+T1
+'ILLEGAL_MOVE(-8769UM)
+'P1-KY-KE-GI-KI-OU * -KI-KE * 
+'P2 *  *  *  *  * -HI * -GI-KY
+'P3-FU-FU-FU-FU+KY-FU * -FU-FU
+'P4 *  * -KE * -FU * -FU *  * 
+'P5 *  *  *  * +KA *  *  *  * 
+'P6+FU * +FU *  * +FU+FU *  * 
+'P7 * -UM * +FU+FU+KI * +FU+FU
+'P8 *  *  * +OU *  *  * +HI * 
+'P9 *  *  * +KI *  * +GI+KE+KY
+'P-00FU00GI
+'-
+'summary:oute_kaihimore:hoge768 win:hoge7 lose
+'$END_TIME:2013/04/28 09:07:58
