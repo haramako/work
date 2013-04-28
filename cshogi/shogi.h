@@ -116,8 +116,10 @@ const Command NO_COMMAND(NN,Pos(0,0),Pos(0,0),0);
  */
 class Board {
  public:
-	Board(){ Clear(); }
-	Board( const Board *src );
+	Board( bool initialized = false ){ if( initialized ) Clear(); }
+	Board( const Board *src ){ Copy(src); };
+
+	void Copy( const Board *src );
 
 	void Init();
 	Koma GetCell(Pos pos) const { return cell[pos.X()-1][pos.Y()-1]; }

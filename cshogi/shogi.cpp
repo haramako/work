@@ -137,7 +137,7 @@ string Command::ToString() const {
 // Board
 //================================
 
-Board::Board( const Board *src )
+void Board::Copy( const Board *src )
 {
 	memcpy( cell, src->cell, sizeof(cell) );
 	memcpy( hand, src->hand, sizeof(hand) );

@@ -106,7 +106,7 @@ void board_mode(int argc, char **argv )
 	}
 	cout << node->ToString() << endl;
 
-	pair<Command,int> result = Solv( node, level, -PlayerDir(node->CurPlayer()), 0 );
+	pair<Command,int> result = Solv( *node, level, -PlayerDir(node->CurPlayer()), 0 );
 	cout << "point: " << result.second << " " << string(result.first) << endl;
 }
 
@@ -151,7 +151,7 @@ int main(int argc, char **argv )
 	if( argc <= 1 ) help_mode();
 
 	srand(time(NULL));
-	
+
 	string mode(argv[1]);
 	if( mode == "board" ){
 		board_mode( argc-2, argv+2 );

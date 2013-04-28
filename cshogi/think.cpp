@@ -1,13 +1,6 @@
 #include "think.h"
 #include <limits.h>
 
-Node::Node()
-{
-	curPlayer = SENTE;
-	point = INT_MIN;
-	Reset();
-}
-
 Node::Node( const Board *src ): Board(src)
 {
 	curPlayer = SENTE;
@@ -15,8 +8,9 @@ Node::Node( const Board *src ): Board(src)
 	Reset();
 }
 
-Node::Node( const Node *src ): Board(src)
+void Node::Copy( const Node *src )
 {
+	Board::Copy( src );
 	curPlayer = src->curPlayer;
 	point = INT_MIN;
 	Reset();
@@ -27,13 +21,11 @@ bool Node::Stop() const
 	return abs(Point())>10000;
 }
 
-int Node::Choose( Command com, Node **out_child ) const
+int Node::Choose( Command com, Node &out_child ) const
 {
-	Node *child = new Node(this);
-	child->Progress( com );
-	child->hash = 0;
-	
-	*out_child = child;
+	out_child.Copy(this);
+	out_child.Progress( com );
+	out_child.hash = 0;
 	return 8;
 }
 
@@ -111,20 +103,21 @@ int Node::CalcKikiPoint() const
 
 const int COMMAND_LEN = 600;
 
-pair<Command,int> SolvNode( State &state, Node *node, int sign, int level, int rest_level, int alpha, int beta, bool null_window = false )
+pair<Command,int> SolvNode( State &state, const Node &node, int sign, int level, int rest_level, int alpha, int beta )
 {
-	state.count++;
 
 	// リーフの場合
-	if( ( rest_level <= 0 && level % 2 == 1 ) || node->Stop() ){
-		return pair<Command,int>( NO_COMMAND, node->Point() * sign );
+	if( ( rest_level <= 0 && level % 2 == 1 ) || node.Stop() ){
+		state.leafCount++;
+		return pair<Command,int>( NO_COMMAND, node.Point() * sign );
 	}
+	
+	state.nodeCount++;
 
 	// キャッシュが利用できるなら帰る
-	boost::unordered_map<uint64_t,CacheItem>::const_iterator it = state.cache.find(node->Hash());
+	boost::unordered_map<uint64_t,CacheItem>::const_iterator it = state.cache.find(node.Hash());
 	if( it != state.cache.end() ){
 		const CacheItem &item = it->second;
-		state.cacheFound++;
 		if( item.rest_level >= rest_level ){
 			state.cacheHit++;
 			return pair<Command,int>( item.choice, item.point*sign );
@@ -132,10 +125,10 @@ pair<Command,int> SolvNode( State &state, Node *node, int sign, int level, int r
 	}
 
 	Command choices[COMMAND_LEN];
-	int choices_len = node->ListMovableAll(node->CurPlayer(), choices);
+	int choices_len = node.ListMovableAll(node.CurPlayer(), choices);
 
 	// 選択肢がないなら帰る
-	if( choices_len <= 0 ) return pair<Command,int>( NO_COMMAND, node->Point() * sign );
+	if( choices_len <= 0 ) return pair<Command,int>( NO_COMMAND, node.Point() * sign );
 
 	// 前回のベスト選択肢を先頭にする
 	bool best_exists = false;
@@ -157,23 +150,15 @@ pair<Command,int> SolvNode( State &state, Node *node, int sign, int level, int r
 	
 	Command r_choice = NO_COMMAND;
 
-	// 非並列バージョン
 	for( int i=0; i<choices_len; ++i ){
 		Command choice = choices[i];
-		Node *child;
+		Node child;
 		// cout << "choose: " << level << " " << string(choice) << endl;
-		int use_level = node->Choose( choice, &child );
+		int use_level = node.Choose( choice, child );
 		if( best_exists ){
 			// キャッシュ上の最善手は、0.5手上乗せする
 			use_level -= 4;
 			best_exists = false;
-		}else{
-			// null window search
-			pair<Command,int> result = SolvNode( state, child, -sign, level+1, rest_level-use_level, -alpha-1, -alpha, true );
-			if( -result.second >= beta ){
-				alpha = -result.second;
-				break;
-			}
 		}
 
 		for( int rest=0; rest+8<rest_level-use_level; rest+=8 ){
@@ -183,7 +168,6 @@ pair<Command,int> SolvNode( State &state, Node *node, int sign, int level, int r
 		
 		int point = -result.second;
 		// if( level == 0 ) cout << string(choice) << " " << point << " " << string(result.first) << endl;
-		delete child;
 		if( alpha < point ){
 			r_choice = choice;
 			alpha = point;
@@ -192,38 +176,31 @@ pair<Command,int> SolvNode( State &state, Node *node, int sign, int level, int r
 		}
 	}
 
-	if( !null_window ){
-		CacheItem item;
-		item.rest_level = rest_level;
-		item.point = alpha * sign;
-		item.choice = r_choice;
-		// cout << level << " " << string(r_choice) <<" "<< choices_len << " " << limit << " " << alpha << " " << sign << endl;
+	CacheItem item;
+	item.rest_level = rest_level;
+	item.point = alpha * sign;
+	item.choice = r_choice;
+	// cout << level << " " << string(r_choice) <<" "<< choices_len << " " << limit << " " << alpha << " " << sign << endl;
 
-		state.cache[node->Hash()] = item;
-	}
+	state.cache[node.Hash()] = item;
 	
 	return pair<Command,int>(r_choice,alpha);
 }
 
 
-pair<Command,int> Solv( Node *node, int level, int sign, int parallel)
+pair<Command,int> Solv( const Node &node, int level, int sign, int parallel)
 {
 	assert( sign == 1 || sign == -1 );
+	
 	State state;
-	state.cache.rehash(1000000);
+	pair<Command,int> result = SolvNode( state, node, sign, 0, level*8, -INT_MAX, INT_MAX );
 
-	/*
-	pair<Command,int> result;
-	for( int lv=1; lv <= level; lv++ ){
-		result = SolvNode( state, node, sign, 0, lv*8, -INT_MAX, INT_MAX );
-	}
-	*/
-	pair<Command,int> result = SolvNode( state, node, sign, 0, level*8, -INT_MAX+100, INT_MAX-100 );
-
-	printf( "count:%8d cache-size:%8ld %2.1f%%\n",
-			state.count,
+	printf( "count:%dN + %dL = %d cache-size:%ld %2.1f%%\n",
+			state.nodeCount,
+			state.leafCount,
+			state.nodeCount+state.leafCount,
 			state.cache.size(),
-			(100.0*state.cacheHit/state.count) );
+			(100.0*state.cacheHit/state.nodeCount) );
 	
 	return result;
 }
