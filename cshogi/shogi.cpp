@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <boost/uuid/sha1.hpp>
 #include <stdio.h>
+#include <sstream>
 
 //================================
 // Player
@@ -181,44 +182,41 @@ int64_t Board::Hash() const
 
 string Board::ToString() const
 {
-	string r("_9__8__7__6__5__4__3__2__1__\n");
+	stringstream ss;
+	ss << "_9__8__7__6__5__4__3__2__1__\n";
 	for( int y=1; y<=BOARD_SIZE; y++ ){
 		// r += "+--+--+--+--+--+--+--+--+--+\n";
-		string r1;
-		string r2;
+		stringstream r1;
+		stringstream r2;
 		for( int x=BOARD_SIZE; x>=1; x-- ){
 			Koma koma = GetCell( Pos(x,y) );
 			if( koma != BLANK ){
 				string kstr( KomaKindToString(koma.GetKind()) );
 				if( koma.GetPlayer() == SENTE ){
-					r1 += "|/\\";
-					r2 += "|"+kstr;
+					r1 << "|/\\";
+					r2 << "|"+kstr;
 				}else{
-					r1 += "|"+kstr;
-					r2 += "|\\/";
+					r1 << "|"+kstr;
+					r2 << "|\\/";
 				}
 			}else{
-				r1 += "|  ";
-				r2 += "|__";
+				r1 << "|  ";
+				r2 << "|__";
 			}
 		}
-		r1 += "|\n";///*+y*/+"\n";
-		r2 += "|\n";
-		r += r1 + r2;
+		ss << r1.str() << "|" << int(y) << endl << r2.str() << "|\n";
 	}
 	for( Player pl=0; pl<PLAYER_MAX; pl++ ){
-		r += string(PlayerToString(pl)) + ": ";
+		ss << string(PlayerToString(pl)) << ": ";
 		for( KomaKind kind=0; kind<KOMA_KIND_MAX; kind++ ){
 			int num = hand[pl][kind];
 			if( num > 0 ){
-				char buf[4];
-				sprintf( buf, "%d", num );
-				r += string(KomaKindToString(kind)) + "x" + buf + ",";
+				ss << string(KomaKindToString(kind)) << "x" << num << ",";
 			}
 		}
-		r += "\n";
+		ss << endl;
 	}
-	return r;
+	return ss.str();
 }
 
 Pos* Board::MoveStraight(Pos* out_pos, Pos pos, Player player, int dx, int dy ) const {

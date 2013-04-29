@@ -5,6 +5,7 @@ Node::Node( const Board *src ): Board(src)
 {
 	curPlayer = SENTE;
 	point = INT_MIN;
+	kikiUpdated = false;
 	Reset();
 }
 
@@ -13,6 +14,7 @@ void Node::Copy( const Node *src )
 	Board::Copy( src );
 	curPlayer = src->curPlayer;
 	point = INT_MIN;
+	kikiUpdated = false;
 	Reset();
 }
 
@@ -21,22 +23,38 @@ bool Node::Stop() const
 	return abs(Point())>10000;
 }
 
-int Node::Choose( Command com, Node &out_child ) const
+int Node::Choose( Command com, Node &out_child, int level ) const
 {
+	int use_level = 8;
+
+	Player pl = com.player;
+	CalcKiki();
+	// 駒取りは、深く読む
+	if( GetCell(com.to) != BLANK ){
+		use_level = 4;
+	}else{
+		if( level > 0 ){
+			// タダ取りされる移動は、深く読まない
+			if( GetKiki(pl,com.to) <= GetKiki(PlayerSwitch(pl),com.to) ){
+				use_level += 8;
+			}
+		}
+	}
+		
 	out_child.Copy(this);
 	out_child.Progress( com );
-	out_child.hash = 0;
-	return 8;
+	
+	return use_level;
 }
 
 const int POINT[] = {
 	//NN;  FU;  KY;  KE;  GI;  KI;  KA;  HI;   OU;  TO;  NY;  NK;  NG;  UM;  RY
-        0,100, 200, 200, 400, 500, 800,1000,99999, 600, 500, 500, 500,1000,1200,
+        0,100, 200, 220, 400, 500, 800,1000,99999, 500, 500, 500, 500,1000,1200,
 };
 
 const int KIKI_POINT[] = {
 	//NN;  FU;  KY;  KE;  GI;  KI;  KA;  HI;   OU;  TO;  NY;  NK;  NG;  UM;  RY
-        0,100, 200, 200, 400, 500, 800,1000, 2000, 600, 500, 500, 500,1000,1200,
+        0,100, 200, 220, 400, 500, 800,1000, 2000, 500, 500, 500, 500,1000,1200,
 };
 
 int Node::Point() const
@@ -66,6 +84,7 @@ int Node::Point() const
 
 void Node::CalcKiki() const
 {
+	if( kikiUpdated ) return;
 	Pos move_to_buf[32];
 	memset( kiki, 0, sizeof(kiki) );
 	for( int y=1; y<=BOARD_SIZE; y++ ){
@@ -75,10 +94,11 @@ void Node::CalcKiki() const
 			if( koma == BLANK ) continue;
 			int kiki_len = ListMovable( pos, move_to_buf );
 			for( int i=0; i<kiki_len; ++i ){
-				kiki[koma.GetPlayer()][pos.X()-1][pos.Y()-1] += 1;
+				kiki[koma.GetPlayer()][move_to_buf[i].X()-1][move_to_buf[i].Y()-1] += 1;
 			}
 		}
 	}
+	kikiUpdated = true;
 }
 
 int Node::CalcKikiPoint() const
@@ -91,9 +111,9 @@ int Node::CalcKikiPoint() const
 			Koma koma( GetCell( pos ) );
 			if( koma == BLANK ) continue;
 			Player pl = koma.GetPlayer();
-			if( kiki[pl][pos.X()-1][pos.Y()-1] < kiki[PlayerSwitch(pl)][pos.X()-1][pos.Y()-1] ){
+			if( GetKiki(pl,pos) < GetKiki(PlayerSwitch(pl),pos) ){
 				p += KIKI_POINT[koma.GetKind()] * PlayerDir(pl) * 10;
-			}else if( kiki[PlayerSwitch(pl)][pos.X()-1][pos.Y()-1] > 0 ){
+			}else if( GetKiki(PlayerSwitch(pl),pos) > 0 ){
 				p += KIKI_POINT[koma.GetKind()] * PlayerDir(pl);
 			}
 		}
@@ -106,6 +126,8 @@ const int COMMAND_LEN = 600;
 pair<Command,int> SolvNode( State &state, const Node &node, int sign, int level, int rest_level, int alpha, int beta )
 {
 
+	state.levelCount[level]++;
+
 	// リーフの場合
 	if( ( rest_level <= 0 && level % 2 == 1 ) || node.Stop() ){
 		state.leafCount++;
@@ -117,7 +139,7 @@ pair<Command,int> SolvNode( State &state, const Node &node, int sign, int level,
 	// キャッシュが利用できるなら帰る
 	boost::unordered_map<uint64_t,CacheItem>::const_iterator it = state.cache.find(node.Hash());
 	if( it != state.cache.end() ){
-		const CacheItem &item = it->second;
+		const CacheItem item = it->second;
 		if( item.rest_level >= rest_level ){
 			state.cacheHit++;
 			return pair<Command,int>( item.choice, item.point*sign );
@@ -154,7 +176,7 @@ pair<Command,int> SolvNode( State &state, const Node &node, int sign, int level,
 		Command choice = choices[i];
 		Node child;
 		// cout << "choose: " << level << " " << string(choice) << endl;
-		int use_level = node.Choose( choice, child );
+		int use_level = node.Choose( choice, child, level );
 		if( best_exists ){
 			// キャッシュ上の最善手は、0.5手上乗せする
 			use_level -= 4;
@@ -176,13 +198,9 @@ pair<Command,int> SolvNode( State &state, const Node &node, int sign, int level,
 		}
 	}
 
-	CacheItem item;
-	item.rest_level = rest_level;
-	item.point = alpha * sign;
-	item.choice = r_choice;
-	// cout << level << " " << string(r_choice) <<" "<< choices_len << " " << limit << " " << alpha << " " << sign << endl;
-
+	CacheItem item( rest_level, alpha*sign, r_choice );
 	state.cache[node.Hash()] = item;
+	// cout << level << " " << string(r_choice) <<" "<< choices_len << " " << limit << " " << alpha << " " << sign << endl;
 	
 	return pair<Command,int>(r_choice,alpha);
 }
@@ -193,14 +211,21 @@ pair<Command,int> Solv( const Node &node, int level, int sign, int parallel)
 	assert( sign == 1 || sign == -1 );
 	
 	State state;
-	pair<Command,int> result = SolvNode( state, node, sign, 0, level*8, -INT_MAX, INT_MAX );
+	pair<Command,int> result;
+	for( int lv=1; lv<=level; lv++ ){
+		result = SolvNode( state, node, sign, 0, lv*8, -INT_MAX, INT_MAX );
+	}
+	// pair<Command,int> result = SolvNode( state, node, sign, 0, level*8, -INT_MAX, INT_MAX );
 
-	printf( "count:%dN + %dL = %d cache-size:%ld %2.1f%%\n",
+	fprintf( stderr, "count:%dN + %dL = %d cache-size:%ld %2.1f%%\n",
 			state.nodeCount,
 			state.leafCount,
 			state.nodeCount+state.leafCount,
 			state.cache.size(),
 			(100.0*state.cacheHit/state.nodeCount) );
+	for( int i=0; i<20; i++ ){
+		fprintf( stderr, "%2d:%8d\n", i, state.levelCount[i] );
+	}
 	
 	return result;
 }

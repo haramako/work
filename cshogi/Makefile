@@ -1,7 +1,7 @@
 CC=g++
 SRCS=main.cpp shogi.cpp csa.cpp think.cpp
 OBJS=$(SRCS:.cpp=.o)
-CCFLAGS=-O2 -g -DNDEBUG
+CCFLAGS=-O2 -g # -DNDEBUG
 LDFLAGS=
 
 shogi: $(OBJS)

@@ -131,7 +131,7 @@ void pipe_mode(int argc, char **argv )
 		stringstream ss(line);
 		ss >> hex >> level >> rest_level >> limit >> sign;
 
-		Node *node = new Node();
+		Node *node = new Node(true);
 		stringstream bin(hex2bin(hex));
 		node->Deserialize( bin );
 		cerr << node->ToString() << endl;

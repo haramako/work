@@ -82,7 +82,7 @@ func (c *MyClient) Play( b *Board ) (string, error) {
 	if b.Teban == Gote { sign = -1 }
 
 	level := 0
-	rest_level := 4
+	rest_level := 3
 
 	str := fmt.Sprintf( "%s %d %d 9999999 %d\n", b.SerializeHex(), level, rest_level, sign)
 	fmt.Println( str )
