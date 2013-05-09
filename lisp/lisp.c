@@ -248,15 +248,6 @@ void name_add( Value name, Value v )
 
 Value _atom_progn;
 
-Value eval_list( Value v )
-{
-	if( V_IS_CELL(v) ){
-		return cons( eval(CAR(v)), eval_list(CDR(v)) );
-	}else{
-		return eval(v);
-	}
-}
-
 Value eval( Value v )
 {
 	switch( TYPE_OF(v) ){
@@ -292,6 +283,24 @@ Value eval( Value v )
 		assert(0);
 	}
 	return NIL;
+}
+
+Value eval_list( Value v )
+{
+	if( V_IS_CELL(v) ){
+		return cons( eval(CAR(v)), eval_list(CDR(v)) );
+	}else{
+		return eval(v);
+	}
+}
+
+Value progn( Value v )
+{
+	Value result;
+	for( Value cur=v; cur != NIL; cur = CDR(cur) ){
+		result = eval( CAR(cur) );
+	}
+	return result;
 }
 
 void init()

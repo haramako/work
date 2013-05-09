@@ -10,6 +10,29 @@ static Value _progn( Value args )
 	return result;
 }
 
+static Value _setq( Value args )
+{
+	Value atom = CAR(args);
+	Value val = eval( CAR(CDR(args)) );
+	name_add( atom, val );
+	return NIL;
+}
+
+static Value _if( Value args )
+{
+	Value cond = eval( CAR(args) );
+	if( cond ){
+		return eval( CAR(CDR(args)) );
+	}else{
+		return progn( CDR(CDR(args)) );
+	}
+}
+
+static Value _quote( Value args )
+{
+	return CAR(args);
+}
+
 static Value _print( Value args )
 {
 	for( Value cur = args; cur != NIL; cur = CDR(cur) ){
@@ -42,6 +65,9 @@ static Value _sub( Value args )
 void cfunc_init()
 {
 	defspecial( "progn", _progn );
+	defspecial( "setq", _setq );
+	defspecial( "if", _if );
+	defspecial( "quote", _quote );
 	
 	defun( "print", _print );
 	defun( "+", _add );

@@ -14,7 +14,7 @@ void eval_str( char *str )
 {
 	Value src = parse_list(str);
 	print_val( src );
-	eval_list(src);
+	progn(src);
 }
 
 void mode_help()

@@ -1,0 +1,10 @@
+import os
+
+env = DefaultEnvironment( ENV = os.environ )
+env.AppendUnique( CCFLAGS = ['-Wall', '-O2', '-std=c99', '-g'] )
+env.AppendUnique( LIBS = ['m'] )
+
+env.Program( 'mlisp', ['main.c', 'lisp.c', 'cfunc.c'] )
+env.Program( 'test_mlisp', ['test.c', 'lisp.c', 'cfunc.c'] )
+
+env.Command( 'test', 'test_mlisp', 'echo hoge' )

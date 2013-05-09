@@ -1,3 +1,0 @@
-main.o: main.c lisp.h
-lisp.o: lisp.c lisp.h
-cfunc.o: cfunc.c lisp.h

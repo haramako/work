@@ -112,6 +112,8 @@ void name_add( Value name, Value v );
 
 Value eval( Value v );
 Value eval_list( Value v );
+Value progn( Value v );
+
 void init();
 void cfunc_init();
 
