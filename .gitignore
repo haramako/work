@@ -1,3 +1,4 @@
 a.out*
 *.o
 .sconsign.dblite
+.DS_Store
