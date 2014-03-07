@@ -9,9 +9,9 @@
 using namespace std;
 
 const double DT = 0.1;
-const double RE = 0.003;
+const double RE = 0.001;
 const int XSIZE = 64;
-const int YSIZE = 32;
+const int YSIZE = 16;
 const int END_TIME = 500;
 const int SKIP = 4/DT;
 
@@ -47,33 +47,23 @@ public:
 	double cur_time;
 	int cur_frame;
 	
-	double vx[XSIZE][YSIZE];
-	double vy[XSIZE][YSIZE];
-	double dxvx[XSIZE][YSIZE];
-	double dyvx[XSIZE][YSIZE];
-	double dxvy[XSIZE][YSIZE];
-	double dyvy[XSIZE][YSIZE];
-	double next_vx[XSIZE][YSIZE];
-	double next_vy[XSIZE][YSIZE];
-	double p[XSIZE][YSIZE];
-	double s[XSIZE][YSIZE];
-	double marker[XSIZE][YSIZE];
-	double next_marker[XSIZE][YSIZE];
 	char flag[XSIZE][YSIZE]; // 0: 壁, 1: 有効面
 	
-	darray &yu;
-	darray &yun;
-	darray &yv;
-	darray &yvn;
-	darray &gux;
-	darray &guy;
-	darray &gvx;
-	darray &gvy;
+	darray yu;
+	darray yun;
+	darray yv;
+	darray yvn;
+	darray gux;
+	darray guy;
+	darray gvx;
+	darray gvy;
+	darray yp;
+	darray s;
+	darray marker;
 };
 
 CFD::CFD(int width_, int height_):
-	width(width_), height(height_), cur_time(0), cur_frame(0), yu(vx), yun(next_vx), yv(vy), yvn(next_vy), gux(dxvx)
-	, guy(dyvx), gvx(dxvy), gvy(dyvy)
+	width(width_), height(height_), cur_time(0), cur_frame(0)
 {
 	memset( yu, 0, sizeof(yu) );
 	memset( yun, 0, sizeof(yun) );
@@ -83,10 +73,9 @@ CFD::CFD(int width_, int height_):
 	memset( guy, 0, sizeof(guy) );
 	memset( gvx, 0, sizeof(gvx) );
 	memset( gvy, 0, sizeof(guy) );
-	memset( p, 0, sizeof(p) );
+	memset( yp, 0, sizeof(yp) );
 	memset( s, 0, sizeof(s) );
 	memset( marker, 0, sizeof(marker) );
-	memset( next_marker, 0, sizeof(next_marker) );
 	
 	for(int x=0; x<width; x++){
 		for(int y=0; y<height; y++){
@@ -105,7 +94,7 @@ CFD::CFD(int width_, int height_):
 	}
 
 	WriteCircle( 5.5, 7.5, 2 );
-	WriteCircle( 13.5, 9.5, 2 );
+	//WriteCircle( 13.5, 9.5, 2 );
 
 }
 
@@ -128,8 +117,8 @@ void CFD::Step()
 	CalcRHS();
 	CalcGairyoku();
 
-	CalcIryu();
-	//CalcIryuCIP();
+	//CalcIryu();
+	CalcIryuCIP();
 	CalcNensei();
 	CalcMarker();
 
@@ -169,8 +158,8 @@ inline void newgrad( const darray &yn, const darray &y, darray &gx, darray &gy, 
 {
 	for(int i=1; i<width-1; i++){
 		for(int j=1; j<height-1; j++){
-			gx[i][j] += 0;//(yn[i+1][j] - yn[i-1][j] - y[i+1][j] + y[i-1][j] ) / 2;
-			gy[i][j] += 0;//(yn[i][j+1] - yn[i][j-1] - y[i][j+1] + y[i][j-1] ) / 2;
+			gx[i][j] += (yn[i+1][j] - yn[i-1][j] - y[i+1][j] + y[i-1][j] ) / 2;
+			gy[i][j] += (yn[i][j+1] - yn[i][j-1] - y[i][j+1] + y[i][j-1] ) / 2;
 		}
 	}
 }
@@ -231,14 +220,12 @@ inline void dcip( darray &f, darray &gx, darray &gy, const darray &u, const darr
 
 void CFD::CalcIryuCIP()
 {
-	newgrad( next_vx, vx, dxvx, dyvx, width, height );
-	newgrad( next_vy, vy, dxvy, dyvy, width, height );
+	newgrad( yun, yu, gux, guy, width, height );
+	newgrad( yvn, yv, gvx, gvy, width, height );
 
 	CalcGairyoku();
 	
 	// veloc
-	double (&yu)[XSIZE][YSIZE] = vx;
-	double (&yv)[XSIZE][YSIZE] = vy;
 	double yuv[XSIZE][YSIZE];
 	double yvu[XSIZE][YSIZE];
 	memset( yuv, 0, sizeof(yuv) );
@@ -250,8 +237,8 @@ void CFD::CalcIryuCIP()
 		}
 	}
 
-	dcip( next_vx, dxvx, dyvx, vx, yvu, width, height );
-	dcip( next_vy, dxvy, dyvy, yuv, vy, width, height );
+	dcip( yun, gux, guy, yu, yvu, width, height );
+	dcip( yvn, gvx, gvy, yuv, yv, width, height );
 	
 	CalcGairyoku();
 }
@@ -259,23 +246,16 @@ void CFD::CalcIryuCIP()
 void CFD::CalcNensei()
 {
 	// 粘性項
-	const darray &yu = next_vx;
-	const darray &yv = next_vy;
-	darray yun;
-	darray yvn;
-	memset( yun, 0 ,sizeof(yun) );
-	memset( yvn, 0 ,sizeof(yvn) );
+	memcpy( yu, yun, sizeof(yu) );
+	memcpy( yv, yvn, sizeof(yv) );
 	for(int i=1; i<width-1; i++){
 		for(int j=1; j<height-1; j++){
 			yun[i][j] = yu[i][j] + RE * (yu[i+1][j] + yu[i][j+1] + yu[i-1][j] + yu[i][j-1]) * DT;
 			yvn[i][j] = yv[i][j] + RE * (yv[i+1][j] + yv[i][j+1] + yv[i-1][j] + yv[i][j-1]) * DT;
 		}
 	}
-	
-	memcpy( next_vx, yun, sizeof(vx) );
-	memcpy( next_vy, yvn, sizeof(vy) );
-	memcpy( vx, yun, sizeof(vx) );
-	memcpy( vy, yvn, sizeof(vy) );
+	memcpy( yu, yun, sizeof(yun) );
+	memcpy( yv, yvn, sizeof(yvn) );
 }
 
 void CFD::CalcGairyoku()
@@ -283,41 +263,41 @@ void CFD::CalcGairyoku()
 	for(int x=0; x<width; x++){
 		for(int y=0; y<height; y++){
 			if( flag[x][y] == WALL ){
-				vx[x][y] = 0;
-				vy[x][y] = 0;
-				next_vx[x][y] = 0;
-				next_vy[x][y] = 0;
-				dxvx[x][y] = 0;
-				dxvy[x][y] = 0;
-				dyvx[x][y] = 0;
-				dyvy[x][y] = 0;
+				yu[x][y] = 0;
+				yv[x][y] = 0;
+				yun[x][y] = 0;
+				yvn[x][y] = 0;
+				gux[x][y] = 0;
+				guy[x][y] = 0;
+				gvx[x][y] = 0;
+				gvy[x][y] = 0;
 
 				// 壁の下面
 				if( y < height-1 ){
-					vx[x+1][y] = 0;
-					next_vx[x+1][y] = 0;
-					dxvx[x+1][y] = 0;
-					dxvy[x+1][y] = 0;
+					yv[x][y+1] = 0;
+					yvn[x][y+1] = 0;
+					guy[x][y+1] = 0;
+					gvy[x][y+1] = 0;
 				}
 			
 				// 壁の右面
 				if( x < width-1 ){
-					vy[x][y+1] = 0;
-					next_vy[x][y+1] = 0;
-					dyvx[x][y+1] = 0;
-					dyvy[x][y+1] = 0;
+					yu[x+1][y] = 0;
+					yun[x+1][y] = 0;
+					gux[x+1][y] = 0;
+					gvx[x+1][y] = 0;
 				}
 			}
 		}
 	}
 
 	for(int y=0; y<height; y++){
-		vx[0][y] = 1;
-		vx[1][y] = 1;
-		next_vx[0][y] = 1;
-		next_vx[1][y] = 1;
-		vx[width-1][y] = 1;
-		next_vx[width-1][y] = 1;
+		yu[0][y] = 1;
+		yun[0][y] = 1;
+		yu[1][y] = 1;
+		yun[1][y] = 1;
+		yu[width-1][y] = 1;
+		yun[width-1][y] = 1;
 	}
 }
 
@@ -328,13 +308,11 @@ void CFD::CalcPressure()
 	for(int x=1; x<width-1; x++){
 		for(int y=1; y<height-1; y++){
 			if( flag[x][y] == WALL ) continue;
-			s[x][y] = (-vx[x][y] - vy[x][y] + vx[x+1][y] + vy[x][y+1]) / DT;
+			s[x][y] = (-yu[x][y] - yv[x][y] + yu[x+1][y] + yv[x][y+1]) / DT;
 			stotal += s[x][y];
 		}
 	}
 	//cerr << "stotal " << stotal << endl;
-
-	memset( p, 0, sizeof(p) );
 
 	Poason();
 
@@ -342,6 +320,8 @@ void CFD::CalcPressure()
 
 void CFD::Poason()
 {
+	memset( yp, 0, sizeof(yp) );
+	
     double omega = 1.7;
 	if( cur_time <= 0.2 ) omega = 1.9;
 
@@ -355,8 +335,8 @@ void CFD::Poason()
 				int pr = flag[x+1][y];
 				int pu = flag[x][y-1];
 				int pd = flag[x][y+1];
-				double diff = omega / 4.0 * (-(pl+pr+pu+pd)*p[x][y] + pl*p[x-1][y] + pr*p[x+1][y] + pu*p[x][y-1] + pd*p[x][y+1] - s[x][y]);
-				p[x][y] += diff;
+				double diff = omega / 4.0 * (-(pl+pr+pu+pd)*yp[x][y] + pl*yp[x-1][y] + pr*yp[x+1][y] + pu*yp[x][y-1] + pd*yp[x][y+1] - s[x][y]);
+				yp[x][y] += diff;
 				if( fabs(diff) > max_diff ) max_diff = fabs(diff);
 			}
 		}
@@ -379,8 +359,8 @@ void CFD::CalcRHS()
 	for(int x=1; x<width-1; x++){
 		for(int y=1; y<height-1; y++){
 			if( flag[x][y] == WALL ) continue;
-			next_vx[x][y] = vx[x][y] - flag[x-1][y] * (p[x][y] - p[x-1][y]) * DT;
-			next_vy[x][y] = vy[x][y] - flag[x][y-1] * (p[x][y] - p[x][y-1]) * DT;
+			yun[x][y] = yu[x][y] - flag[x-1][y] * (yp[x][y] - yp[x-1][y]) * DT;
+			yvn[x][y] = yv[x][y] - flag[x][y-1] * (yp[x][y] - yp[x][y-1]) * DT;
 		}
 	}
 	
@@ -396,34 +376,37 @@ void CFD::CalcMarker()
 		marker[0][y] = color;
 	}
 
+	darray mn;
+	memset( mn, 0, sizeof(mn) );
+
 	// マーカーの移流を計算する( 一次川上差分法 )
 	for(int x=1; x<width-1; x++){
 		for(int y=1; y<height-1; y++){
 			if( flag[x][y] == WALL ) continue;
 			
-			double vx0 = (vx[x][y] + vx[x+1][y] ) / 2.0;
-			double vy0 = (vy[x][y] + vy[x][y+1] ) / 2.0;
-			int sx = -copysign(1.0, vx0);
-			int sy = -copysign(1.0, vy0);
+			double u = (yu[x][y] + yu[x+1][y] ) / 2.0;
+			double v = (yv[x][y] + yv[x][y+1] ) / 2.0;
+			int is = -copysign(1.0, u);
+			int js = -copysign(1.0, v);
 			
-			next_marker[x][y] = marker[x][y]
-				+ vx0 * sx * (marker[x][y] - marker[x+sx][y] ) * DT
-			    + vy0 * sy * (marker[x][y] - marker[x][y+sy] ) * DT;
+			mn[x][y] = marker[x][y]
+				+ u * is * (marker[x][y] - marker[x+is][y] ) * DT
+			    + v * js * (marker[x][y] - marker[x][y+js] ) * DT;
 			
 		}
 	}
-	memcpy( marker, next_marker, sizeof(marker) );
+	memcpy( marker, mn, sizeof(marker) );
 }
 
 void CFD::Dump()
 {
 	ostream &out = cout;
 	out << "{\"cur_time\":" << cur_time << "," << endl;
-	puts( vx, out, "\"vx\"" );
+	puts( yu, out, "\"vx\"" );
 	out << ",";
-	puts( vy, out, "\"vy\"" );
+	puts( yv, out, "\"vy\"" );
 	out << ",";
-	puts( p, out, "\"p\"" );
+	puts( yp, out, "\"p\"" );
 	out << ",";
 	puts( marker, out, "\"marker\"" );
 	out << ",\"flag\":[\n";

@@ -40,7 +40,7 @@ json.each do |data|
         Magick::Pixel.new( r*63336, g*63336, b*65536, 0 )
       when :speed
         speed = Math.sqrt(((vx[y][x]+vx[y][x+1])/2.0) ** 2 + ((vy[y][x]+vy[y+1][x])/2.0) ** 2)
-        pow = norm((speed-1.0)*10)
+        pow = norm((speed-1.0)/2)
         Magick::Pixel.from_hsla( (1-pow)*240, 100, 100 )
       when :marker
         pow = norm(marker[y][x]*1.8-0.4)
