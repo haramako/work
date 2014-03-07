@@ -9,10 +9,10 @@
 using namespace std;
 
 const double DT = 0.1;
-const double RE = 0.001;
+const double RE = 0.01;
 const int XSIZE = 64;
 const int YSIZE = 16;
-const int END_TIME = 500;
+const int END_TIME = 400;
 const int SKIP = 4/DT;
 
 void puts(const double d[XSIZE][YSIZE], ostream &out = cout, const string &label = "");
@@ -93,7 +93,7 @@ CFD::CFD(int width_, int height_):
 		flag[width-1][y] = WALL;
 	}
 
-	WriteCircle( 5.5, 7.5, 2 );
+	WriteCircle( 5.5, 5.5, 2 );
 	//WriteCircle( 13.5, 9.5, 2 );
 
 }
@@ -117,8 +117,8 @@ void CFD::Step()
 	CalcRHS();
 	CalcGairyoku();
 
-	//CalcIryu();
-	CalcIryuCIP();
+	CalcIryu();
+	//CalcIryuCIP();
 	CalcNensei();
 	CalcMarker();
 
