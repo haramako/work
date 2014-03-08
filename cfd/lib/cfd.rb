@@ -9,7 +9,7 @@ module Cfd
   
   class Solver
     attr_reader :width, :height
-    attr_reader :u, :v, :p, :mask, :mask_u, :mask_v, :mark
+    attr_reader :u, :v, :p, :mask, :mask_u, :mask_v, :mark, :uc, :vc
     attr_reader :cur_time
     attr_accessor :on_snap, :on_step, :on_setting
     attr_accessor :dt, :re, :snap_span
@@ -21,26 +21,34 @@ module Cfd
         
       @width = width_
       @height = height_
-      @u = NArray.float(width_, height_)
-      @v = @u.clone
-      @u4v = @u.clone # Y節上のu
-      @v4u = @u.clone # X節上のv
-      @p = @u.clone
-      @mark = @u.clone
-      @mask = NArray.int(width_, height_).fill!(1)
+      @u = NArray.float(width_, height_) # u(X節)
+      @v = @u.clone    # v(Y節)
+      @u4v = @u.clone  # Y節上のu(Y節)
+      @v4u = @u.clone  # X節上のv(X節)
+      @p = @u.clone    # 圧力 Pressure(格子中央)
+      @mark = @u.clone # マーカー(格子中央)
+      @uc = @u.clone   # u(格子中央)
+      @vc = @u.clone   # v(格子中央)
+      @mask = NArray.int(width_, height_).fill!(1) # マスク(0:壁, 1:空間)
       @mask[[0,-1],true] = 0
       @mask[true,[0,-1]] = 0
-      @mask_u = nil
-      @mask_v = nil
+      @mask_u = nil    # マスクを一つ右にずらしたもの
+      @mask_v = nil    # マスクを一つ下にずらしたもの
       @cur_time = 0
       @time_from_last_snap = 0
       @plot = nil
       @on_snap = nil
       @on_step = nil
       @on_setting = nil
+
+      @gux = @u.clone
+      @guy = @u.clone
+      @gvx = @u.clone
+      @gvy = @u.clone
       
       yield self
-      
+
+      # テンポラリ
       @un = @u.clone
       @vn = @v.clone
       @markn = @mark.clone
@@ -104,23 +112,47 @@ module Cfd
     def step
       setting
 
+      # 圧力/速度修正
       Cfd.solve_poisson( @dt, @p, @u, @v, @mask, {max_iteration:100000, omega:1.9, permissible:0.001} )
       Cfd.rhs( @dt, @un, @vn, @p, @u, @v, @mask )
       @u, @v, @un, @vn = @un, @vn, @u, @v
 
       setting
       
-      Cfd.middle4( @u4v, @u, 1, -1)
-      Cfd.middle4( @v4u, @v, -1, 1)
+      # 移流
+      Cfd.average4( @u4v, @u, 1, -1)
+      Cfd.average4( @v4u, @v, -1, 1)
       
-      Cfd.advect_roe( @dt, @un, @u, @u, @v4u, {} )
-      Cfd.advect_roe( @dt, @vn, @v, @u4v, @v, {} )
+      @use_cip = false
+      if @use_cip
+        # CIP法
+        @un = @u.clone
+        @vn = @v.clone
+        @gux[[0,1,-1],true] = 0
+        @guy[true, [0,1,-1]] = 0
+        Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u, {} )
+        Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v, {} )
+        # pp '****', @u, @gux, @guy
+      else
+        # 風上差分法
+        Cfd.advect_roe( @dt, @un, @u, @u, @v4u, {} )
+        Cfd.advect_roe( @dt, @vn, @v, @u4v, @v, {} )
+      end
       @u, @v, @un, @vn = @un, @vn, @u, @v
-      
+
+      # 粘性
       Cfd.viscosity( @dt, @re, @un, @vn, @u, @v )
       @u, @v, @un, @vn = @un, @vn, @u, @v
 
-      Cfd.advect_roe( @dt, @markn, @mark, @u, @v, {} )
+      @guxn = @gux.clone
+      @guyn = @guy.clone
+      Cfd.viscosity( @dt, @re, @guxn, @guyn, @gux, @guy )
+      @gux, @guy = @guxn, @guyn
+      
+      # マーカーの移動
+      Cfd.average4( @uc, @u, 1, 1)
+      Cfd.average4( @vc, @v, 1, 1)
+      Cfd.advect_roe( @dt, @markn, @mark, @uc, @vc, {} )
       @mark, @markn = @markn, @mark
 
       @on_step.call self if @on_step

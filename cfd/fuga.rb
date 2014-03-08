@@ -10,7 +10,7 @@ def init_solver
 
   $solver = Cfd::Solver.new(64,32) do |s|
     #s.draw_rect 8, 6, 4, 4
-    #s.draw_circle 15.5, 15.5, 5
+    s.draw_circle 15.5, 15.5, 5
 
     s.snap_span = 5
     s.re = 0.001
@@ -20,29 +20,20 @@ def init_solver
   $solver.on_setting = lambda do |s|
     speed = 2.0
     angle = 0.0 *(Math::PI/180.0)
-    s.u[1,true] = speed*Math.cos(angle)
-    s.u[-1,true] = speed*Math.cos(angle)
-    s.v[true,1] = -speed*Math.sin(angle)
-    s.v[true,-1] = -speed*Math.sin(angle)
+    s.u[[1,-1],true] = speed*Math.cos(angle)
+    s.v[true,[1,-1]] = -speed*Math.sin(angle)
 
     #s.mark.mul! s.mask
     #s.mark.add!((1.0-s.mask)*2)
     # s.mark[[0,1,-1],true] = 0
     # s.mark[true,[0,-1]] = 0
 
-    mark_orig = 1
-    if (s.cur_time.to_i / 20) % 2 == 0
-      s.mark[[0,1],true] = mark_orig
-    else
-      s.mark[[0,1],true] = 0
-    end
+    s.mark[[0,1],true] = if (s.cur_time.to_i / 20) % 2 == 0 then 1 else 0 end
     
     s.u[true,0] = s.u[true,1]
     s.u[true,-1] = s.u[true,-2]
     s.v[0,true] = s.v[1,true]
     s.v[-1,true] = s.v[-2,true]
-    #s.v[true,1] = 0.2
-    #s.v[true,-1] = 0.2
   end
 
   yr = []
@@ -72,13 +63,33 @@ def init_solver
   end
 end
 
-def process
-  step = 5 / $solver.dt
-  (step.to_i).times { $solver.step }
-end
+#=====================================================================================
 
 def norm(x,min=0.0,max=1.0)
   if x <= min then 0.0 elsif x >= max then 1.0 else (x-min)/(max-min) end
+end
+
+def color_bar(n)
+  base = [[0.0, 0,0,0],
+          [0.1, 64,0,192],
+          [0.2, 0,0,255],
+          [0.4, 0,255,255],
+          [0.6, 0,255,0],
+          [0.85, 255,255,0],
+          [0.95, 255,0,0],
+          [1.01, 255,255,255]]
+  
+  n = [[n,0].max,1].min.to_f
+  
+  base.each.with_index do |c1,i|
+    if c1[0] > n
+      c0 = base[i-1]
+      a = 1-(c1[0]-n)/(c1[0]-c0[0])
+      return [c0[1]*(1-a)+c1[1]*a, c0[2]*(1-a)+c1[2]*a, c0[3]*(1-a)+c1[3]*a]
+    end
+  end
+  p n
+  raise
 end
 
 def update
@@ -108,27 +119,9 @@ def update
   $screen.update
 end
 
-def color_bar(n)
-  base = [[0.0, 0,0,0],
-          [0.1, 64,0,192],
-          [0.2, 0,0,255],
-          [0.4, 0,255,255],
-          [0.6, 0,255,0],
-          [0.85, 255,255,0],
-          [0.95, 255,0,0],
-          [1.01, 255,255,255]]
-  
-  n = [[n,0].max,1].min.to_f
-  
-  base.each.with_index do |c1,i|
-    if c1[0] > n
-      c0 = base[i-1]
-      a = 1-(c1[0]-n)/(c1[0]-c0[0])
-      return [c0[1]*(1-a)+c1[1]*a, c0[2]*(1-a)+c1[2]*a, c0[3]*(1-a)+c1[3]*a]
-    end
-  end
-  p n
-  raise
+def process
+  step = 5 / $solver.dt
+  (step.to_i).times { $solver.step }
 end
 
 def mainloop
@@ -192,5 +185,3 @@ end
 
 init_solver
 mainloop
-
-
