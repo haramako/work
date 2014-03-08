@@ -6,19 +6,28 @@ require 'pp'
 ENV['RUBYSDLFFI_PATH'] = '/opt/boxen/homebrew/lib'
 require 'rubygame'
 
+WING0 = ['1111111111111111111111',
+         '1000000000011111111111',
+         '1110000000000000001111',
+         '1111111111111111000001',
+         '1111111111111111111100']
+
 def init_solver
 
   $solver = Cfd::Solver.new(64,32) do |s|
     #s.draw_rect 8, 6, 4, 4
     s.draw_circle 15.5, 15.5, 5
 
-    s.snap_span = 5
+    w = WING0
+    #s.mask[8,s.height/2] = w.map do |a| p a.chars.map(&:to_i) end
+
+    s.snap_span = 2
     s.re = 0.001
-    s.dt = 0.1
+    s.dt = 0.05
   end
 
   $solver.on_setting = lambda do |s|
-    speed = 2.0
+    speed = 1.0
     angle = 0.0 *(Math::PI/180.0)
     s.u[[1,-1],true] = speed*Math.cos(angle)
     s.v[true,[1,-1]] = -speed*Math.sin(angle)
@@ -110,6 +119,13 @@ def update
       when :velocity
         v = Math.sqrt($solver.u[x,y]**2 + $solver.v[x,y]**2)
         col = color_bar( norm(v, $disp_min, $disp_max) )
+      when :vorticity
+        v = $solver.v[x-1,y] + $solver.u[x,y] - $solver.v[x,y] - $solver.u[x,y-1]
+        if v > 0
+          col = [norm(v)*255,0,0]
+        else
+          col = [0,norm(-v)*255,0]
+        end
       else
         raise
       end
@@ -120,7 +136,7 @@ def update
 end
 
 def process
-  step = 5 / $solver.dt
+  step = 1 / $solver.dt
   (step.to_i).times { $solver.step }
 end
 
@@ -163,6 +179,9 @@ def mainloop
         vel = NMath.sqrt($solver.u**2 + $solver.v**2)
         $disp_min = vel.min
         $disp_max = vel.max
+        update
+      when '$'
+        $disp = :vorticity
         update
       when '#'
         $disp = :pressure

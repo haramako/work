@@ -80,13 +80,14 @@ module Cfd
       @mask_v = @mask.map_with_index{|_,x,y| @mask[x,y] * @mask[x,y-1] }
     end
 
-    def setting
+    # 境界条件の設定
+    def setting( *init )
       @u.mul! @mask_u
       @v.mul! @mask_v
-      # @gux.mul! @mask_u
-      # @guy.mul! @mask_u
-      # @gvx.mul! @mask_v
-      # @gvy.mul! @mask_v
+      @gux.mul! @mask_u
+      @guy.mul! @mask_u
+      @gvx.mul! @mask_v
+      @gvy.mul! @mask_v
       @on_setting.call self if @on_setting
     end
     
@@ -137,10 +138,6 @@ module Cfd
         @vn[] = @v
         #Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
         #Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
-        @gux.mul! @mask_u
-        @guy.mul! @mask_u
-        @gvx.mul! @mask_v
-        @gvy.mul! @mask_v
         Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u, {} )
         Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v, {} )
 

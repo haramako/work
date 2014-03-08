@@ -4,10 +4,10 @@ $LOAD_PATH << "./lib"
 require 'cfd'
 require 'pp'
 
-solver = Cfd::Solver.new(32,32) do |s|
+solver = Cfd::Solver.new(64,32) do |s|
   #s.draw_rect 6, 6, 2, 4
   #s.draw_rect 6, 6, 4, 2
-  #s.draw_rect 8, 6, 2, 8
+  s.draw_rect 8, 6, 2, 8
   s.draw_circle 15.5, 15.5, 5
 
   s.snap_span = 5
