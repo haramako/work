@@ -83,6 +83,10 @@ module Cfd
     def setting
       @u.mul! @mask_u
       @v.mul! @mask_v
+      # @gux.mul! @mask_u
+      # @guy.mul! @mask_u
+      # @gvx.mul! @mask_v
+      # @gvy.mul! @mask_v
       @on_setting.call self if @on_setting
     end
     
@@ -110,6 +114,9 @@ module Cfd
     end
 
     def step
+      @u_prev = @u.clone
+      @v_prev = @v.clone
+      
       setting
 
       # 圧力/速度修正
@@ -123,16 +130,24 @@ module Cfd
       Cfd.average4( @u4v, @u, 1, -1)
       Cfd.average4( @v4u, @v, -1, 1)
       
-      @use_cip = false
+      @use_cip = true
       if @use_cip
         # CIP法
-        @un = @u.clone
-        @vn = @v.clone
-        @gux[[0,1,-1],true] = 0
-        @guy[true, [0,1,-1]] = 0
+        @un[] = @u
+        @vn[] = @v
+        #Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
+        #Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
+        @gux.mul! @mask_u
+        @guy.mul! @mask_u
+        @gvx.mul! @mask_v
+        @gvy.mul! @mask_v
         Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u, {} )
         Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v, {} )
-        # pp '****', @u, @gux, @guy
+
+        # @guxn = @gux.clone
+        # @guyn = @guy.clone
+        # Cfd.viscosity( @dt, @re, @guxn, @guyn, @gux, @guy )
+        # @gux, @guy = @guxn, @guyn
       else
         # 風上差分法
         Cfd.advect_roe( @dt, @un, @u, @u, @v4u, {} )
@@ -143,11 +158,6 @@ module Cfd
       # 粘性
       Cfd.viscosity( @dt, @re, @un, @vn, @u, @v )
       @u, @v, @un, @vn = @un, @vn, @u, @v
-
-      @guxn = @gux.clone
-      @guyn = @guy.clone
-      Cfd.viscosity( @dt, @re, @guxn, @guyn, @gux, @guy )
-      @gux, @guy = @guxn, @guyn
       
       # マーカーの移動
       Cfd.average4( @uc, @u, 1, 1)
