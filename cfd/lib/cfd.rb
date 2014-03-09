@@ -130,19 +130,17 @@ module Cfd
       @u, @v, @un, @vn = @un, @vn, @u, @v
 
       # マーカーの移動
-      Cfd.average4( @uc, @u, 1, 1)
-      Cfd.average4( @vc, @v, 1, 1)
+      Cfd.center(@uc, @vc, @u, @v)
       if @use_cip
         Cfd.update_gradiation( @mark_dx, @mark_dy, @mark, @mark_prev )
-        Cfd.advect_cip( @dt, @mark, @mark_dx, @mark_dy, @uc, @vc, {} )
-        @dummy = @u.clone
-        @mark_prev[] = @mark
+        Cfd.advect_cip( @dt, @mark, @mark_dx, @mark_dy, @uc, @vc )
         @mark, @markn = @markn, @mark
+        @mark_prev[] = @mark
         Cfd.limit @mark, 0, 1
         Cfd.limit @mark_dx, -1, 1
         Cfd.limit @mark_dy, -1, 1
       else
-        Cfd.advect_roe( @dt, @markn, @mark, @uc, @vc, {} )
+        Cfd.advect_roe( @dt, @markn, @mark, @uc, @vc )
         @mark, @markn = @markn, @mark
       end
 
@@ -151,7 +149,6 @@ module Cfd
       # 移流
       Cfd.average4( @u4v, @u, 1, -1)
       Cfd.average4( @v4u, @v, -1, 1)
-      
       if @use_cip
         # CIP法
         
@@ -165,22 +162,21 @@ module Cfd
 
         Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
         Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
-        @u_prev[] = @u
-        @v_prev[] = @v
         @un[] = @u
         @vn[] = @v
-        Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u, {} )
-        Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v, {} )
+        Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u )
+        Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v )
+        @u_prev, @v_prev, @u, @v, @un, @vn = @u, @v, @un, @vn, @u_prev, @v_prev
       else
         # 風上差分法
-        Cfd.advect_roe( @dt, @un, @u, @u, @v4u, {} )
-        Cfd.advect_roe( @dt, @vn, @v, @u4v, @v, {} )
+        Cfd.advect_roe( @dt, @un, @u, @u, @v4u )
+        Cfd.advect_roe( @dt, @vn, @v, @u4v, @v )
+        @u, @v, @un, @vn = @un, @vn, @u, @v
       end
-      @u, @v, @un, @vn = @un, @vn, @u, @v
 
       # 粘性
-      Cfd.viscosity( @dt, @re, @un, @u)
-      Cfd.viscosity( @dt, @re, @vn, @v)
+      Cfd.viscosity(@dt, @re, @un, @u)
+      Cfd.viscosity(@dt, @re, @vn, @v)
       @u, @v, @un, @vn = @un, @vn, @u, @v
       
       @on_step.call self if @on_step
@@ -236,4 +232,5 @@ module Cfd
       plot.start{ yield plot }
     end
   end
+
 end

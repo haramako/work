@@ -11,7 +11,7 @@ def init_solver
 
   $solver = Cfd::Solver.new(64,32) do |s|
     #s.draw_rect 8, 6, 4, 4
-    s.draw_circle 10.5, 15.5, 5
+    s.draw_circle 12.5, 15.5, 5
     #wing1 s, 18, s.height/2, 1.0
 
     # 0.1.step(Math::PI*2-0.1,0.01) do |r|
@@ -26,6 +26,7 @@ def init_solver
     # s.re = 0.00089 / $dx # 水
     # s.re = 1.8e-5 / $dx # 空気
     s.re = 0.05 / $dx
+    s.re = 0.001 / $dx
     s.dt = 0.01
     $speed = 0.5
     $angle = 0.0 *(Math::PI/180.0)
