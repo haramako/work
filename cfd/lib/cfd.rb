@@ -9,7 +9,7 @@ module Cfd
   
   class Solver
     attr_reader :width, :height
-    attr_reader :u, :v, :p, :mask, :mask_u, :mask_v, :mark, :uc, :vc
+    attr_reader :u, :v, :p, :mask, :mask_u, :mask_v, :mark, :uc, :vc, :mark_dx
     attr_reader :cur_time
     attr_accessor :on_snap, :on_step, :on_setting
     attr_accessor :dt, :re, :snap_span
@@ -43,10 +43,14 @@ module Cfd
       @on_step = nil
       @on_setting = nil
 
-      @gux = @u.clone
-      @guy = @u.clone
-      @gvx = @u.clone
-      @gvy = @u.clone
+      @gux = @u.clone  # Δu/Δx
+      @guy = @u.clone  # Δu/Δy
+      @gvx = @u.clone  # Δv/Δx
+      @gvy = @u.clone  # Δv/Δy
+      @u_prev = @u.clone # 前回のu( CIP法で使用 )
+      @v_prev = @u.clone # 前回のv( CIP法で使用 )
+      @mark_dx = @u.clone # Δmark/Δx
+      @mark_dy = @u.clone # Δmark/Δy
       
       yield self
 
@@ -54,6 +58,7 @@ module Cfd
       @un = @u.clone
       @vn = @v.clone
       @markn = @mark.clone
+      @mark_prev = @mark.clone
 
       update_mask
     end
@@ -117,15 +122,29 @@ module Cfd
     end
 
     def step
-      @u_prev = @u.clone
-      @v_prev = @v.clone
-      
       setting
 
       # 圧力/速度修正
       Cfd.solve_poisson( @dt, @p, @u, @v, @mask, {max_iteration:10000, omega:1.9, permissible:0.001} )
       Cfd.rhs( @dt, @un, @vn, @p, @u, @v, @mask )
       @u, @v, @un, @vn = @un, @vn, @u, @v
+
+      # マーカーの移動
+      Cfd.average4( @uc, @u, 1, 1)
+      Cfd.average4( @vc, @v, 1, 1)
+      if @use_cip
+        Cfd.update_gradiation( @mark_dx, @mark_dy, @mark, @mark_prev )
+        Cfd.advect_cip( @dt, @mark, @mark_dx, @mark_dy, @uc, @vc, {} )
+        @dummy = @u.clone
+        @mark_prev[] = @mark
+        @mark, @markn = @markn, @mark
+        Cfd.limit @mark, 0, 1
+        Cfd.limit @mark_dx, -1, 1
+        Cfd.limit @mark_dy, -1, 1
+      else
+        Cfd.advect_roe( @dt, @markn, @mark, @uc, @vc, {} )
+        @mark, @markn = @markn, @mark
+      end
 
       setting
       
@@ -135,10 +154,21 @@ module Cfd
       
       if @use_cip
         # CIP法
-        @un[] = @u
-        @vn[] = @v
+        
+        limit = 0.5/@dt
+        Cfd.limit( @u, -limit, limit )
+        Cfd.limit( @v, -limit, limit )
+        Cfd.limit( @gux, -limit, limit )
+        Cfd.limit( @guy, -limit, limit )
+        Cfd.limit( @gvx, -limit, limit )
+        Cfd.limit( @gvy, -limit, limit )
+
         Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
         Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
+        @u_prev[] = @u
+        @v_prev[] = @v
+        @un[] = @u
+        @vn[] = @v
         Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u, {} )
         Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v, {} )
       else
@@ -149,15 +179,10 @@ module Cfd
       @u, @v, @un, @vn = @un, @vn, @u, @v
 
       # 粘性
-      Cfd.viscosity( @dt, @re, @un, @vn, @u, @v )
+      Cfd.viscosity( @dt, @re, @un, @u)
+      Cfd.viscosity( @dt, @re, @vn, @v)
       @u, @v, @un, @vn = @un, @vn, @u, @v
       
-      # マーカーの移動
-      Cfd.average4( @uc, @u, 1, 1)
-      Cfd.average4( @vc, @v, 1, 1)
-      Cfd.advect_roe( @dt, @markn, @mark, @uc, @vc, {} )
-      @mark, @markn = @markn, @mark
-
       @on_step.call self if @on_step
       
       @cur_time += dt

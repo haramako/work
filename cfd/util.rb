@@ -40,14 +40,13 @@ def wing1( s, cx, cy, scale = 1.0)
 end
 
 def bound0( s, speed, angle )
-  speed = 1.0
   s.u[[0,1,-1],true] = speed*Math.cos(angle)
   s.v[true,[0,1,-1]] = -speed*Math.sin(angle)
   s.u[true,0] = s.u[true,1]
   s.u[true,-1] = s.u[true,-2]
   s.v[0,true] = s.v[1,true]
   s.v[-1,true] = s.v[-2,true]
-  s.mark[[0,1],true] = if (s.cur_time/10.0).to_i % 2 == 0 then 1 else 0 end
+  s.mark[0,true] = if (s.cur_time/(s.snap_span*3)).to_i % 2 == 0 then 1 else 0 end
 end
 
 def norm(x,min=0.0,max=1.0)
@@ -55,14 +54,11 @@ def norm(x,min=0.0,max=1.0)
 end
 
 def color_bar(n)
-  base = [[0.0, 0,0,0],
-          [0.1, 64,0,192],
-          [0.2, 0,0,255],
-          [0.4, 0,255,255],
-          [0.6, 0,255,0],
-          [0.85, 255,255,0],
-          [0.95, 255,0,0],
-          [1.01, 255,255,255]]
+  base = [[0.0, 0,0,255],
+          [0.2, 0,255,255],
+          [0.5, 0,255,0],
+          [0.8, 255,255,0],
+          [1.0001, 255,0,0]]
   
   n = [[n,0].max,1].min.to_f
   
@@ -76,3 +72,8 @@ def color_bar(n)
   raise
 end
 
+def j2(a,x,y)
+  v1 = x + ((a**2)*x) / (x**2+y**2)
+  v2 = y - ((a**2)*y) / (x**2+y**2)
+  [v1,v2]
+end
