@@ -4,20 +4,20 @@ $LOAD_PATH << "./lib"
 require 'cfd'
 require 'pp'
 
-solver = Cfd::Solver.new(64,32) do |s|
+solver = Cfd::Solver.new(8,8) do |s|
   #s.draw_rect 6, 6, 2, 4
   #s.draw_rect 6, 6, 4, 2
-  s.draw_rect 8, 6, 2, 8
-  s.draw_circle 15.5, 15.5, 5
+  #s.draw_rect 8, 6, 2, 8
+  #s.draw_circle 15.5, 15.5, 5
 
   s.snap_span = 5
-  s.re = 0.001
+  s.re = 0.000
   s.dt = 0.1
-  s.output_gif 'test2.gif', :mark
+  s.output_gif 'test2.gif', :p
 end
 
 solver.on_setting = lambda do |s|
-  speed = 0.5
+  speed = 1.0
   angle = -0.0 *(Math::PI/180.0)
   s.u[[1,-1],true] = speed*Math.cos(angle)
   s.v[true,[1,-1]] = -speed*Math.sin(angle)

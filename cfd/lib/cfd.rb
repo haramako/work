@@ -13,11 +13,13 @@ module Cfd
     attr_reader :cur_time
     attr_accessor :on_snap, :on_step, :on_setting
     attr_accessor :dt, :re, :snap_span
+    attr_accessor :use_cip
     
     def initialize(width_, height_)
       @dt = 0.1
       @re = 0.001
       @snap_span = 4.0
+      @use_cip = true
         
       @width = width_
       @height = height_
@@ -121,7 +123,7 @@ module Cfd
       setting
 
       # 圧力/速度修正
-      Cfd.solve_poisson( @dt, @p, @u, @v, @mask, {max_iteration:100000, omega:1.9, permissible:0.001} )
+      Cfd.solve_poisson( @dt, @p, @u, @v, @mask, {max_iteration:10000, omega:1.9, permissible:0.001} )
       Cfd.rhs( @dt, @un, @vn, @p, @u, @v, @mask )
       @u, @v, @un, @vn = @un, @vn, @u, @v
 
@@ -131,20 +133,14 @@ module Cfd
       Cfd.average4( @u4v, @u, 1, -1)
       Cfd.average4( @v4u, @v, -1, 1)
       
-      @use_cip = true
       if @use_cip
         # CIP法
         @un[] = @u
         @vn[] = @v
-        #Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
-        #Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
+        Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
+        Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
         Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u, {} )
         Cfd.advect_cip( @dt, @vn, @gvx, @gvy, @u4v, @v, {} )
-
-        # @guxn = @gux.clone
-        # @guyn = @guy.clone
-        # Cfd.viscosity( @dt, @re, @guxn, @guyn, @gux, @guy )
-        # @gux, @guy = @guxn, @guyn
       else
         # 風上差分法
         Cfd.advect_roe( @dt, @un, @u, @u, @v4u, {} )

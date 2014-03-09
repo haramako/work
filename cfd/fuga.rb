@@ -1,105 +1,35 @@
 # -*- coding: utf-8 -*-
-$LOAD_PATH << "./lib"
+$LOAD_PATH << "./lib" << '.'
 
 require 'cfd'
 require 'pp'
 ENV['RUBYSDLFFI_PATH'] = '/opt/boxen/homebrew/lib'
 require 'rubygame'
-
-WING0 = ['1111111111111111111111',
-         '1000000000011111111111',
-         '1110000000000000001111',
-         '1111111111111111000001',
-         '1111111111111111111100']
+require 'util'
 
 def init_solver
 
   $solver = Cfd::Solver.new(64,32) do |s|
     #s.draw_rect 8, 6, 4, 4
-    s.draw_circle 15.5, 15.5, 5
+    #s.draw_circle 15.5, 15.5, 5
 
-    w = WING0
-    #s.mask[8,s.height/2] = w.map do |a| p a.chars.map(&:to_i) end
+    wing1 s, 28, s.height/2, 1.8
 
-    s.snap_span = 2
-    s.re = 0.001
-    s.dt = 0.05
-  end
+    $dx = 0.1
+    s.snap_span = 1
+    # s.re = 0.00089 / $dx # 水
+    # s.re = 1.8e-5 / $dx # 空気
+    s.re = 0.08 / $dx
+    s.dt = 0.01
 
-  $solver.on_setting = lambda do |s|
-    speed = 1.0
-    angle = 0.0 *(Math::PI/180.0)
-    s.u[[1,-1],true] = speed*Math.cos(angle)
-    s.v[true,[1,-1]] = -speed*Math.sin(angle)
-
-    #s.mark.mul! s.mask
-    #s.mark.add!((1.0-s.mask)*2)
-    # s.mark[[0,1,-1],true] = 0
-    # s.mark[true,[0,-1]] = 0
-
-    s.mark[[0,1],true] = if (s.cur_time.to_i / 20) % 2 == 0 then 1 else 0 end
-    
-    s.u[true,0] = s.u[true,1]
-    s.u[true,-1] = s.u[true,-2]
-    s.v[0,true] = s.v[1,true]
-    s.v[-1,true] = s.v[-2,true]
-  end
-
-  yr = []
-  $solver.on_snap = lambda do |s|
-    STDERR.print '.'
-    mask = $solver.mask
-    total_x = 0.0
-    total_y = 0.0
-    $solver.p.each_with_index do |v,x,y|
-      next if x<=1 or y<=1 or x>=$solver.width-2 or y>=$solver.height-2
-      if mask[x-1,y] == 0 and mask[x,y] != 0
-        total_x -= v
-      end
-      if x < $solver.width-1 and mask[x+1,y] == 0 and mask[x,y] != 0
-        total_x += v
-      end
-      
-      if mask[x,y-1] == 0 and mask[x,y] != 0
-        total_y -= v
-      end
-      if y < $solver.height-1 and mask[x,y+1] == 0 and mask[x,y] != 0
-        total_y += v
-      end
+    s.on_setting = lambda do |s|
+      $angle = 5.0 *(Math::PI/180.0)
+      bound0 s, 1.0/$dx, $angle
     end
-    # puts "x=%.3f y=%.3f"%[total_x, total_y]
-    yr << [total_x, total_y]
   end
 end
 
 #=====================================================================================
-
-def norm(x,min=0.0,max=1.0)
-  if x <= min then 0.0 elsif x >= max then 1.0 else (x-min)/(max-min) end
-end
-
-def color_bar(n)
-  base = [[0.0, 0,0,0],
-          [0.1, 64,0,192],
-          [0.2, 0,0,255],
-          [0.4, 0,255,255],
-          [0.6, 0,255,0],
-          [0.85, 255,255,0],
-          [0.95, 255,0,0],
-          [1.01, 255,255,255]]
-  
-  n = [[n,0].max,1].min.to_f
-  
-  base.each.with_index do |c1,i|
-    if c1[0] > n
-      c0 = base[i-1]
-      a = 1-(c1[0]-n)/(c1[0]-c0[0])
-      return [c0[1]*(1-a)+c1[1]*a, c0[2]*(1-a)+c1[2]*a, c0[3]*(1-a)+c1[3]*a]
-    end
-  end
-  p n
-  raise
-end
 
 def update
   surface = Rubygame::Screen.get_surface
@@ -122,9 +52,9 @@ def update
       when :vorticity
         v = $solver.v[x-1,y] + $solver.u[x,y] - $solver.v[x,y] - $solver.u[x,y-1]
         if v > 0
-          col = [norm(v)*255,0,0]
+          col = [norm(v,$disp_min,$disp_max)*255,0,0]
         else
-          col = [0,norm(-v)*255,0]
+          col = [0,norm(-v,$disp_min,$disp_max)*255,0]
         end
       else
         raise
@@ -136,8 +66,10 @@ def update
 end
 
 def process
-  step = 1 / $solver.dt
-  (step.to_i).times { $solver.step }
+  ($solver.snap_span / $solver.dt).to_i.times { $solver.step }
+
+  force = calc_force($solver) * rot_matrix($angle) * $dx
+  puts "%0.3f %0.3f"%[force[0],force[1]]
 end
 
 def mainloop
@@ -182,6 +114,8 @@ def mainloop
         update
       when '$'
         $disp = :vorticity
+        $disp_min = 0
+        $disp_max = [$solver.v.abs.max, $solver.u.abs.max].max / 2
         update
       when '#'
         $disp = :pressure
