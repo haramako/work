@@ -77,3 +77,10 @@ def j2(a,x,y)
   v2 = y - ((a**2)*y) / (x**2+y**2)
   [v1,v2]
 end
+
+def wing_j(s,x,y,w,h,p1=0.08,p2=0.15)
+  0.2.step(Math::PI*2-0.2,0.01) do |r|
+    z = j2(1.0+p1, Math.cos(r) + p1, Math.sin(r) + p2)
+    s.mask[x+z[0]*w, y-z[1]*h] = 0
+  end
+end

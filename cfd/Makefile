@@ -9,3 +9,5 @@ test1.json: cfd
 test1.gif: test1.json plot.rb
 	time ruby plot.rb
 
+ocl: ocl.cc
+	clang++ -std=c++11 -Wc++11-extensions -framework opencl -O3 -ffast-math -Wall -o ocl ocl.cc

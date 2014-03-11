@@ -125,14 +125,14 @@ module Cfd
       setting
 
       # 圧力/速度修正
-      Cfd.solve_poisson( @dt, @p, @u, @v, @mask, {max_iteration:10000, omega:1.9, permissible:0.001} )
+      Cfd.solve_poisson( @dt, @p, @u, @v, @mask, {max_iteration:1000000, omega:1.9, permissible:0.01} )
       Cfd.rhs( @dt, @un, @vn, @p, @u, @v, @mask )
       @u, @v, @un, @vn = @un, @vn, @u, @v
 
       # マーカーの移動
       Cfd.center(@uc, @vc, @u, @v)
       if @use_cip
-        Cfd.update_gradiation( @mark_dx, @mark_dy, @mark, @mark_prev )
+        Cfd.update_gradient( @mark_dx, @mark_dy, @mark, @mark_prev )
         Cfd.advect_cip( @dt, @mark, @mark_dx, @mark_dy, @uc, @vc )
         @mark, @markn = @markn, @mark
         @mark_prev[] = @mark
@@ -150,18 +150,13 @@ module Cfd
       Cfd.average4( @u4v, @u, 1, -1)
       Cfd.average4( @v4u, @v, -1, 1)
       if @use_cip
-        # CIP法
-        
-        limit = 0.5/@dt
-        Cfd.limit( @u, -limit, limit )
-        Cfd.limit( @v, -limit, limit )
-        Cfd.limit( @gux, -limit, limit )
-        Cfd.limit( @guy, -limit, limit )
-        Cfd.limit( @gvx, -limit, limit )
-        Cfd.limit( @gvy, -limit, limit )
+        # 速度制限
+        limit = 1.0/@dt
+        [@u,@v,@gux,@guy,@gvx,@gvy].each{|a| Cfd.limit(a, -limit, limit) }
 
-        Cfd.update_gradiation( @gux, @guy, @u, @u_prev )
-        Cfd.update_gradiation( @gvx, @gvy, @v, @v_prev )
+        # CIP法
+        Cfd.update_gradient( @gux, @guy, @u, @u_prev )
+        Cfd.update_gradient( @gvx, @gvy, @v, @v_prev )
         @un[] = @u
         @vn[] = @v
         Cfd.advect_cip( @dt, @un, @gux, @guy, @u, @v4u )

@@ -41,7 +41,8 @@ Gnuplot.open do |gnuplot|
 
     0.step(PI*2,0.1) do |r|
       a = 1.0
-      data << j2(1.2, a*cos(r) + 0.2, a*sin(r) + 0.1)
+      x = 0.12
+      data << j2(1.0+x, a*cos(r) + x, a*sin(r) + 0.20)
     end
 
     pp data

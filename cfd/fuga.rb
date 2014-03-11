@@ -9,35 +9,32 @@ require 'util'
 
 def init_solver
 
-  $solver = Cfd::Solver.new(64,32) do |s|
+  $solver = Cfd::Solver.new(64,48) do |s|
     #s.draw_rect 8, 6, 4, 4
     s.draw_circle 12.5, 15.5, 5
     #wing1 s, 18, s.height/2, 1.0
+    #s.draw_rect 8, 16, 2, 2
 
-    # 0.1.step(Math::PI*2-0.1,0.01) do |r|
-    #   a = 1.0
-    #   z = j2(1.2, a*Math.cos(r) + 0.2, a*Math.sin(r) + 0.1)
-    #   s.mask[38+z[0]*12, s.height/2-z[1]*10] = 0
-    # end
-    
 
-    $dx = 0.1
+    #wing_j(s, 38, s.height/2, 12, 12, 0.08, 0.15)
+
+    $dx = 0.01
     s.snap_span = 1
     # s.re = 0.00089 / $dx # 水
     # s.re = 1.8e-5 / $dx # 空気
-    s.re = 0.05 / $dx
-    s.re = 0.001 / $dx
+    # s.re = 0.000 / $dx
+    s.re = 0.0
     s.dt = 0.01
-    $speed = 0.5
+    $speed = 10.0
     $angle = 0.0 *(Math::PI/180.0)
 
     s.on_setting = lambda do |s|
-      bound0 s, $speed/$dx, $angle
+      bound0 s, $speed, $angle
+      # s.u[true,[0,-1]] = 0
+      # s.v[[0,-1],true] = 0
     end
   end
 end
-
-#=====================================================================================
 
 def update
   surface = Rubygame::Screen.get_surface
@@ -76,8 +73,8 @@ end
 def process
   ($solver.snap_span / $solver.dt).to_i.times { $solver.step }
 
-  #force = calc_force($solver) * rot_matrix($angle) * $dx
-  #puts "%0.3f %0.3f"%[force[0],force[1]]
+  # force = calc_force($solver) * rot_matrix($angle) * $dx
+  # puts "%0.3f %0.3f"%[force[0],force[1]]
 end
 
 def mainloop
