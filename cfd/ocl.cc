@@ -1,6 +1,11 @@
+#include "stdafx.h"
 #include <iostream>
 #include <fstream>
+#ifdef darwin
 #include <OpenCL/opencl.h>
+#else
+#include <CL/opencl.h>
+#endif
 #include <assert.h>
 #include <string>
 
@@ -8,12 +13,16 @@ using namespace std;
 
 
 const char * get_error_string(cl_int err);
-#define CHK() if( ret != CL_SUCCESS ){ cout << "error: "<< get_error_string(ret) << "(" << ret << ")" << endl; assert(0); }
+#define CHK() if( ret != CL_SUCCESS ){ cout << "error: "<< get_error_string(ret) << "(" << ret << ")" << endl; throw(0); }
 #define CHECK(exp) { ret = exp; CHK(); }
 
 void vec_add(size_t n, float* z, float* x, float* y);
 
+#ifdef WIN32
+int _tmain(int argc, TCHAR *argv[])
+#else
 int main(int argc, char **argv)
+#endif
 {
 	cl_int ret;
 	char tmp[256*256];
@@ -47,6 +56,11 @@ int main(int argc, char **argv)
 	CHECK( clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_DEFAULT, 1, &device_id, &ret_num_devices) );
 	clGetDeviceInfo(device_id, CL_DEVICE_NAME, sizeof(tmp), tmp, NULL );
 	// cout << tmp << endl;
+
+	cl_uint tmpi;
+	CHECK(clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(tmpi), &tmpi, NULL));
+	cout << tmpi << endl;
+	//exit(0);
 	
 	cl_context context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret); CHK();
 	cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret); CHK();
@@ -63,41 +77,58 @@ int main(int argc, char **argv)
 
 	cl_kernel kernel = clCreateKernel(program, "vec_add", &ret); CHK();
 
-	cl_mem z_dev = clCreateBuffer(context, CL_MEM_READ_ONLY, n*sizeof(float), NULL, &ret); CHK();
-	cl_mem x_dev = clCreateBuffer(context, CL_MEM_HOST_WRITE_ONLY, n*sizeof(float), NULL, &ret); CHK();
-	cl_mem y_dev = clCreateBuffer(context, CL_MEM_HOST_WRITE_ONLY, n*sizeof(float), NULL, &ret); CHK();
+	cl_mem z_dev = clCreateBuffer(context, CL_MEM_WRITE_ONLY, n*sizeof(float), NULL, &ret); CHK();
+	cl_mem x_dev = clCreateBuffer(context, CL_MEM_READ_ONLY, n*sizeof(float), NULL, &ret); CHK();
+	cl_mem y_dev = clCreateBuffer(context, CL_MEM_READ_ONLY, n*sizeof(float), NULL, &ret); CHK();
 
 	float *x = new float[n];
 	float *y = new float[n];
 	float *z = new float[n];
 
-	for( int i=0; i<n; i++ ){
-		x[i] = rand()%100;
-		y[i] = rand()%100;
+	for( size_t i=0; i<n; i++ ){
+		//x[i] = rand()%100;
+		//y[i] = rand()%100;
+		x[i] = i;
+		y[i] = i;
+		z[i] = 0;
 	}
 	
 	if( type == 0 ){
 		clEnqueueWriteBuffer(command_queue, x_dev, CL_TRUE, 0, n * sizeof(float), x, 0, NULL, NULL);
 		clEnqueueWriteBuffer(command_queue, y_dev, CL_TRUE, 0, n * sizeof(float), y, 0, NULL, NULL);
-		// clEnqueueWriteBuffer(command_queue, z_dev, CL_TRUE, 0, n * sizeof(float), z, 0, NULL, NULL);
-		
-		for( int j=0; j<repeat; j++ ){
-			CHECK( clSetKernelArg(kernel, 0, sizeof(size_t), &n) );
-			CHECK( clSetKernelArg(kernel, 1, sizeof(cl_mem), &z_dev) );
-			CHECK( clSetKernelArg(kernel, 2, sizeof(cl_mem), &x_dev) );
-			CHECK( clSetKernelArg(kernel, 3, sizeof(cl_mem), &y_dev) );
-			CHECK( clEnqueueTask(command_queue, kernel, 0, NULL, NULL) );
+		clEnqueueWriteBuffer(command_queue, z_dev, CL_TRUE, 0, n * sizeof(float), z, 0, NULL, NULL);
+		CHECK( clEnqueueBarrier(command_queue) );
+
+		for( size_t j=0; j<repeat; j++ ){
+			CHECK( clSetKernelArg(kernel, 0, sizeof(cl_mem), &z_dev) );
+			CHECK( clSetKernelArg(kernel, 1, sizeof(cl_mem), &x_dev) );
+			CHECK( clSetKernelArg(kernel, 2, sizeof(cl_mem), &y_dev) );
+			size_t gsize = n/4;
+			size_t lsize = n/4;
+			if (lsize > 512) lsize = 512;
+			CHECK( clEnqueueNDRangeKernel(command_queue, kernel, 1, nullptr, &gsize, &lsize, 0, NULL, NULL) );
+			CHECK(clEnqueueBarrier(command_queue));
+			/*
+			if (j % 10000 == 0){
+				cl_event event = clCreateUserEvent(context, &ret); CHK();
+				CHECK(clEnqueueMarker(command_queue, &event));
+				CHECK(clWaitForEvents(1, &event));
+				//cout << j << endl;
+			}
+			*/
 		}
-		
-		CHECK( clEnqueueReadBuffer(command_queue, z_dev, CL_TRUE, 0, n * sizeof(float), z, 0, NULL, NULL) );
+
+		CHECK(clEnqueueBarrier(command_queue));
+		CHECK(clEnqueueReadBuffer(command_queue, z_dev, CL_TRUE, 0, n * sizeof(float), z, 0, NULL, NULL));
+		cout << "end" << endl;
 	}else{
-		for( int j=0; j<repeat; j++ ){
+		for( size_t j=0; j<repeat; j++ ){
 			vec_add(n,z,x,y);
 		}
 	}
 
 	if( n <= 100 ){
-		for( int i=0; i<n; i++ ){
+		for( size_t i=0; i<n; i++ ){
 			cout << z[i] << ", ";
 		}
 		cout << endl;
@@ -108,7 +139,7 @@ int main(int argc, char **argv)
 
 #include <math.h>
 
-void vec_add(size_t n, float* z, float* x, float* y) __restrict
+void vec_add(size_t n, float* __restrict z, float* __restrict x, float* __restrict y)
 {
 	for(size_t i=0; i<n; i++){
 		z[i] = x[i]*x[i] + y[i]*y[i];
