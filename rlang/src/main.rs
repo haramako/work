@@ -13,11 +13,10 @@ use nom::{
     combinator::{map, map_res},
     multi::*,
     sequence::*,
-    IResult
+    IResult,
 };
 
 type Span<'a> = LocatedSpan<&'a str, RecursiveInfo>;
-
 
 struct Ident {
     name: String,
@@ -100,23 +99,33 @@ struct Func {
 }
 
 fn func(s: Span) -> IResult<Span, Stmt> {
-    let (s, (_, id, _, args, _, _, t, blk)) = tuple((kw("func"), ident, kw("("), arg_list, kw(")"), kw(":"), typ, block))(s)?;
-    let (ids,typs):(Vec<_>,Vec<_>) = args.into_iter().unzip();
+    let (s, (_, id, _, args, _, _, t, blk)) = tuple((
+        kw("func"),
+        ident,
+        kw("("),
+        arg_list,
+        kw(")"),
+        kw(":"),
+        typ,
+        block,
+    ))(s)?;
+    let (ids, typs): (Vec<_>, Vec<_>) = args.into_iter().unzip();
     let t = Type::Func(Box::new(t), typs);
-    Ok((s, Stmt::Func( id, t, ids, blk)))
+    Ok((s, Stmt::Func(id, t, ids, blk)))
 }
 
-fn arg_decl(s: Span) -> IResult<Span, (Ident,Type)> {
+fn arg_decl(s: Span) -> IResult<Span, (Ident, Type)> {
     let (s, (id, _, t)) = tuple((ident, kw(":"), typ))(s)?;
     Ok((s, (id, t)))
 }
 
-fn arg_list(s: Span) -> IResult<Span, Vec<(Ident,Type)>> {
+fn arg_list(s: Span) -> IResult<Span, Vec<(Ident, Type)>> {
     many0(arg_decl)(s)
 }
 
 fn var_decl(s: Span) -> IResult<Span, Stmt> {
-    let (s, (_, id, _, t, _, expr, _)) = tuple((kw("var"), ident, kw(":"), typ, kw("="), expr, kw(";")))(s)?;
+    let (s, (_, id, _, t, _, expr, _)) =
+        tuple((kw("var"), ident, kw(":"), typ, kw("="), expr, kw(";")))(s)?;
     Ok((s, Stmt::VarDecl(id, t, Some(expr))))
 }
 
@@ -157,10 +166,10 @@ fn term(s: Span) -> IResult<Span, Expr> {
 }
 
 fn typ(s: Span) -> IResult<Span, Type> {
-   alt((
-       map(ident, |t| Type::Ident(t)),
-       map(tuple((kw("*"), typ)), |(_,t)| Type::Pointer(Box::new(t))),
-   ))(s)
+    alt((
+        map(ident, |t| Type::Ident(t)),
+        map(tuple((kw("*"), typ)), |(_, t)| Type::Pointer(Box::new(t))),
+    ))(s)
 }
 
 fn expr(s: Span) -> IResult<Span, Expr> {
