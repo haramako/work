@@ -1,5 +1,5 @@
 [package]
-name = "hello_cargo"
+name = "rlang"
 version = "0.1.0"
 authors = ["Your Name <you@example.com>"]
 

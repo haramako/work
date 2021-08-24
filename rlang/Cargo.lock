@@ -51,15 +51,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fed34cd105917e91daa4da6b3728c47b068749d6a62c59811f06ed2ac71d9da7"
 
 [[package]]
-name = "hello_cargo"
-version = "0.1.0"
-dependencies = [
- "nom 6.2.1",
- "nom-recursive",
- "nom_locate 3.0.2",
-]
-
-[[package]]
 name = "lexical-core"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -168,6 +159,15 @@ name = "radium"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "941ba9d78d8e2f7ce474c015eea4d9c6d25b6a3327f9832ee29a4de27f91bbb8"
+
+[[package]]
+name = "rlang"
+version = "0.1.0"
+dependencies = [
+ "nom 6.2.1",
+ "nom-recursive",
+ "nom_locate 3.0.2",
+]
 
 [[package]]
 name = "ryu"
