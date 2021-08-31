@@ -7,3 +7,4 @@ authors = ["Your Name <you@example.com>"]
 nom = "6"
 nom-recursive = "0.3.0"
 nom_locate = "3"
+thiserror = "1.0"

@@ -1,13 +1,19 @@
 extern crate rlang;
 
+use std::error;
 use rlang::codegen;
 use rlang::parser;
 
 fn main() {
-    let src = "func hoge(a:int b:int):int { var a:int = 123; return a + b; }";
-    let prog = parser::parse(src);
-    println!("{:?}", prog);
+    prog().unwrap();
+}
 
-    let code = codegen::gencode(&prog.unwrap()).unwrap();
-    codegen::dump(&code)
+fn prog() -> Result<(), Box<dyn error::Error>>{
+    let src = "func main(a:int b:int):int { var a:int = 123; return a + b; }";
+    let (_, prog) = parser::parse(src)?;
+    //println!("{:?}", prog);
+
+    let code = codegen::gencode(&prog)?;
+    codegen::dump(&code);
+    Ok(())
 }

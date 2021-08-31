@@ -82,7 +82,7 @@ pub enum Expr {
     Ident(Ident),
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum Type {
     Ident(Ident),
     Pointer(Box<Type>),
@@ -168,6 +168,6 @@ fn expr(s: Span) -> IResult<Span, Expr> {
     alt((binop, term))(s)
 }
 
-pub fn parse<'a>(src:&str) -> Option<Vec<Stmt>>{
-    stmt_list(Span::from(src)).map(|(_,r)| r).ok()
+pub fn parse<'a>(src:&str) -> IResult<Span, Vec<Stmt>>{
+    stmt_list(Span::from(src))
 }
