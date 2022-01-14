@@ -1,0 +1,22 @@
+<h1 class="title">User <%=@id%> Commit List</h1>
+
+<table class="table is-striped  is-fullwidth is-hoverable">
+  <tr>
+    <td>コミット番号</td>
+    <td>種類</td>
+    <td>日時</td>
+    <td></td>
+    <td></td>
+  </tr>
+  <% @commits.each do |c| %>
+  <tr>
+    <td><%=c.id.num%>
+    <td><%=c.id.type%></td>
+    <td><%=t c.mtime%></td>
+    <td>
+      <a href="/u/<%=@id%>/dump/<%=c.id.num%>" class="button is-link">表示</a>
+      <a href="/u/<%=@id%>/commit/<%=c.id.type%>/<%=c.id.num%>" class="button">差分表示</a>
+    </td>
+  </tr>
+  <% end %>
+</table>

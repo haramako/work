@@ -1,0 +1,8 @@
+.vs
+bin
+obj
+packages
+html
+*.dll
+*.exe
+*.db

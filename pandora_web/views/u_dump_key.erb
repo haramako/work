@@ -1,0 +1,52 @@
+<h1 class="title">User "<%=@user.name%>" Commit <%=@commit%> Key <%= @key64 %></h1>
+
+<% url = "/u/#{@id}/get/#{@commit}/#{base64(@key)}" %>
+<% pp url %>
+<% pp base64(@key) %>
+
+<script>
+function copy() {
+  var copyText = document.querySelector("#import-url");
+  copyText.select();
+  document.execCommand("copy");
+}
+</script>
+
+<table class="table is-striped is-hoverable">
+  <tr>
+    <th>キー</th>
+    <td><%=h savedata_title(@key)%></td>
+  </tr>
+  <tr>
+    <th>名前</th>
+    <td><%=h savedata_desc(@bin)%></td>
+  </tr>
+  <tr>
+    <th>サイズ</th>
+    <td><%=@bin.size%></td>
+  </tr>
+  <tr>
+    <th>エクスポート番号</th>
+    <td>
+      <% if @export_code %>
+      <%= @export_code[:id] %>
+      <% else %>
+      <a href="/u/<%=@id%>/export_code/<%=@commit%>/<%=base64(@key)%>" class="button is-link">番号発行</a>
+      <% end %>
+    </td>
+  </tr>
+  <tr>
+    <th>インポートURL</th>
+    <td>
+      <input id="import-url" readonly class="input" style="width: 600px;" value="drs:///TitlePage?import=<%=base_url%><%=url%>">
+      <button class="button is-small" onclick="copy();">コピー</button>
+    </td>
+  </tr>
+  <tr>
+    <td></td>
+    <td>
+    <a href="drs:///TitlePage?import=<%=base_url%><%=url%>" class="button is-link">インポート</a>
+    <a href="<%=url%>" class="button">ダウンロード</a>
+    </td>
+  </tr>
+</table>
