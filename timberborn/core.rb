@@ -27,13 +27,16 @@ class World
     end
   end
 
+  def add_cell(idx, c)
+    c.set_pos(idx2pos(idx))
+    @cells[idx] = c
+  end
+
   def add_cells(kind, n=1)
     n.times do
       idx = blank_idx
       if idx
-        c = Cell.new(self, kind)
-        c.set_pos(idx2pos(idx))
-        @cells[idx] = c
+        add_cell idx, Cell.new(self, kind)
       else
         raise "can't find blank pos"
       end
@@ -161,10 +164,10 @@ class Beaver < GameObject
     case @type
     when :yield
       try_yield || try_populate || 1.0
-    when :yield_only
-      try_yield || 1.0
     when :populate
       try_populate || try_yield || 1.0
+    when :yield_only
+      try_yield || 1.0
     when :populate_only
       try_populate || 1.0
     else

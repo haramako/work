@@ -28,54 +28,96 @@ def with_plot
   end
 end
 
-case (ARGV[0] || :wood_cells).to_sym
-when :foods
-  # 畑の場合
-  with_plot do |plot|
+def plot_run(plot, w, days, title)
+  puts title
+  
+  data = []
+  days.times do
+    w.run(24)
+    data << w.storage.inject(0){|m,x| m+x[1]}
+  end
+
+  plot.data << Gnuplot::DataSet.new(data) do |ds|
+    ds.title = title
+    ds.with = 'linespoints'
+  end
+end
+
+def plot_consume(plot, pop, days)
     pop = 22
-    data = (0..100).map{|x| x*3*pop}
+    data = (0..days).map{|x| x*3*pop}
     plot.data << Gnuplot::DataSet.new(data) do |ds|
       ds.title = "consume:#{pop}"
       ds.with = 'linespoints'
     end
-    
-    #[:populate,:yield].each do |t|
-    [:populate].each do |t|
-      #[:yield].each do |t|
-      [1,2,3].each do |f|
-        [CARROT].each do |target|
-          w = World.new
+end
 
-          case t
-          when :half
-            w.add_beavers :populate, f/2
-            w.add_beavers :yield, f-(f/2)
-          when :yield
-            w.add_beavers :yield, f
-          when :populate
-            w.add_beavers :populate, f
-          end
+case (ARGV[0] || :test).to_sym
+when :foods
+  # 畑の場合
+  days = 50
+  types = [:populate]
+  pops = [2,4,6,8]
+  kinds = [CARROT]
+  
+  with_plot do |plot|
+    plot_consume(plot, 22, days)
 
-          w.add_cells target, 100
-          
-          #puts '='*80
-          #w.dump
+    types.product(pops,kinds) do |type,pop,kind|
+      w = World.new(20,20)
 
-          data = []
-          100.times do
-            w.run(24)
-            data << w.storage.inject(0){|m,x| m+x[1]}
-            #w.dump_foods
-          end
-          puts '='*80
-          w.dump
-
-          plot.data << Gnuplot::DataSet.new(data) do |ds|
-            ds.title = "#{t}:#{target.name}:#{f}"
-            ds.with = 'linespoints'
-          end
-        end
+      case type
+      when :half
+        w.add_beavers :populate, pop/2
+        w.add_beavers :yield, pop-(pop/2)
+      when :yield
+        w.add_beavers :yield, pop
+      when :populate
+        w.add_beavers :populate, pop
       end
+
+      w.add_cells kind, 100
+      
+      plot_run(plot, w, days, "#{type}:#{kind.name}:#{pop}")
+    end
+  end
+
+when :foods_pop
+  # 100マスの人参固定で、人数を変えた場合
+  days = 50
+  with_plot do |plot|
+    plot_consume(plot, 22, days)
+
+    [1,2,4,6].each do |pop|
+      w = World.new(20,20)
+      w.add_beavers :populate, pop
+      w.add_cells CARROT, 100
+      plot_run(plot, w, days, "#{pop}")
+    end
+  end
+  
+when :foods_work
+  # 100マスのジンジンに二人固定で、仕事を変えた場合
+  days = 50
+  with_plot do |plot|
+    plot_consume(plot, 22, days)
+
+    [:half,:populate,:yield].each do |type,pop,kind|
+      w = World.new(10,10)
+
+      case type
+      when :half
+        w.add_beavers :populate, 1
+        w.add_beavers :yield, 1
+      when :yield
+        w.add_beavers :yield, 2
+      when :populate
+        w.add_beavers :populate, 2
+      end
+
+      w.add_cells CARROT, 100
+
+      plot_run(plot, w, days, "#{type}")
     end
   end
   
@@ -141,19 +183,22 @@ when :wood_cells
 when :test
   # テスト
 
-  w = World.new(5,5)
+  w = World.new(10,10)
 
-  w.add_beavers :yield, 1
+  w.add_beavers :populate, 1
+  #w.add_beavers :yield, 1
 
-  w.add_cells CARROT, 13
+  w.add_cells CARROT, 100
         
   50.times do |n|
     w.run(24)
 
-    puts '-' * 80
-    puts "DAY #{n}"
-    w.dump_cell_stats
-    w.dump_cells
+    if n % 5 == 0
+      puts '-' * 80
+      puts "DAY #{n}"
+      w.dump_cell_stats
+      w.dump_cells
+    end
   end
 
   puts '='*80
