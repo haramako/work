@@ -1,207 +1,37 @@
 # coding: utf-8
 # Timberbornの食料生産シミュレーター
 
+require 'core'
 require 'gnuplot'
-
-def log_(*args)
-  puts *args if $debug
-end
-
-#==============================================================
-# World
-#==============================================================
-class World
-  attr_reader :beavers, :foods, :storage
-  
-  def initialize
-    @beavers = []
-    @foods = []
-    @storage = Hash.new{|h,k| h[k] = 0}
-  end
-
-  def add_beaver(b,n=1)
-    b.id = @beavers.size
-    @beavers << b
-  end
-
-  def add_beavers(behaviour,n)
-    n.times do
-      add_beaver(Beaver.new(self,behaviour))
-    end
-  end
-
-  def add_food(f)
-    f.id = @foods.size
-    @foods << f
-  end
-
-  def add_foods(kind, n=1)
-    n.times do
-      add_food Food.new(self, kind)
-    end
-  end
-  
-  def run(time)
-    while time > 0
-      tick
-      time -= 1.0
-    end
-  end
-
-  def tick
-    (@beavers + @foods).each do |obj|
-      obj.wait -= 1.0
-      while obj.wait <= 0
-        obj.wait += obj.process
-      end
-    end
-  end
-
-  def dump
-    puts "BEAVERS"
-    b = @beavers.group_by{|b| b.type}
-    b.each do |k,v|
-      puts "  #{k}: #{v.size}"
-    end
-    puts "FOODS"
-    dump_foods
-    puts "STORAGE"
-    @storage.each do |k,v|
-      puts "  %-8s: %2d" % [k,v]
-    end
-  end
-  
-  def dump_foods
-    [CARROT].each do |kind|
-      fs = @foods.find_all{|f| f.kind == kind}
-      populated = fs.count{|f| !f.populated}
-      growing = fs.count{|f| f.populated && !f.yield_ready?}
-      yield_ready = fs.count{|f| f.yield_ready?}
-      puts '  %-8s: %3d %3d %3d' % [kind.name, populated, growing, yield_ready]
-    end
-  end
-end
-
-#==============================================================
-#==============================================================
-class GameObject
-  attr_accessor :id, :wait
-  def initialize(world, *args)
-    @w = world
-    @wait = 0
-  end
-
-  def log(*args)
-    log_ "ID(#{@id}): #{args.join(' ')}"
-  end
-
-end
-
-#==============================================================
-# Beaver
-#==============================================================
-class Beaver < GameObject
-  attr_reader :type
-  
-  def initialize(world, type)
-    super
-    @type = type
-  end
-  
-  def process
-    case @type
-    when :yield
-      try_yield || try_populate || 1.0
-    when :populate
-      try_populate || try_yield || 1.0
-    else
-      raise
-    end
-  end
-
-  def try_yield
-    f = @w.foods.find {|f| f.yield_ready? }
-    if f
-      f.yield_
-      @w.storage[f.kind.name] += f.kind.ammount
-      1.5
-    else
-      nil
-    end
-  end
-
-  def try_populate
-    f = @w.foods.find {|f| !f.populated }
-    if f
-      f.populate
-      0.5
-    else
-      nil
-    end
-  end
-end
-
-#==============================================================
-# Food
-#==============================================================
-class Food < GameObject
-  attr_reader :kind, :growth, :populated
-  
-  def initialize(world, kind)
-    super
-    @kind = kind
-    @growth = 0
-    @populated = false
-  end
-  
-  def process
-    return 1.0 unless @populated
-    @growth = [@growth + @kind.growth_per_hour, 1.0].min
-    log "grow #{@growth}"
-    1.0
-  end
-
-  def yield_
-    @growth = 0
-    @populated = false
-  end
-
-  def yield_ready?
-    @growth >= 1.0
-  end
-
-  def populate
-    @populated = true
-  end
-end
-
-#==============================================================
-# Food Kind
-#==============================================================
-class FoodKind
-  attr_reader :name, :growth_days, :growth_per_hour, :ammount
-  def initialize(name, growth_days, ammount)
-    @name = name
-    @growth_days = growth_days
-    @growth_per_hour = 1.0 / (growth_days * 24)
-    @ammount = ammount
-  end
-end
 
 #==============================================================
 # Entry Point
 #==============================================================
 
-CARROT = FoodKind.new('Carrot',4,3)
-POTATO = FoodKind.new('Potato',6,1)
-WHEAT = FoodKind.new('Wheat',12,3)
+# CellKind.new(name, resource, days, ammount, )
+CARROT = CellKind.new('Carrot',4, :food, 3, 0.5, 1.5)
+POTATO = CellKind.new('Potato',6, :food, 4, 0.5, 1.5)
+WHEAT = CellKind.new('Wheat',12, :food, 15, 0.5, 1.5)
+
+BIRCH = CellKind.new('Birch',12, :wood, 2, 1.0, 5.0)
+PINE = CellKind.new('Pine',12, :wood, 2, 1.0, 5.0)
+CHESTNUT = CellKind.new('Chestnut', 12, :wood, 2, 1.0, 5.0)
+MAPLE = CellKind.new('Maple', 30, :wood, 8, 1.0, 5.0)
 
 $debug = false
 
-if true
-Gnuplot.open do |gnuplot|
-  Gnuplot::Plot.new(gnuplot) do |plot|
+def with_plot
+  Gnuplot.open do |gnuplot|
+    Gnuplot::Plot.new(gnuplot) do |plot|
+      yield plot
+    end
+  end
+end
 
+case (ARGV[0] || :wood_cells).to_sym
+when :foods
+  # 畑の場合
+  with_plot do |plot|
     pop = 22
     data = (0..100).map{|x| x*3*pop}
     plot.data << Gnuplot::DataSet.new(data) do |ds|
@@ -211,58 +41,119 @@ Gnuplot.open do |gnuplot|
     
     #[:populate,:yield].each do |t|
     [:populate].each do |t|
-    #[:yield].each do |t|
-      [2,4].each do |f|
-        w = World.new
+      #[:yield].each do |t|
+      [1,2,3].each do |f|
+        [CARROT].each do |target|
+          w = World.new
 
-        case t
-        when :half
-          w.add_beavers :populate, f/2
-          w.add_beavers :yield, f-(f/2)
-        when :yield
-          w.add_beavers :yield, f
-        when :populate
-          w.add_beavers :populate, f
-        end
+          case t
+          when :half
+            w.add_beavers :populate, f/2
+            w.add_beavers :yield, f-(f/2)
+          when :yield
+            w.add_beavers :yield, f
+          when :populate
+            w.add_beavers :populate, f
+          end
 
-        #w.add_foods CARROT, 100
-        #w.add_foods POTATO, 100
-        w.add_foods WHEAT, 200
-        
-        #puts '='*80
-        #w.dump
+          w.add_cells target, 100
+          
+          #puts '='*80
+          #w.dump
 
-        data = []
-        50.times do
-          w.run(24)
-          data << w.storage.inject(0){|m,x| m+x[1]}
-          #w.dump_foods
-        end
-        puts '='*80
-        w.dump
+          data = []
+          100.times do
+            w.run(24)
+            data << w.storage.inject(0){|m,x| m+x[1]}
+            #w.dump_foods
+          end
+          puts '='*80
+          w.dump
 
-        plot.data << Gnuplot::DataSet.new(data) do |ds|
-          ds.title = "#{t}:#{f}"
-          ds.with = 'linespoints'
+          plot.data << Gnuplot::DataSet.new(data) do |ds|
+            ds.title = "#{t}:#{target.name}:#{f}"
+            ds.with = 'linespoints'
+          end
         end
       end
     end
   end
-end
+  
+when :wood_kind
+  # 森の場合
+  with_plot do |plot|
+    cell_counts = [100,150,200,250,300]
+    pops = [3]
+    kinds = [PINE]
+    cell_counts.product(pops, kinds) do |cell_count, pop, kind|
+      w = World.new
 
-else
-  w = World.new
+      w.add_beavers :populate_only, 1
+      w.add_beavers :yield_only, pop
+      
+      w.add_foods kind, cell_count
+      
+      data = []
+      w.run(24*100)
+      
+      puts '='*80
+      w.dump
+
+      data << w.storage.inject(0){|m,x| m+x[1]}
+      plot.data << Gnuplot::DataSet.new(data) do |ds|
+        ds.title = "#{kind.name}:#{cell_count}:#{pop}"
+        ds.with = 'linespoints'
+      end
+    end
+  end
+
+when :wood_cells
+  # 森の場合（マス目と人数）
+  with_plot do |plot|
+    cell_counts = [200,300,400,500]
+    pops = [1,2,3,4]
+    kind = PINE
+    
+    pops.each do |pop|
+      data = []
+      cell_counts.each do |cell_count|
+        w = World.new
+
+        w.add_beavers :populate_only, 1
+        w.add_beavers :yield_only, pop
+        
+        w.add_foods kind, cell_count
+        
+        w.run(24*100)
+        
+        p [cell_count, pop]
+
+        data << [cell_count, w.storage.inject(0){|m,x| m+x[1]}]
+      end
+    
+      plot.data << Gnuplot::DataSet.new(data.transpose) do |ds|
+        ds.title = "#{kind.name}:#{pop}"
+        ds.with = 'linespoints'
+      end
+    end
+  end
+
+when :test
+  # テスト
+
+  w = World.new(10,10)
 
   w.add_beavers :populate, 1
 
-  w.add_foods CARROT, 100
+  w.add_cells CARROT, 82
         
-  #puts '='*80
-  #w.dump
-
-  50.times do
+  50.times do |n|
     w.run(24)
-    w.dump_foods
+
+    puts '-' * 80
+    puts "DAY #{n}"
+    w.dump_cell_stats
+    w.dump_cells
   end
 
   puts '='*80
