@@ -141,11 +141,11 @@ when :wood_cells
 when :test
   # テスト
 
-  w = World.new(10,10)
+  w = World.new(5,5)
 
-  w.add_beavers :populate, 1
+  w.add_beavers :yield, 1
 
-  w.add_cells CARROT, 82
+  w.add_cells CARROT, 13
         
   50.times do |n|
     w.run(24)

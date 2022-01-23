@@ -29,9 +29,11 @@ class World
 
   def add_cells(kind, n=1)
     n.times do
-      pos = blank_pos
-      if pos
-        self[pos] = Cell.new(self, kind)
+      idx = blank_idx
+      if idx
+        c = Cell.new(self, kind)
+        c.set_pos(idx2pos(idx))
+        @cells[idx] = c
       else
         raise "can't find blank pos"
       end
@@ -42,27 +44,9 @@ class World
     [idx % @cell_width, idx / @cell_width]
   end
 
-  def each_cell
+  def blank_idx
     @cells.each_with_index do |c,i|
-      next unless c
-      yield c, idx2pos(i)
-    end
-  end
-
-  def find_cell
-    @cells.find.with_index do |c,i|
-      next unless c
-      if yield c, idx2pos(i)
-        c
-      else
-        nil
-      end
-    end
-  end
-
-  def blank_pos
-    @cells.each_with_index do |c,i|
-      return idx2pos(i) unless c
+      return i unless c
     end
     nil
   end
@@ -71,11 +55,11 @@ class World
     @cells.lazy.select{|c| c }
   end
 
-  def [](pos)
+  def cell(pos)
     @cells[pos2idx(pos)]
   end
 
-  def []=(pos,v)
+  def set_cell(pos,v)
     @cells[pos2idx(pos)] = v
   end
 
@@ -97,7 +81,7 @@ class World
         obj.wait += obj.process
       end
     end
-    each_cell do |obj|
+    cell_available.each do |obj|
       obj.wait -= 1.0
       while obj.wait <= 0
         obj.wait += obj.process
@@ -189,7 +173,7 @@ class Beaver < GameObject
   end
 
   def try_yield
-    f = @w.find_cell {|f| f.yield_ready? }
+    f = @w.cell_available.find {|f| f.yield_ready? }
     if f
       f.yield_
       @w.storage[f.kind.resource] += f.kind.ammount
@@ -200,7 +184,7 @@ class Beaver < GameObject
   end
 
   def try_populate
-    f = @w.find_cell {|f| !f.populated }
+    f = @w.cell_available.find {|f| !f.populated }
     if f
       f.populate
       0.5
@@ -214,13 +198,24 @@ end
 # Cell
 #==============================================================
 class Cell < GameObject
-  attr_reader :kind, :growth, :populated
+  attr_reader :kind, :growth, :populated, :x, :y
   
   def initialize(world, kind)
     super
+    @x = nil
+    @y = nil
     @kind = kind
     @growth = 0
     @populated = false
+  end
+
+  def set_pos(pos)
+    @x = pos[0]
+    @y = pos[1]
+  end
+
+  def pos
+    [@x, @y]
   end
   
   def process
