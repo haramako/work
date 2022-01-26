@@ -9,9 +9,9 @@ require 'gnuplot'
 #==============================================================
 
 # CellKind.new(name, resource, days, ammount, )
-CARROT = CellKind.new('Carrot',4, :food, 3, 0.5, 1.5)
-POTATO = CellKind.new('Potato',6, :food, 4, 0.5, 1.5)
-WHEAT = CellKind.new('Wheat',12, :food, 15, 0.5, 1.5)
+CARROT = CellKind.new('Carrot',4, :food, 3, 0.28, 2.0)
+POTATO = CellKind.new('Potato',6, :food, 4, 0.28, 2.0)
+WHEAT = CellKind.new('Wheat',12, :food, 15, 0.28, 2.0)
 
 BIRCH = CellKind.new('Birch',12, :wood, 2, 1.0, 5.0)
 PINE = CellKind.new('Pine',12, :wood, 2, 1.0, 5.0)
@@ -32,9 +32,10 @@ def plot_run(plot, w, days, title)
   puts title
   
   data = []
-  days.times do
+  days.times do |d|
     w.run(24)
     data << w.storage.inject(0){|m,x| m+x[1]}
+    # puts "#{d} #{w.storage.inject(0){|m,x| m+x[1]}}"
   end
 
   plot.data << Gnuplot::DataSet.new(data) do |ds|
@@ -44,8 +45,7 @@ def plot_run(plot, w, days, title)
 end
 
 def plot_consume(plot, pop, days)
-    pop = 22
-    data = (0..days).map{|x| x*3*pop}
+    data = (0..days).map{|x| x*2.5*pop}
     plot.data << Gnuplot::DataSet.new(data) do |ds|
       ds.title = "consume:#{pop}"
       ds.with = 'linespoints'
@@ -55,15 +55,16 @@ end
 case (ARGV[0] || :test).to_sym
 when :foods
   # 畑の場合
-  days = 50
+  days = 30
   types = [:populate]
-  pops = [2,4,6,8]
+  pops = [2]
   kinds = [CARROT]
+  cells = [50,60,70,80,90,100]
   
   with_plot do |plot|
     plot_consume(plot, 22, days)
 
-    types.product(pops,kinds) do |type,pop,kind|
+    types.product(pops,kinds,cells) do |type,pop,kind,cell|
       w = World.new(20,20)
 
       case type
@@ -76,9 +77,9 @@ when :foods
         w.add_beavers :populate, pop
       end
 
-      w.add_cells kind, 100
+      w.add_cells kind, cell
       
-      plot_run(plot, w, days, "#{type}:#{kind.name}:#{pop}")
+      plot_run(plot, w, days, "#{type}:#{kind.name}:#{pop}:#{cell}")
     end
   end
 
@@ -97,12 +98,12 @@ when :foods_pop
   end
   
 when :foods_work
-  # 100マスのジンジンに二人固定で、仕事を変えた場合
+  # 100マスのニンジンに二人固定で、仕事を変えた場合
   days = 50
   with_plot do |plot|
     plot_consume(plot, 22, days)
 
-    [:half,:populate,:yield].each do |type,pop,kind|
+    [:populate,:yield].each do |type,pop,kind|
       w = World.new(10,10)
 
       case type
@@ -116,6 +117,7 @@ when :foods_work
       end
 
       w.add_cells CARROT, 100
+      # w.add_cells POTATO, 100
 
       plot_run(plot, w, days, "#{type}")
     end

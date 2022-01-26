@@ -1,3 +1,4 @@
+# coding: utf-8
 def log_(*args)
   puts *args if $debug
 end
@@ -9,6 +10,7 @@ class World
   attr_reader :beavers, :cells, :storage
   
   def initialize(w,h)
+    @time = 0
     @beavers = []
     @cell_width = w
     @cell_height = h
@@ -79,9 +81,15 @@ class World
 
   def tick
     @beavers.each do |obj|
-      obj.wait -= 1.0
-      while obj.wait <= 0
-        obj.wait += obj.process
+      if @time < 20
+        # 起きてる
+        obj.wait -= 1.0
+        while obj.wait <= 0
+          obj.wait += obj.process
+        end
+      else
+        # 寝てる
+        obj.wait = 0
       end
     end
     cell_available.each do |obj|
@@ -90,6 +98,7 @@ class World
         obj.wait += obj.process
       end
     end
+    @time = (@time + 1) % 24
   end
 
   def dump
@@ -180,7 +189,7 @@ class Beaver < GameObject
     if f
       f.yield_
       @w.storage[f.kind.resource] += f.kind.ammount
-      1.5
+      f.kind.yield_time
     else
       nil
     end
@@ -190,7 +199,7 @@ class Beaver < GameObject
     f = @w.cell_available.find {|f| !f.populated }
     if f
       f.populate
-      0.5
+      f.kind.populate_time
     else
       nil
     end
