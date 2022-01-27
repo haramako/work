@@ -13,10 +13,11 @@ CARROT = CellKind.new('Carrot',4, :food, 3, 0.28, 2.0)
 POTATO = CellKind.new('Potato',6, :food, 4, 0.28, 2.0)
 WHEAT = CellKind.new('Wheat',12, :food, 15, 0.28, 2.0)
 
-BIRCH = CellKind.new('Birch',12, :wood, 2, 1.0, 5.0)
-PINE = CellKind.new('Pine',12, :wood, 2, 1.0, 5.0)
-CHESTNUT = CellKind.new('Chestnut', 12, :wood, 2, 1.0, 5.0)
-MAPLE = CellKind.new('Maple', 30, :wood, 8, 1.0, 5.0)
+w = 1.0
+BIRCH = CellKind.new('Birch',9, :wood, 1, 1.0, 3.0+w*1)
+PINE = CellKind.new('Pine',12, :wood, 2, 1.0, 3.0+w*1)
+CHESTNUT = CellKind.new('Chestnut', 24, :wood, 4, 1.0, 3.0+w*2)
+MAPLE = CellKind.new('Maple', 30, :wood, 8, 1.0, 3+w*4)
 
 $debug = false
 
@@ -97,6 +98,36 @@ when :foods_pop
     end
   end
   
+when :foods_kind
+  # 300マスの２人固定で、作物を変えた場合
+  days = 50
+  with_plot do |plot|
+    plot_consume(plot, 22, days)
+
+    [CARROT, POTATO, WHEAT].each do |kind|
+      w = World.new(20,20)
+      w.add_beavers :populate, 2
+      w.add_cells kind, 300
+      plot_run(plot, w, days, "#{kind.name}")
+    end
+  end
+
+when :foods_kind2
+  # 100マス固定で、作物を変えた場合
+  days = 50
+  with_plot do |plot|
+    plot.title "100 cells, 8 pop"
+    plot_consume(plot, 22, days)
+    plot_consume(plot, 40, days)
+
+    [CARROT, POTATO, WHEAT].each do |kind|
+      w = World.new(10,10)
+      w.add_beavers :populate, 8
+      w.add_cells kind, 100
+      plot_run(plot, w, days, "#{kind.name}")
+    end
+  end
+  
 when :foods_work
   # 100マスのニンジンに二人固定で、仕事を変えた場合
   days = 50
@@ -151,22 +182,55 @@ when :wood_kind
     end
   end
 
+when :wood_kind2
+  # 森の場合（マス目と人数）
+  with_plot do |plot|
+    cell_counts = [180,190,200,250,260,300,350,360, 480,490,500]
+    # kinds = [CHESTNUT, MAPLE]
+    kinds = [BIRCH, PINE, CHESTNUT, MAPLE]
+    pop = 4
+    
+    kinds.each do |kind|
+      plot.xrange "[0:]"
+      plot.yrange "[0:]"
+      data = []
+      cell_counts.each do |cell_count|
+        w = World.new(30,30)
+
+        w.add_beavers :populate_only, 1
+        w.add_beavers :yield_only, pop
+        
+        w.add_cells kind, cell_count
+        
+        w.run(24*100)
+        
+        data << [cell_count, w.storage.inject(0){|m,x| m+x[1]}]
+      end
+    
+      plot.data << Gnuplot::DataSet.new(data.transpose) do |ds|
+        ds.title = "#{kind.name}:#{kind.name}"
+        ds.with = 'linespoints'
+      end
+    end
+  end
+  
+
 when :wood_cells
   # 森の場合（マス目と人数）
   with_plot do |plot|
-    cell_counts = [200,300,400,500]
-    pops = [1,2,3,4]
+    cell_counts = [100,110,120,130,140,150,200,300]
+    pops = [1,2,4]
     kind = PINE
     
     pops.each do |pop|
       data = []
       cell_counts.each do |cell_count|
-        w = World.new
+        w = World.new(30,30)
 
         w.add_beavers :populate_only, 1
         w.add_beavers :yield_only, pop
         
-        w.add_foods kind, cell_count
+        w.add_cells kind, cell_count
         
         w.run(24*100)
         
@@ -185,12 +249,14 @@ when :wood_cells
 when :test
   # テスト
 
-  w = World.new(10,10)
+  w = World.new(20,20)
 
-  w.add_beavers :populate, 1
+  #w.add_beavers :populate, 1
   #w.add_beavers :yield, 1
+  w.add_beavers :populate_only, 1
+  w.add_beavers :yield_only, 3
 
-  w.add_cells CARROT, 100
+  w.add_cells PINE, 300
         
   50.times do |n|
     w.run(24)

@@ -116,7 +116,7 @@ class World
   end
   
   def dump_cell_stats
-    [CARROT].each do |kind|
+    [CARROT,PINE].each do |kind|
       fs = cell_available.find_all{|f| f.kind == kind}
       populated = fs.count{|f| !f.populated}
       growing = fs.count{|f| f.populated && !f.yield_ready?}
