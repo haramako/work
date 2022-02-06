@@ -1,0 +1,20 @@
+
+task :start do
+  sh 'rerun', 'ruby', 'cabinet_server.rb'
+end
+
+namespace :db do
+  task :migrate do
+    sh 'sequel', '-m', 'migrations', 'sqlite://db.sqlite3'
+  end
+
+  task :clean do
+    raise "set EXECUTE=1 to run" if ENV['EXECUTE'] != '1'
+    rm_f 'db.sqlite3'
+  end
+end
+
+task :publish do
+  raise "must specify EXECUTE=1 to run" if ENV['EXECUTE'] != '1'
+  sh 'rsync -C --filter=":- .gitignore" -acvz . tdadmin@133.242.225.63:drs_cloud/'
+end

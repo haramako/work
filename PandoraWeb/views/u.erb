@@ -1,0 +1,25 @@
+<h1 class="title">User List</h1>
+      
+<table class="table is-striped is-fullwidth is-hoverable">
+  <tr>
+    <th>ID</th>
+    <th>名前</th>
+    <th>最終更新</th>
+    <th></th>
+  </tr>
+  <% @users.each do |u| %>
+  <tr>
+    <td><%=u.id%></td>
+    <td><%=u.name%></td>
+    <td><%=t db.user_last_access(u.id)%></td>
+    <td>
+      <a href='/u/<%=u.id%>/latest' class="button is-link">データ</a>
+      <a href='/u/<%=u.id%>/list' class="button">履歴</a>
+    </td>
+  </tr>
+  <% end %>
+</table>
+
+<div>
+  <a href="/admin" class="button">管理</a>
+</div>
