@@ -21,8 +21,6 @@ pp r
 gen = Generator::CSharpGenerator.new
 src = gen.generate(r)
 
-puts src
-
 IO.write('../Test/CodeGen/Generated.cs', src);
 
 

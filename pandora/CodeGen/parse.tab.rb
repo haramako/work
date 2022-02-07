@@ -27,10 +27,10 @@ racc_action_pointer = [
    nil,   nil,    13,    14,   nil,    24,    25,   nil,   nil ]
 
 racc_action_default = [
-    -2,   -19,    -6,   -19,   -19,    -1,    -6,   -19,   -19,    -4,
-    -5,    39,    -8,   -19,    -3,   -19,   -19,   -19,   -15,   -10,
-   -19,   -16,   -19,   -19,   -10,   -19,   -19,   -14,   -15,   -18,
-    -9,   -11,   -19,   -19,   -17,   -19,   -19,   -12,   -13 ]
+    -2,   -18,    -6,   -18,   -18,    -1,    -6,   -18,   -18,    -4,
+    -5,    39,    -7,   -18,    -3,   -18,   -18,   -18,   -14,    -9,
+   -18,   -15,   -18,   -18,    -9,   -18,   -18,   -13,   -14,   -17,
+    -8,   -10,   -18,   -18,   -16,   -18,   -18,   -11,   -12 ]
 
 racc_goto_table = [
     17,    20,    23,     1,     5,     2,     8,    31,    12,   nil,
@@ -56,20 +56,19 @@ racc_reduce_table = [
   1, 19, :_reduce_none,
   1, 19, :_reduce_none,
   0, 18, :_reduce_6,
-  1, 18, :_reduce_7,
-  2, 18, :_reduce_8,
-  8, 20, :_reduce_9,
-  0, 22, :_reduce_10,
-  2, 22, :_reduce_11,
+  2, 18, :_reduce_7,
+  8, 20, :_reduce_8,
+  0, 22, :_reduce_9,
+  2, 22, :_reduce_10,
+  4, 23, :_reduce_11,
   4, 23, :_reduce_12,
-  4, 23, :_reduce_13,
-  3, 21, :_reduce_14,
-  0, 24, :_reduce_15,
-  1, 24, :_reduce_16,
-  3, 24, :_reduce_17,
-  2, 25, :_reduce_18 ]
+  3, 21, :_reduce_13,
+  0, 24, :_reduce_14,
+  1, 24, :_reduce_15,
+  3, 24, :_reduce_16,
+  2, 25, :_reduce_17 ]
 
-racc_reduce_n = 19
+racc_reduce_n = 18
 
 racc_shift_n = 39
 
@@ -173,83 +172,76 @@ module_eval(<<'.,.,', 'parse.y', 9)
 
 module_eval(<<'.,.,', 'parse.y', 10)
   def _reduce_7(val, _values, result)
-     result = [val[0]]
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'parse.y', 11)
-  def _reduce_8(val, _values, result)
      result = [val[0]].concat(val[1])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 13)
-  def _reduce_9(val, _values, result)
+module_eval(<<'.,.,', 'parse.y', 12)
+  def _reduce_8(val, _values, result)
      result = Table.new(val[1], val[2], val[3], val[4], val[6])
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parse.y', 14)
+  def _reduce_9(val, _values, result)
+     result = []
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 15)
   def _reduce_10(val, _values, result)
-     result = []
+     result = [val[0]].concat(val[1])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 16)
+module_eval(<<'.,.,', 'parse.y', 17)
   def _reduce_11(val, _values, result)
-     result = [val[0]].concat(val[1])
+     result = Index.new(val[1], val[2], [])
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 18)
   def _reduce_12(val, _values, result)
-     result = Index.new(val[1], val[2], [])
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'parse.y', 19)
-  def _reduce_13(val, _values, result)
      result = Index.new(val[1], val[2], ['unique'])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 21)
-  def _reduce_14(val, _values, result)
+module_eval(<<'.,.,', 'parse.y', 20)
+  def _reduce_13(val, _values, result)
      result = val[1]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parse.y', 22)
+  def _reduce_14(val, _values, result)
+     result = []
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 23)
   def _reduce_15(val, _values, result)
-     result = []
+     result = [val[0]]
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 24)
   def _reduce_16(val, _values, result)
-     result = [val[0]]
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'parse.y', 25)
-  def _reduce_17(val, _values, result)
      result = [val[0]].concat(val[2])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 27)
-  def _reduce_18(val, _values, result)
+module_eval(<<'.,.,', 'parse.y', 26)
+  def _reduce_17(val, _values, result)
      result = Param.new(Type.new(val[0]), val[1])
     result
   end
