@@ -25,6 +25,6 @@ param_list: { result = [] }
 | param_element { result = [val[0]] }
 | param_element ',' param_list { result = [val[0]].concat(val[2]) }
 
-param_element: IDENT IDENT { result = Param.new(val[0], val[1]) }
+param_element: IDENT IDENT { result = Param.new(Type.new(val[0]), val[1]) }
 
 end

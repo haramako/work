@@ -42,8 +42,7 @@ public partial class Characters
 
     public void Save(Character v)
     {
-        var key = kb.Cleared().Store(Keys.Characters).Store(v.Id).Build();
-        c.Put(key, v.Serialize());
+        c.Put(kb.Cleared().Store(Keys.Characters).Store(v.Id).Build(), v.Serialize());
         c.Put(kb.Cleared().Store(Keys.Characters_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
         c.Put(kb.Cleared().Store(Keys.Characters_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build(), new ByteSpan());
     }
@@ -53,40 +52,43 @@ public partial class Characters
         var start = kb.Cleared().Store(Keys.Characters_Name).Store(Name.Start).Build();
         var end = kb.Cleared().Store(Keys.Characters_Name).Store(Name.End).Build();
         var found = c.GetRange(start, end);
-        byte[] buf = new byte[16];
+        byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0);
-            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf, 9));
+            kv.Key.WriteTo(buf, 0, 1);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });
     }
+
     public IEnumerable<Character> SearchByAgeWeight(Range<int> Age)
     {
         var start = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age.Start).Build();
         var end = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age.End).Build();
         var found = c.GetRange(start, end);
-        byte[] buf = new byte[16];
+        byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0);
-            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf, 9));
+            kv.Key.WriteTo(buf, 0, 9);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });
     }
+
     public IEnumerable<Character> SearchByAgeWeight(int Age,Range<int> Weight)
     {
         var start = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age).Store(Weight.Start).Build();
         var end = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age).Store(Weight.End).Build();
         var found = c.GetRange(start, end);
-        byte[] buf = new byte[16];
+        byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0);
-            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf, 9));
+            kv.Key.WriteTo(buf, 0, 9);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });
     }
+
 }
 
 

@@ -35,8 +35,30 @@ module Pandora::CodeGen
   end
 
   Prog = Struct.new(:namespace, :tables)
-  Table = Struct.new(:idx, :name, :cls, :key, :decls)
+  Table = Struct.new(:idx, :name, :cls, :key, :indices)
   Index = Struct.new(:idx, :params, :options)
   Param = Struct.new(:type, :name)
+  
+  class Type
+    MAPPING = {
+      'int'=>[:int32,4],
+      'uint'=>[:uint32,4],
+      'string'=>[:string,0],
+    }
+
+    attr_reader :size
+
+    def initialize(_name)
+      @name, @size = MAPPING[_name]
+      raise unless @name
+    end
+
+    def name
+      @name.to_s
+    end
+
+    alias to_s name
+    alias inspect name
+  end
 end
 

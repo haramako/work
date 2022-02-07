@@ -28,7 +28,7 @@ public partial class <%=t.name%>
         c = _c;
     }
 
-    public <%=t.cls%> Find(<%=param_args(t.key,1,false)%>)
+    public <%=t.cls%> Find(<%=t.key_func_args%>)
     {
         var key = kb.Cleared().Store(Keys.<%=t.name%>).Store(<%=t.key[0][1]%>).Build();
         var data = c.Get(key);
@@ -44,28 +44,28 @@ public partial class <%=t.name%>
 
     public void Save(<%=t.cls%> v)
     {
-        var key = kb.Cleared().Store(Keys.<%=t.name%>).Store(v.<%=t.key[0][1]%>).Build();
-        c.Put(key, v.Serialize());
-        <%- t.decls.each do |decl| -%>
-        c.Put(<%=param_make_key_save(t, decl, prefix: 'v.')%>, new ByteSpan());
+        c.Put(<%=t.make_key_save%>, v.Serialize());
+        <%- t.indices.each do |index| -%>
+        c.Put(<%=index.make_key_save(t, prefix: 'v.')%>, new ByteSpan());
         <%- end -%>
     }
 
-    <%- t.decls.each do |decl| -%>
-    <%- (1..decl.params.size).each do |len| -%>
-    public IEnumerable<<%=t.cls%>> SearchBy<%=param_funcname(decl.params)%>(<%= param_args(decl.params,len)%>)
+    <%- t.indices.each do |index| -%>
+    <%- (1..index.params.size).each do |len| -%>
+    public IEnumerable<<%=t.cls%>> SearchBy<%=index.funcname%>(<%= index.func_args(len)%>)
     {
-        var start = <%=param_make_key(t, decl, len, 'Start')%>;
-        var end = <%=param_make_key(t, decl, len, 'End')%>;
+        var start = <%=index.make_key(t, len, 'Start')%>;
+        var end = <%=index.make_key(t, len, 'End')%>;
         var found = c.GetRange(start, end);
-        byte[] buf = new byte[16];
+        byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0);
-            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf, 9));
+            kv.Key.WriteTo(buf, 0, <%=index.index_size%>);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });
     }
+
     <%- end -%>
     <%- end -%>
 }

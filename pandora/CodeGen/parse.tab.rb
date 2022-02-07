@@ -250,7 +250,7 @@ module_eval(<<'.,.,', 'parse.y', 25)
 
 module_eval(<<'.,.,', 'parse.y', 27)
   def _reduce_18(val, _values, result)
-     result = Param.new(val[0], val[1])
+     result = Param.new(Type.new(val[0]), val[1])
     result
   end
 .,.,
