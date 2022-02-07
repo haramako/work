@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Client": {
-      "commandName": "Project",
-      "commandLineArgs": "bench -n 100000 -c 1000"
-    }
-  }
-}
