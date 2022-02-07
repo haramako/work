@@ -1,0 +1,10 @@
+task :build do
+  sh 'racc parse.y'
+  sh 'ruby codegen.rb'
+end
+
+task :test => :build do
+  sh 'dotnet run --project TestProj'
+end
+
+  

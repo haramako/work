@@ -330,6 +330,16 @@ namespace ToydeaCabinet
 		}
 
 		/// <summary>
+		/// 特定のプレフィックスをもつキーを列挙する
+		/// </summary>
+		/// <param name="prefix">キーのプレフィックス</param>
+		/// <returns>指定されたプレフィックスのキー・値を返す</returns>
+		public IEnumerable<KeyValuePair> GetRange(CabinetKey start, CabinetKey end)
+		{
+			return data_.SearchRange(start, end).Where(i => !i.IsDeleted).Select(i => new KeyValuePair(i.Key, i.Data));
+		}
+
+		/// <summary>
 		/// キーを指定して、値が存在するかどうかを返す
 		/// </summary>
 		/// <param name="key">対象のキー</param>

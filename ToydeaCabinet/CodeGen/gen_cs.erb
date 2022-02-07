@@ -1,0 +1,16 @@
+using ToydeaCabinet;
+
+public partial class <%= t.name %>
+{
+<%- t.decls.each do |decl| -%>
+    public IEnumerator<<%= t.cls %>> FindBy<%= param_funcname(decl.params) %>(<%= param_args(decl.params) %>)
+    {
+        CabinetKey key;
+        <%- decl.params.each do |param| -%>
+        <%= param.name %>.Add(key);
+        <%- end -%>
+	return FindRange<<%=t.cls%>>(key);
+    }
+    
+<%- end -%>
+}
