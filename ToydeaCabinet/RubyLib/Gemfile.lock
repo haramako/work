@@ -6,7 +6,7 @@ GEM
     google-protobuf (3.11.2-x64-mingw32)
     multi_json (1.13.1)
     mustermann (1.0.3)
-    rack (2.0.6)
+    rack (2.2.3)
     rack-protection (2.0.5)
       rack
     sequel (5.28.0)
