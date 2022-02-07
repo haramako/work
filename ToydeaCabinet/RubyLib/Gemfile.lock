@@ -2,8 +2,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     backports (3.11.4)
-    google-protobuf (3.11.2)
-    google-protobuf (3.11.2-x64-mingw32)
+    google-protobuf (3.19.2)
+    google-protobuf (3.19.2-x64-mingw32)
     multi_json (1.13.1)
     mustermann (1.0.3)
     rack (2.0.6)
