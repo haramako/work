@@ -127,6 +127,38 @@ when :foods_kind2
       plot_run(plot, w, days, "#{kind.name}")
     end
   end
+
+when :foods_kind3
+  # 畑の場合（人数を固定して、マス数を変更）
+  with_plot do |plot|
+    cell_counts = [70,80,100,110,200,220,250]
+    kinds = [CARROT,POTATO,WHEAT]
+    pop = 2
+    
+    kinds.each do |kind|
+      plot.time "Foods, pop=2"
+      plot.xrange "[0:]"
+      plot.yrange "[0:]"
+      data = []
+      cell_counts.each do |cell_count|
+        w = World.new(20,20)
+
+        w.add_beavers :populate, pop
+        
+        w.add_cells kind, cell_count
+        
+        w.run(24*100)
+        
+        data << [cell_count, w.storage.inject(0){|m,x| m+x[1]}]
+      end
+    
+      plot.data << Gnuplot::DataSet.new(data.transpose) do |ds|
+        ds.title = "#{kind.name}"
+        ds.with = 'linespoints'
+      end
+    end
+  end
+  
   
 when :foods_work
   # 100マスのニンジンに二人固定で、仕事を変えた場合

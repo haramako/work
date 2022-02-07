@@ -44,7 +44,7 @@ pub enum UnaryOp {
     Not,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Type {
     I8,
     I16,
@@ -55,10 +55,28 @@ pub enum Type {
     U32,
     U64,
     UPtr,
+    Array(i32, Rc<Type>),
+}
+
+impl Clone for Type {
+    fn clone(&self) -> Type {
+        match self {
+            Type::I8 => Type::I8,
+            Type::I16 => Type::I16,
+            Type::I32 => Type::I32,
+            Type::I64 => Type::I64,
+            Type::U8 => Type::U8,
+            Type::U16 => Type::U16,
+            Type::U32 => Type::U32,
+            Type::U64 => Type::U64,
+            Type::UPtr => Type::UPtr,
+            Type::Array(a, b) => Type::Array(*a, b.clone()),
+        }
+    }
 }
 
 impl Type {
-    pub fn to_asm(self) -> &'static str {
+    pub fn to_asm(&self) -> &'static str {
         match self {
             Type::I8 => "i8",
             Type::I16 => "i16",
@@ -69,10 +87,11 @@ impl Type {
             Type::U32 => "i32",
             Type::U64 => "i64",
             Type::UPtr => "i64",
+            Type::Array(_, _) => "",
         }
     }
 
-    pub fn size(self) -> i32 {
+    pub fn size(&self) -> i32 {
         match self {
             Type::I8 => 1,
             Type::I16 => 2,
@@ -83,10 +102,11 @@ impl Type {
             Type::U32 => 4,
             Type::U64 => 8,
             Type::UPtr => 8,
+            Type::Array(_, _) => 0,
         }
     }
 
-    pub fn signed(self) -> bool {
+    pub fn signed(&self) -> bool {
         match self {
             Type::I8 => true,
             Type::I16 => true,
@@ -97,6 +117,7 @@ impl Type {
             Type::U32 => false,
             Type::U64 => false,
             Type::UPtr => false,
+            Type::Array(_, _) => false,
         }
     }
 
@@ -120,9 +141,9 @@ impl Type {
         }
     }
 
-    pub fn combinate(t1: Type, t2: Type) -> Type {
+    pub fn combinate(t1: &Type, t2: &Type) -> Type {
         if t1 == t2 {
-            t1
+            t1.clone()
         } else if t1.signed() == t2.signed() {
             Type::from(max(t1.size(), t2.size()), t1.signed())
         } else {
@@ -213,7 +234,7 @@ pub fn to_type(typ: &p::Type) -> Type {
 }
 
 impl CodeGenerator {
-    fn op_type(&self, t1: Type, t2: Type) -> Type {
+    fn op_type(&self, t1: &Type, t2: &Type) -> Type {
         Type::combinate(t1, t2)
     }
 
@@ -228,7 +249,7 @@ impl CodeGenerator {
     }
 
     pub fn tmpreg(&mut self, typ: Type) -> Rc<Reg> {
-        self.reg_num+=1;
+        self.reg_num += 1;
         self.new_reg(format!("{}", self.reg_num).as_str(), typ)
     }
 
@@ -237,7 +258,7 @@ impl CodeGenerator {
             p::Expr::BinOp(op, e1, e2) => {
                 let r1 = self.genexpr(e1)?;
                 let r2 = self.genexpr(e2)?;
-                let reg = self.tmpreg(self.op_type(r1.typ, r2.typ));
+                let reg = self.tmpreg(self.op_type(&r1.typ, &r2.typ));
                 self.code
                     .push(Code::BinOp(op_to_op(op), Type::I8, reg.clone(), r1, r2));
                 Ok(reg)
@@ -256,7 +277,7 @@ impl CodeGenerator {
             p::Stmt::Func(id, typ, args, body) => self.genfunc(id, typ, args, body),
             p::Stmt::Return(expr) => {
                 let r = self.genexpr(expr)?;
-                self.code.push(Code::Ret(self.func_result, r));
+                self.code.push(Code::Ret(self.func_result.clone(), r));
                 Ok(())
             }
             _ => Ok(()),
@@ -326,10 +347,11 @@ pub fn gencode(prog: &Vec<p::Stmt>) -> Result<CodeGenerator, Err> {
 }
 
 pub fn dump(cg: &CodeGenerator) {
-    println!(r#"source_filename = "hoge.c"
+    println!(
+        r#"source_filename = "hoge.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu""#);
-    
+target triple = "x86_64-pc-linux-gnu""#
+    );
     for f in cg.funcs.iter() {
         let args = f
             .args
