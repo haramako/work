@@ -6,3 +6,4 @@ html
 *.dll
 *.exe
 *.db
+*.csproj.user
