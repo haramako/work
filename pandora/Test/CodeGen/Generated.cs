@@ -11,9 +11,9 @@ namespace ToydeaCabinet.CodeGenTest {
 
 public static class Keys
 {
-    public const byte Characters = 1;
-    public const byte Characters_Name = 2;
-    public const byte Characters_AgeWeight = 3;
+    public const byte Character_Id = 1;
+    public const byte Character_Name = 2;
+    public const byte Character_AgeWeight = 3;
 }
 
 public partial class Characters
@@ -28,7 +28,7 @@ public partial class Characters
 
     public Character Find(int Id)
     {
-        var key = kb.Cleared().Store(Keys.Characters).Store(Id).Build();
+        var key = kb.Cleared().Store(Keys.Character_Id).Store(Id).Build();
         var data = c.Get(key);
         if (data.IsEmpty)
         {
@@ -42,15 +42,15 @@ public partial class Characters
 
     public void Save(Character v)
     {
-        c.Put(kb.Cleared().Store(Keys.Characters).Store(v.Id).Build(), v.Serialize());
-        c.Put(kb.Cleared().Store(Keys.Characters_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
-        c.Put(kb.Cleared().Store(Keys.Characters_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build(), new ByteSpan());
+        c.Put(kb.Cleared().Store(Keys.Character_Id).Store(v.Id).Build(), v.Serialize());
+        c.Put(kb.Cleared().Store(Keys.Character_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
+        c.Put(kb.Cleared().Store(Keys.Character_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build(), new ByteSpan());
     }
 
     public IEnumerable<Character> SearchByName(Range<string> Name)
     {
-        var start = kb.Cleared().Store(Keys.Characters_Name).Store(Name.Start).Build();
-        var end = kb.Cleared().Store(Keys.Characters_Name).Store(Name.End).Build();
+        var start = kb.Cleared().Store(Keys.Character_Name).Store(Name.Start).Build();
+        var end = kb.Cleared().Store(Keys.Character_Name).Store(Name.End).Build();
         var found = c.GetRange(start, end);
         byte[] buf = new byte[4];
         return found.Select(kv =>
@@ -63,8 +63,8 @@ public partial class Characters
 
     public IEnumerable<Character> SearchByAgeWeight(Range<int> Age)
     {
-        var start = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age.Start).Build();
-        var end = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age.End).Build();
+        var start = kb.Cleared().Store(Keys.Character_AgeWeight).Store(Age.Start).Build();
+        var end = kb.Cleared().Store(Keys.Character_AgeWeight).Store(Age.End).Build();
         var found = c.GetRange(start, end);
         byte[] buf = new byte[4];
         return found.Select(kv =>
@@ -77,8 +77,8 @@ public partial class Characters
 
     public IEnumerable<Character> SearchByAgeWeight(int Age,Range<int> Weight)
     {
-        var start = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age).Store(Weight.Start).Build();
-        var end = kb.Cleared().Store(Keys.Characters_AgeWeight).Store(Age).Store(Weight.End).Build();
+        var start = kb.Cleared().Store(Keys.Character_AgeWeight).Store(Age).Store(Weight.Start).Build();
+        var end = kb.Cleared().Store(Keys.Character_AgeWeight).Store(Age).Store(Weight.End).Build();
         var found = c.GetRange(start, end);
         byte[] buf = new byte[4];
         return found.Select(kv =>

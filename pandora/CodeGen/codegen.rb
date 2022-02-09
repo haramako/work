@@ -7,21 +7,13 @@ require_relative 'gen_cs.rb'
 
 include Pandora::CodeGen
 
-r = Parser.new(<<EOT).parse
-namespace ToydeaCabinet.CodeGenTest;
-// Comment
-table 1 Characters Character (int Id){
-  index 2 (string Name); // [cached];
-  index 3 (int Age, int Weight); // [ranged, name("LevelHp")];
-}
-EOT
+f = ARGV[0]
 
-pp r
+ast = Parser.new(IO.read(f), f).parse
+#pp ast
+ast.analyze
+code = Generator::CSharpGenerator.new.generate(ast)
 
-gen = Generator::CSharpGenerator.new
-src = gen.generate(r)
+puts code
 
-IO.write('../Test/CodeGen/Generated.cs', src);
-
-
-
+IO.write('../Test/CodeGen/Generated.cs', code);

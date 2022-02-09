@@ -1,29 +1,39 @@
 class Pandora::CodeGen::Parser
 rule
 
-prog: namespace_decl table_decls { result = Prog.new(val[0], val[1]) }
+default: namespace_decl table_decls { result = AST.new(val[0], val[1]) }
 
 namespace_decl: | 'namespace' namespace_name ';' { result = val[1] }
 
 namespace_name: IDENT | NAMESPACE
 
-table_decls: { result = [] }
-| table_decl table_decls { result = [val[0]].concat(val[1]) }
+# for object
+field_decls: { result = [] }
+           | field_decl field_decls { result = list(val) }
 
-table_decl: 'table' NUMBER IDENT IDENT params '{' index_decls '}' { result = Table.new(val[1], val[2], val[3], val[4], val[6]) }
+field_decl: IDENT IDENT ';' { result = Param.new(Type.new(val[0]), val[1]) }
+
+# for table
+table_decls: { result = [] }
+           | table_decl table_decls { result = list(val) }
+
+table_decl: 'table' NUMBER IDENT 'for' IDENT key_list '{' index_decls '}'
+                 { result = Table.new(val[1], val[2], val[4], val[5], val[7]) }
+          | 'object'  IDENT '{' field_decls '}' { result = ObjectDecl.new(val[1], val[3]) }
 
 index_decls: { result = [] }
-| index_decl index_decls { result = [val[0]].concat(val[1]) }
+           | index_decl index_decls { result = list(val) }
 
-index_decl: 'index' NUMBER params ';' { result = Index.new(val[1], val[2], []) }
-| KEY NUMBER params ';' { result = Index.new(val[1], val[2], ['unique']) }
+index_decl: 'index' NUMBER key_list ';' { result = Index.new(val[1], val[2], []) }
 
-params: '(' param_list ')' { result = val[1] }
+key_list: '(' keys ')' { result = val[1] }
 
-param_list: { result = [] }
-| param_element { result = [val[0]] }
-| param_element ',' param_list { result = [val[0]].concat(val[2]) }
+keys: { result = [] }
+    | key { result = [val[0]] }
+    | key ',' keys { result = list2(val) }
 
-param_element: IDENT IDENT { result = Param.new(Type.new(val[0]), val[1]) }
+key: IDENT
+
+
 
 end

@@ -6,18 +6,18 @@ using System.Linq;
 using ToydeaCabinet;
 using ToydeaCabinet.Indexer;
 
-<%- if prog.namespace %>
-namespace <%=prog.namespace%> {
+<%- if ast.namespace %>
+namespace <%=ast.namespace%> {
 <%- end -%>
 
 public static class Keys
 {
-    <%- keys.each do |idx,name| -%>
-    public const byte <%=name%> = <%=idx%>;
+    <%- ast.keys.each do |key| -%>
+    public const byte <%=key.keyname%> = <%=key.idx%>;
     <%- end -%>
 }
 
-<%- prog.tables.each do |t| -%>
+<%- ast.tables.each do |t| -%>
 public partial class <%=t.name%>
 {
     CabinetKeyBuilder kb = new CabinetKeyBuilder();
@@ -28,9 +28,9 @@ public partial class <%=t.name%>
         c = _c;
     }
 
-    public <%=t.cls%> Find(<%=t.key_func_args%>)
+    public <%=t.cls.name%> Find(<%=t.key.func_args(is_range: false)%>)
     {
-        var key = kb.Cleared().Store(Keys.<%=t.name%>).Store(<%=t.key[0][1]%>).Build();
+        var key = <%=t.key.make_get_key%>;
         var data = c.Get(key);
         if (data.IsEmpty)
         {
@@ -38,29 +38,29 @@ public partial class <%=t.name%>
         }
         else
         {
-            return <%=t.cls%>.Deserialize(data);
+            return <%=t.cls.name%>.Deserialize(data);
         }
     }
 
-    public void Save(<%=t.cls%> v)
+    public void Save(<%=t.cls.name%> v)
     {
-        c.Put(<%=t.make_key_save%>, v.Serialize());
+        c.Put(<%=t.key.make_put_key('v.')%>, v.Serialize());
         <%- t.indices.each do |index| -%>
-        c.Put(<%=index.make_key_save(t, prefix: 'v.')%>, new ByteSpan());
+        c.Put(<%=index.key.make_put_key('v.')%>, new ByteSpan());
         <%- end -%>
     }
 
     <%- t.indices.each do |index| -%>
-    <%- (1..index.params.size).each do |len| -%>
-    public IEnumerable<<%=t.cls%>> SearchBy<%=index.funcname%>(<%= index.func_args(len)%>)
+    <%- (1..index.key.fields.size).each do |len| -%>
+    public IEnumerable<<%=t.cls.name%>> SearchBy<%=index.key.funcname%>(<%= index.key.func_args(len)%>)
     {
-        var start = <%=index.make_key(t, len, 'Start')%>;
-        var end = <%=index.make_key(t, len, 'End')%>;
+        var start = <%=index.key.make_get_key(len, 'Start')%>;
+        var end = <%=index.key.make_get_key(len, 'End')%>;
         var found = c.GetRange(start, end);
         byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0, <%=index.index_size%>);
+            kv.Key.WriteTo(buf, 0, <%=index.key.index_size%>);
             var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });
@@ -71,6 +71,6 @@ public partial class <%=t.name%>
 }
 <%- end -%>
 
-<%- if prog.namespace %>
+<%- if ast.namespace %>
 }
 <%- end -%>

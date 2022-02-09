@@ -9,16 +9,6 @@ module Pandora::CodeGen::Generator
     end
 
     def generate(ast)
-      gen_table(ast)
-    end
-
-    def gen_table(prog)
-      keys = []
-      prog.tables.each do |t|
-        keys << [t.idx, t.name];
-        keys.concat(t.indices.map {|d| [d.idx, t.name + '_' + d.funcname] })
-      end
-        
       @erb.result(binding)
     end
 
@@ -29,70 +19,65 @@ end
 module Pandora::CodeGen
 
   class Table
-
-    def make_key_save
-      "kb.Cleared().Store(Keys.#{name}).Store(v.#{key[0][1]}).Build()"
-    end
-
-    def key_func_args
-      "#{key[0].type} #{key[0].name}"
-    end
   end
   
   class Index
-    def funcname
-      params.map do |p|
-        "#{p.name}"
-      end.join('')
-    end
 
     def type_exp_class(type)
       "Range<#{type}>"
     end
     
-    def func_args(len, is_range = true)
-      params[0,len].map.with_index do |p,i|
+  end
+
+  class Key
+    def func_args(len = fields.size, is_range: true)
+      fields[0,len].map.with_index do |f,i|
         if is_range && i == len-1
-          "#{type_exp_class(p.type)} #{p.name}"
+          "#{f.type.range_type} #{f.name}"
         else
-          "#{p.type} #{p.name}"
+          "#{f.type} #{f.name}"
         end
       end.join(',')
     end
 
-    def keyname(table)
-      "#{table.name}_#{funcname}"
+    def funcname
+      key_names.join
     end
-
-    def make_key_save(table, prefix: nil)
-      r = []
-      r << "kb.Cleared().Store(Keys.#{keyname(table)})"
-      r << params.map.with_index do |tn,i|
-        ".Store(#{prefix}#{tn[1]})"
-      end
-      r << ".Store(#{prefix}#{table.key[0][1]})"
-      r << '.Build()'
-      r.flatten.join
-    end
-
-    def make_key(table, len=nil, field=nil)
-      len ||= params.size
-      r = []
-      r << "kb.Cleared().Store(Keys.#{keyname(table)})"
-      r << params[0,len].map.with_index do |tn,i|
-        if field && i == len-1
-          ".Store(#{tn[1]}.#{field})"
-        else
-          ".Store(#{tn[1]})"
-        end
-      end
-      r << '.Build()'
-      r.flatten.join
+    
+    def keyname
+      "#{cls.name}_#{funcname}"
     end
 
     def index_size
-      1 + params.sum{|p| p.type.size}
+      1 + fields.sum{|f| f.type.size}
     end
+
+    def make_get_key(len=fields.size, access_field = nil)
+      make_key(len, access_field: access_field)
+    end
+    
+    def make_put_key(prefix)
+      make_key(fields.size, prefix: prefix)
+    end
+    
+    def make_key(len, access_field: nil, prefix: nil)
+      r = []
+      r << "kb.Cleared().Store(Keys.#{keyname})"
+      r << fields[0,len].map.with_index do |f,i|
+        if access_field && i == len-1
+          ".Store(#{f.name}.#{access_field})"
+        else
+          ".Store(#{prefix}#{f.name})"
+        end
+      end
+      pp [is_primary_key, r.join]
+      if prefix && !is_primary_key
+        r << ".Store(v.Id)"
+      end
+      r << '.Build()'
+      r.flatten.join
+    end
+
   end
 
   class Type
@@ -107,6 +92,10 @@ module Pandora::CodeGen
       else
         raise
       end
+    end
+
+    def range_type
+      "Range<#{to_s}>"
     end
   end
 end

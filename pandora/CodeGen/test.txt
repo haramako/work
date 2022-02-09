@@ -1,0 +1,14 @@
+namespace ToydeaCabinet.CodeGenTest;
+
+object Character {
+  int Id;
+  string Name;
+  int Age;
+  int Weight;
+}
+
+// Comment
+table 1 Characters for Character(Id){
+  index 2 (Name); // [cached];
+  index 3 (Age, Weight); // [ranged, name("AgeAndWeight")];
+}

@@ -11,66 +11,73 @@ module Pandora
 ##### State transition tables begin ###
 
 racc_action_table = [
-     9,    10,    25,    26,    25,    26,     3,     4,     7,    11,
-     7,    13,    14,    15,    16,    18,    19,    22,    27,    28,
-    29,    30,    32,    33,    22,    18,    18,    37,    38 ]
+     7,     7,    10,    11,     3,     8,     8,     4,    12,    14,
+    15,    16,    17,    18,    19,    21,    23,    21,    25,    26,
+    28,    29,    30,    33,    36,    37,    38,    39,    36,    41,
+    33,    28,    44 ]
 
 racc_action_check = [
-     3,     3,    19,    19,    24,    24,     0,     1,     2,     4,
-     6,     7,     8,    13,    15,    16,    17,    18,    20,    21,
-    22,    23,    25,    26,    28,    32,    33,    35,    36 ]
+     2,     6,     3,     3,     0,     2,     6,     1,     4,     7,
+     8,     9,    14,    15,    17,    18,    19,    20,    21,    22,
+    23,    25,    27,    28,    30,    31,    32,    34,    35,    36,
+    38,    41,    43 ]
 
 racc_action_pointer = [
-     4,     7,     2,    -4,     9,   nil,     4,     4,     9,   nil,
-   nil,   nil,   nil,     9,   nil,    10,     3,     8,    13,    -8,
-     5,     5,    16,    12,    -6,    15,    16,   nil,    20,   nil,
-   nil,   nil,    13,    14,   nil,    24,    25,   nil,   nil ]
+     2,     7,    -6,    -2,     8,   nil,    -5,     2,     6,     8,
+   nil,   nil,   nil,   nil,     8,     4,   nil,     6,    11,    12,
+    13,    14,     9,     7,   nil,    18,   nil,    13,    19,   nil,
+    12,    11,    11,   nil,    17,    16,    22,   nil,    26,   nil,
+   nil,    18,   nil,    29,   nil ]
 
 racc_action_default = [
-    -2,   -18,    -6,   -18,   -18,    -1,    -6,   -18,   -18,    -4,
-    -5,    39,    -7,   -18,    -3,   -18,   -18,   -18,   -14,    -9,
-   -18,   -15,   -18,   -18,    -9,   -18,   -18,   -13,   -14,   -17,
-    -8,   -10,   -18,   -18,   -16,   -18,   -18,   -11,   -12 ]
+    -2,   -21,    -9,   -21,   -21,    -1,    -9,   -21,   -21,   -21,
+    -4,    -5,    45,   -10,   -21,   -21,    -3,   -21,    -6,   -21,
+    -6,   -21,   -21,   -21,    -7,   -21,   -12,   -21,   -17,    -8,
+   -13,   -21,   -18,   -20,   -21,   -13,   -21,   -16,   -17,   -11,
+   -14,   -21,   -19,   -21,   -15 ]
 
 racc_goto_table = [
-    17,    20,    23,     1,     5,     2,     8,    31,    12,   nil,
-   nil,    34,   nil,   nil,   nil,   nil,    35,    36 ]
+    27,    31,    34,    22,     5,    24,     1,    40,    13,     2,
+     9,    42,   nil,   nil,   nil,   nil,   nil,   nil,    43 ]
 
 racc_goto_check = [
-     6,     9,     7,     1,     3,     2,     4,     7,     3,   nil,
-   nil,     9,   nil,   nil,   nil,   nil,     6,     6 ]
+     8,    11,     9,     5,     3,     5,     1,     9,     3,     2,
+     4,    11,   nil,   nil,   nil,   nil,   nil,   nil,     8 ]
 
 racc_goto_pointer = [
-   nil,     3,     5,     2,     3,   nil,   -16,   -17,   nil,   -17,
-   nil ]
+   nil,     6,     9,     2,     7,   -15,   nil,   nil,   -23,   -28,
+   nil,   -27,   nil ]
 
 racc_goto_default = [
-   nil,   nil,   nil,   nil,   nil,     6,   nil,   nil,    24,   nil,
-    21 ]
+   nil,   nil,   nil,   nil,   nil,   nil,    20,     6,   nil,   nil,
+    35,   nil,    32 ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
-  2, 16, :_reduce_1,
-  0, 17, :_reduce_none,
-  3, 17, :_reduce_3,
-  1, 19, :_reduce_none,
-  1, 19, :_reduce_none,
-  0, 18, :_reduce_6,
-  2, 18, :_reduce_7,
-  8, 20, :_reduce_8,
-  0, 22, :_reduce_9,
-  2, 22, :_reduce_10,
-  4, 23, :_reduce_11,
-  4, 23, :_reduce_12,
-  3, 21, :_reduce_13,
-  0, 24, :_reduce_14,
-  1, 24, :_reduce_15,
+  2, 17, :_reduce_1,
+  0, 18, :_reduce_none,
+  3, 18, :_reduce_3,
+  1, 20, :_reduce_none,
+  1, 20, :_reduce_none,
+  0, 21, :_reduce_6,
+  2, 21, :_reduce_7,
+  3, 22, :_reduce_8,
+  0, 19, :_reduce_9,
+  2, 19, :_reduce_10,
+  9, 23, :_reduce_11,
+  5, 23, :_reduce_12,
+  0, 25, :_reduce_13,
+  2, 25, :_reduce_14,
+  4, 26, :_reduce_15,
   3, 24, :_reduce_16,
-  2, 25, :_reduce_17 ]
+  0, 27, :_reduce_17,
+  1, 27, :_reduce_18,
+  3, 27, :_reduce_19,
+  1, 28, :_reduce_none ]
 
-racc_reduce_n = 18
+racc_reduce_n = 21
 
-racc_shift_n = 39
+racc_shift_n = 45
 
 racc_token_table = {
   false => 0,
@@ -81,15 +88,16 @@ racc_token_table = {
   :NAMESPACE => 5,
   "table" => 6,
   :NUMBER => 7,
-  "{" => 8,
-  "}" => 9,
-  "index" => 10,
-  :KEY => 11,
-  "(" => 12,
-  ")" => 13,
-  "," => 14 }
+  "for" => 8,
+  "{" => 9,
+  "}" => 10,
+  "object" => 11,
+  "index" => 12,
+  "(" => 13,
+  ")" => 14,
+  "," => 15 }
 
-racc_nt_base = 15
+racc_nt_base = 16
 
 racc_use_result_var = true
 
@@ -118,24 +126,27 @@ Racc_token_to_s_table = [
   "NAMESPACE",
   "\"table\"",
   "NUMBER",
+  "\"for\"",
   "\"{\"",
   "\"}\"",
+  "\"object\"",
   "\"index\"",
-  "KEY",
   "\"(\"",
   "\")\"",
   "\",\"",
   "$start",
-  "prog",
+  "default",
   "namespace_decl",
   "table_decls",
   "namespace_name",
+  "field_decls",
+  "field_decl",
   "table_decl",
-  "params",
+  "key_list",
   "index_decls",
   "index_decl",
-  "param_list",
-  "param_element" ]
+  "keys",
+  "key" ]
 
 Racc_debug_parser = false
 
@@ -145,7 +156,7 @@ Racc_debug_parser = false
 
 module_eval(<<'.,.,', 'parse.y', 3)
   def _reduce_1(val, _values, result)
-     result = Prog.new(val[0], val[1])
+     result = AST.new(val[0], val[1])
     result
   end
 .,.,
@@ -163,89 +174,105 @@ module_eval(<<'.,.,', 'parse.y', 5)
 
 # reduce 5 omitted
 
-module_eval(<<'.,.,', 'parse.y', 9)
+module_eval(<<'.,.,', 'parse.y', 10)
   def _reduce_6(val, _values, result)
      result = []
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 10)
+module_eval(<<'.,.,', 'parse.y', 11)
   def _reduce_7(val, _values, result)
-     result = [val[0]].concat(val[1])
+     result = list(val)
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 12)
+module_eval(<<'.,.,', 'parse.y', 13)
   def _reduce_8(val, _values, result)
-     result = Table.new(val[1], val[2], val[3], val[4], val[6])
+     result = Param.new(Type.new(val[0]), val[1])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 14)
+module_eval(<<'.,.,', 'parse.y', 16)
   def _reduce_9(val, _values, result)
      result = []
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 15)
-  def _reduce_10(val, _values, result)
-     result = [val[0]].concat(val[1])
-    result
-  end
-.,.,
-
 module_eval(<<'.,.,', 'parse.y', 17)
-  def _reduce_11(val, _values, result)
-     result = Index.new(val[1], val[2], [])
-    result
-  end
-.,.,
-
-module_eval(<<'.,.,', 'parse.y', 18)
-  def _reduce_12(val, _values, result)
-     result = Index.new(val[1], val[2], ['unique'])
+  def _reduce_10(val, _values, result)
+     result = list(val)
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 20)
-  def _reduce_13(val, _values, result)
-     result = val[1]
+  def _reduce_11(val, _values, result)
+     result = Table.new(val[1], val[2], val[4], val[5], val[7])
     result
   end
 .,.,
 
-module_eval(<<'.,.,', 'parse.y', 22)
-  def _reduce_14(val, _values, result)
-     result = []
+module_eval(<<'.,.,', 'parse.y', 21)
+  def _reduce_12(val, _values, result)
+     result = ObjectDecl.new(val[1], val[3])
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 23)
-  def _reduce_15(val, _values, result)
-     result = [val[0]]
+  def _reduce_13(val, _values, result)
+     result = []
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 24)
-  def _reduce_16(val, _values, result)
-     result = [val[0]].concat(val[2])
+  def _reduce_14(val, _values, result)
+     result = list(val)
     result
   end
 .,.,
 
 module_eval(<<'.,.,', 'parse.y', 26)
-  def _reduce_17(val, _values, result)
-     result = Param.new(Type.new(val[0]), val[1])
+  def _reduce_15(val, _values, result)
+     result = Index.new(val[1], val[2], [])
     result
   end
 .,.,
+
+module_eval(<<'.,.,', 'parse.y', 28)
+  def _reduce_16(val, _values, result)
+     result = val[1]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parse.y', 30)
+  def _reduce_17(val, _values, result)
+     result = []
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parse.y', 31)
+  def _reduce_18(val, _values, result)
+     result = [val[0]]
+    result
+  end
+.,.,
+
+module_eval(<<'.,.,', 'parse.y', 32)
+  def _reduce_19(val, _values, result)
+     result = list2(val)
+    result
+  end
+.,.,
+
+# reduce 20 omitted
 
 def _reduce_none(val, _values, result)
   val[0]
