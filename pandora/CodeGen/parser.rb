@@ -97,9 +97,10 @@ module Pandora::CodeGen
     end
   end
   
-  class Table < Struct.new(:idx, :name, :cls_name, :key_names, :indices)
-    attr_reader :cls, :key
+  class Table < Struct.new(:idx, :cls_name, :key_names, :indices)
+    attr_reader :cls, :key, :name
     def analyze(ast)
+      @name = cls_name + 'Repository'
       @cls = ast.objects[cls_name]
       @key = Key.new(true, idx, cls, key_names)
       ast.keys << key
@@ -115,7 +116,7 @@ module Pandora::CodeGen
     end
   end
 
-  Param = Struct.new(:type, :name)
+  Field = Struct.new(:type, :name)
   
   class Key < Struct.new(:is_primary_key, :idx, :cls, :key_names)
     attr_reader :fields

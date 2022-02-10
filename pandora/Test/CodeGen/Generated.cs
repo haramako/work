@@ -16,12 +16,12 @@ public static class Keys
     public const byte Character_AgeWeight = 3;
 }
 
-public partial class Characters
+public partial class CharacterRepository
 {
     CabinetKeyBuilder kb = new CabinetKeyBuilder();
     Cabinet c;
 
-    public Characters(Cabinet _c)
+    public CharacterRepository(Cabinet _c)
     {
         c = _c;
     }
@@ -55,7 +55,7 @@ public partial class Characters
         byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0, 1);
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
             var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });

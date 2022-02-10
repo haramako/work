@@ -38,6 +38,16 @@ namespace ToydeaCabinet.Indexer
         {
             return new Range<int>(0, n - 1);
         }
+
+        public static Range<string> GreaterEq(string s)
+        {
+            return new Range<string>(s, "あああ");
+        }
+
+        public static Range<string> Less(string s)
+        {
+            return new Range<string>("", s);
+        }
     }
 
     public struct Range<T>

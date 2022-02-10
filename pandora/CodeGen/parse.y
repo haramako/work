@@ -11,14 +11,14 @@ namespace_name: IDENT | NAMESPACE
 field_decls: { result = [] }
            | field_decl field_decls { result = list(val) }
 
-field_decl: IDENT IDENT ';' { result = Param.new(Type.new(val[0]), val[1]) }
+field_decl: IDENT IDENT ';' { result = Field.new(Type.new(val[0]), val[1]) }
 
 # for table
 table_decls: { result = [] }
            | table_decl table_decls { result = list(val) }
 
-table_decl: 'table' NUMBER IDENT 'for' IDENT key_list '{' index_decls '}'
-                 { result = Table.new(val[1], val[2], val[4], val[5], val[7]) }
+table_decl: 'table' NUMBER IDENT key_list '{' index_decls '}'
+                 { result = Table.new(val[1], val[2], val[3], val[5]) }
           | 'object'  IDENT '{' field_decls '}' { result = ObjectDecl.new(val[1], val[3]) }
 
 index_decls: { result = [] }

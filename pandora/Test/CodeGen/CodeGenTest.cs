@@ -45,11 +45,18 @@ namespace ToydeaCabinet.CodeGenTest
     class IndexerTest
     {
         Cabinet c;
+        CharacterRepository rep;
 
         [SetUp]
         public void SetUp()
         {
             c = new Cabinet();
+            rep = new CharacterRepository(c);
+
+            rep.Save(new Character() { Id = 1, Name = "Tanjiro", Age = 16, Weight = 50 });
+            rep.Save(new Character() { Id = 2, Name = "Nezuko", Age = 14, Weight = 40 });
+            rep.Save(new Character() { Id = 3, Name = "Giyuu", Age = 20, Weight = 58 });
+            rep.Save(new Character() { Id = 4, Name = "Zenitsu", Age = 16, Weight = 46 });
         }
 
 
@@ -59,18 +66,21 @@ namespace ToydeaCabinet.CodeGenTest
         }
 
         [Test]
-        public void TestDatabase()
+        public void TestFind()
         {
-            var rep = new Characters(c);
-            rep.Save(new Character() { Id = 1, Name = "Tanjiro", Age = 16, Weight = 50 });
-            rep.Save(new Character() { Id = 2, Name = "Nezuko", Age = 14, Weight = 40 });
-            rep.Save(new Character() { Id = 3, Name = "Giyuu", Age = 20, Weight = 58 });
-            rep.Save(new Character() { Id = 4, Name = "Zenitsu", Age = 16, Weight = 46 });
-
             Assert.AreEqual("Tanjiro", rep.Find(1).Name);
+        }
 
-            //Assert.AreEqual(3, rep.SearchById(Range.Greater(1)).Count());
+        [Test]
+        public void TestSearchWithString()
+        {
+            Assert.AreEqual("Tanjiro,Zenitsu", names(rep.SearchByName(Range.GreaterEq("Tanjiro"))));
+            Assert.AreEqual("Giyuu,Nezuko", names(rep.SearchByName(Range.Less("Tanjiro"))));
+        }
 
+        [Test]
+        public void TestSearchWithMultipleFields()
+        {
             Assert.AreEqual("Zenitsu,Tanjiro", names(rep.SearchByAgeWeight(16, Range.Greater(45))));
             Assert.AreEqual("Tanjiro", names(rep.SearchByAgeWeight(16, Range.Greater(46))));
             Assert.AreEqual("Tanjiro", names(rep.SearchByAgeWeight(16, Range.Greater(49))));
