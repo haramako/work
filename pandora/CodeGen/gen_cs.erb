@@ -35,7 +35,7 @@ public partial class <%=t.name%>
            <%- end -%>
         }
 
-        public void Update(Character _v)
+        public void Update(<%=t.cls.name%> _v)
         {
             _obj = _v;
            <%- t.cls.fields.each do |f| -%>
@@ -74,7 +74,7 @@ public partial class <%=t.name%>
         }
     }
 
-    public bool Delete(Character v)
+    public bool Delete(<%=t.cls.name%> v)
     {
         _cache.Remove(v.<%=t.key_name%>);
 

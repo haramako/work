@@ -14,6 +14,9 @@ public static class Keys
     public const byte Character_Id = 1;
     public const byte Character_Name = 2;
     public const byte Character_AgeWeight = 3;
+    public const byte Item_Id = 4;
+    public const byte Item_OwnerId = 5;
+    public const byte Item_Name = 6;
 }
 
 public partial class CharacterRepository
@@ -150,6 +153,134 @@ public partial class CharacterRepository
     {
         var start = kb.Cleared().Store(Keys.Character_AgeWeight).Store(Age).Store(Weight.Start).Build();
         var end = kb.Cleared().Store(Keys.Character_AgeWeight).Store(Age).Store(Weight.End).Build();
+        var found = c.GetRange(start, end);
+        byte[] buf = new byte[4];
+        return found.Select(kv =>
+        {
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
+            return Find(id);
+        });
+    }
+
+}
+public partial class ItemRepository
+{
+    struct _Cache
+    {
+        public Item _obj;
+        public int Id;
+        public int OwnerId;
+        public string Name;
+
+        public _Cache(Item _v)
+        {
+            _obj = _v;
+           Id = _v.Id;
+           OwnerId = _v.OwnerId;
+           Name = _v.Name;
+        }
+
+        public void Update(Item _v)
+        {
+            _obj = _v;
+           Id = _v.Id;
+           OwnerId = _v.OwnerId;
+           Name = _v.Name;
+        }
+    }
+
+    CabinetKeyBuilder kb = new CabinetKeyBuilder();
+    Cabinet c;
+    Dictionary<int, _Cache> _cache = new Dictionary<int, _Cache>();
+
+    public ItemRepository(Cabinet _c)
+    {
+        c = _c;
+    }
+
+    public Item Find(int Id)
+    {
+        if(_cache.TryGetValue(Id, out _Cache _found))
+        {
+            return _found._obj;
+        }
+
+        var key = kb.Cleared().Store(Keys.Item_Id).Store(Id).Build();
+        var data = c.Get(key);
+        if (data.IsEmpty)
+        {
+            return null;
+        }
+        else
+        {
+            Item _new = Item.Deserialize(data);
+            _cache.Add(Id, new _Cache(_new));
+            return _new;
+        }
+    }
+
+    public bool Delete(Item v)
+    {
+        _cache.Remove(v.Id);
+
+        bool _deleted = c.Delete(kb.Cleared().Store(Keys.Item_Id).Store(v.Id).Build());
+        if (_deleted)
+        {
+            c.Delete(kb.Cleared().Store(Keys.Item_OwnerId).Store(v.OwnerId).Store(v.Id).Build());
+            c.Delete(kb.Cleared().Store(Keys.Item_Name).Store(v.Name).Store(v.Id).Build());
+        }
+        return _deleted;
+    }
+
+    public void Save(Item v)
+    {
+        if (_cache.TryGetValue(v.Id, out _Cache _found))
+        {
+            if( _found._obj != v)
+            {
+                throw new InvalidOperationException("Can't save duplicated key.");
+            }
+
+            // Exsist record.
+            if( _found.OwnerId != v.OwnerId ){
+                c.Delete(kb.Cleared().Store(Keys.Item_OwnerId).Store(_found.OwnerId).Store(v.Id).Build());
+                c.Put(kb.Cleared().Store(Keys.Item_OwnerId).Store(v.OwnerId).Store(v.Id).Build(), new ByteSpan());
+            }
+            if( _found.Name != v.Name ){
+                c.Delete(kb.Cleared().Store(Keys.Item_Name).Store(_found.Name).Store(v.Id).Build());
+                c.Put(kb.Cleared().Store(Keys.Item_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
+            }
+            _found.Update(v);
+        }
+        else
+        {
+            // New record.
+            _cache.Add(v.Id, new _Cache(v));
+            c.Put(kb.Cleared().Store(Keys.Item_Id).Store(v.Id).Build(), v.Serialize());
+            c.Put(kb.Cleared().Store(Keys.Item_OwnerId).Store(v.OwnerId).Store(v.Id).Build(), new ByteSpan());
+            c.Put(kb.Cleared().Store(Keys.Item_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
+        }
+    }
+
+    public IEnumerable<Item> SearchByOwnerId(Range<int> OwnerId)
+    {
+        var start = kb.Cleared().Store(Keys.Item_OwnerId).Store(OwnerId.Start).Build();
+        var end = kb.Cleared().Store(Keys.Item_OwnerId).Store(OwnerId.End).Build();
+        var found = c.GetRange(start, end);
+        byte[] buf = new byte[4];
+        return found.Select(kv =>
+        {
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
+            return Find(id);
+        });
+    }
+
+    public IEnumerable<Item> SearchByName(Range<string> Name)
+    {
+        var start = kb.Cleared().Store(Keys.Item_Name).Store(Name.Start).Build();
+        var end = kb.Cleared().Store(Keys.Item_Name).Store(Name.End).Build();
         var found = c.GetRange(start, end);
         byte[] buf = new byte[4];
         return found.Select(kv =>

@@ -7,8 +7,19 @@ object Character {
   int Weight;
 }
 
+object Item {
+  int Id;
+  int OwnerId;
+  string Name;
+}
+
 // Comment
 table 1 Character(Id) {
   index 2 (Name); // [cached];
   index 3 (Age, Weight); // [ranged, name("AgeAndWeight")];
+}
+
+table 4 Item(Id) {
+  index 5 (OwnerId);
+  index 6 (Name);
 }

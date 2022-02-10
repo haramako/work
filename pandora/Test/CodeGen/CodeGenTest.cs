@@ -35,10 +35,18 @@ namespace ToydeaCabinet.CodeGenTest
     public class Item
     {
         public int Id;
+        public int OwnerId;
+        public string Name;
+        public int Amount;
 
         public byte[] Serialize()
         {
             return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this));
+        }
+
+        public static Item Deserialize(ByteSpan data)
+        {
+            return JsonSerializer.Deserialize<Item>(data.ToBytes());
         }
     }
 
