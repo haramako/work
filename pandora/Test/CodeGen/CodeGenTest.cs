@@ -44,14 +44,14 @@ namespace ToydeaCabinet.CodeGenTest
 
     class IndexerTest
     {
-        Cabinet c;
+        Cabinet cabinet;
         CharacterRepository rep;
 
         [SetUp]
         public void SetUp()
         {
-            c = new Cabinet();
-            rep = new CharacterRepository(c);
+            cabinet = new Cabinet();
+            rep = new CharacterRepository(cabinet);
 
             rep.Save(new Character() { Id = 1, Name = "Tanjiro", Age = 16, Weight = 50 });
             rep.Save(new Character() { Id = 2, Name = "Nezuko", Age = 14, Weight = 40 });
@@ -92,5 +92,31 @@ namespace ToydeaCabinet.CodeGenTest
 
             Assert.AreEqual("Nezuko,Zenitsu,Tanjiro", names(rep.SearchByAgeWeight(Range.Between(14, 17))));
         }
+
+        [Test]
+        public void TestDelete()
+        {
+            Character c = rep.Find(1);
+            Assert.AreEqual("Tanjiro", c.Name);
+            Assert.IsTrue(rep.Delete(c));
+            Assert.IsFalse(rep.Delete(c));
+        }
+
+        [Test]
+        public void TestSaveDuplicated()
+        {
+            Assert.Throws(typeof(InvalidOperationException), () => { rep.Save(new Character() { Id = 1, Name = "" }); });
+        }
+
+        [Test]
+        public void TestSaveUpdated()
+        {
+            var c = rep.Find(1);
+            c.Age = 17;
+            rep.Save(c);
+
+            Assert.AreEqual("Nezuko,Zenitsu", names(rep.SearchByAgeWeight(Range.Between(14, 17))));
+        }
     }
+
 }

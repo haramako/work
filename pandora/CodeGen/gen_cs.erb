@@ -20,8 +20,33 @@ public static class Keys
 <%- ast.tables.each do |t| -%>
 public partial class <%=t.name%>
 {
+    struct _Cache
+    {
+        public <%=t.cls.name%> _obj;
+        <%- t.cls.fields.each do |f| -%>
+        public <%= f.type%> <%= f.name %>;
+        <%- end -%>
+
+        public _Cache(<%=t.cls.name%> _v)
+        {
+            _obj = _v;
+           <%- t.cls.fields.each do |f| -%>
+           <%= f.name %> = _v.<%= f.name %>;
+           <%- end -%>
+        }
+
+        public void Update(Character _v)
+        {
+            _obj = _v;
+           <%- t.cls.fields.each do |f| -%>
+           <%= f.name %> = _v.<%= f.name %>;
+           <%- end -%>
+        }
+    }
+
     CabinetKeyBuilder kb = new CabinetKeyBuilder();
     Cabinet c;
+    Dictionary<<%=t.key_type%>, _Cache> _cache = new Dictionary<<%=t.key_type%>, _Cache>();
 
     public <%=t.name%>(Cabinet _c)
     {
@@ -30,6 +55,11 @@ public partial class <%=t.name%>
 
     public <%=t.cls.name%> Find(<%=t.key.func_args(is_range: false)%>)
     {
+        if(_cache.TryGetValue(<%=t.key_name%>, out _Cache _found))
+        {
+            return _found._obj;
+        }
+
         var key = <%=t.key.make_get_key%>;
         var data = c.Get(key);
         if (data.IsEmpty)
@@ -38,16 +68,53 @@ public partial class <%=t.name%>
         }
         else
         {
-            return <%=t.cls.name%>.Deserialize(data);
+            <%=t.cls.name%> _new = <%=t.cls.name%>.Deserialize(data);
+            _cache.Add(<%=t.key_name%>, new _Cache(_new));
+            return _new;
         }
+    }
+
+    public bool Delete(Character v)
+    {
+        _cache.Remove(v.<%=t.key_name%>);
+
+        bool _deleted = c.Delete(<%=t.key.make_put_key('v.')%>);
+        if (_deleted)
+        {
+            <%- t.indices.each do |index| -%>
+            c.Delete(<%=index.key.make_put_key('v.')%>);
+            <%- end -%>
+        }
+        return _deleted;
     }
 
     public void Save(<%=t.cls.name%> v)
     {
-        c.Put(<%=t.key.make_put_key('v.')%>, v.Serialize());
-        <%- t.indices.each do |index| -%>
-        c.Put(<%=index.key.make_put_key('v.')%>, new ByteSpan());
-        <%- end -%>
+        if (_cache.TryGetValue(v.<%=t.key_name%>, out _Cache _found))
+        {
+            if( _found._obj != v)
+            {
+                throw new InvalidOperationException("Can't save duplicated key.");
+            }
+
+            // Exsist record.
+            <%- t.indices.each do |index| -%>
+            if( <%=index.key.make_diff_cond('_found', 'v')%> ){
+                c.Delete(<%=index.key.make_put_key('_found.')%>);
+                c.Put(<%=index.key.make_put_key('v.')%>, new ByteSpan());
+            }
+            <%- end -%>
+            _found.Update(v);
+        }
+        else
+        {
+            // New record.
+            _cache.Add(v.<%=t.key_name%>, new _Cache(v));
+            c.Put(<%=t.key.make_put_key('v.')%>, v.Serialize());
+            <%- t.indices.each do |index| -%>
+            c.Put(<%=index.key.make_put_key('v.')%>, new ByteSpan());
+            <%- end -%>
+        }
     }
 
     <%- t.indices.each do |index| -%>
@@ -60,7 +127,7 @@ public partial class <%=t.name%>
         byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0, <%=index.key.index_size%>);
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
             var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });

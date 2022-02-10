@@ -18,8 +18,36 @@ public static class Keys
 
 public partial class CharacterRepository
 {
+    struct _Cache
+    {
+        public Character _obj;
+        public int Id;
+        public string Name;
+        public int Age;
+        public int Weight;
+
+        public _Cache(Character _v)
+        {
+            _obj = _v;
+           Id = _v.Id;
+           Name = _v.Name;
+           Age = _v.Age;
+           Weight = _v.Weight;
+        }
+
+        public void Update(Character _v)
+        {
+            _obj = _v;
+           Id = _v.Id;
+           Name = _v.Name;
+           Age = _v.Age;
+           Weight = _v.Weight;
+        }
+    }
+
     CabinetKeyBuilder kb = new CabinetKeyBuilder();
     Cabinet c;
+    Dictionary<int, _Cache> _cache = new Dictionary<int, _Cache>();
 
     public CharacterRepository(Cabinet _c)
     {
@@ -28,6 +56,11 @@ public partial class CharacterRepository
 
     public Character Find(int Id)
     {
+        if(_cache.TryGetValue(Id, out _Cache _found))
+        {
+            return _found._obj;
+        }
+
         var key = kb.Cleared().Store(Keys.Character_Id).Store(Id).Build();
         var data = c.Get(key);
         if (data.IsEmpty)
@@ -36,15 +69,53 @@ public partial class CharacterRepository
         }
         else
         {
-            return Character.Deserialize(data);
+            Character _new = Character.Deserialize(data);
+            _cache.Add(Id, new _Cache(_new));
+            return _new;
         }
+    }
+
+    public bool Delete(Character v)
+    {
+        _cache.Remove(v.Id);
+
+        bool _deleted = c.Delete(kb.Cleared().Store(Keys.Character_Id).Store(v.Id).Build());
+        if (_deleted)
+        {
+            c.Delete(kb.Cleared().Store(Keys.Character_Name).Store(v.Name).Store(v.Id).Build());
+            c.Delete(kb.Cleared().Store(Keys.Character_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build());
+        }
+        return _deleted;
     }
 
     public void Save(Character v)
     {
-        c.Put(kb.Cleared().Store(Keys.Character_Id).Store(v.Id).Build(), v.Serialize());
-        c.Put(kb.Cleared().Store(Keys.Character_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
-        c.Put(kb.Cleared().Store(Keys.Character_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build(), new ByteSpan());
+        if (_cache.TryGetValue(v.Id, out _Cache _found))
+        {
+            if( _found._obj != v)
+            {
+                throw new InvalidOperationException("Can't save duplicated key.");
+            }
+
+            // Exsist record.
+            if( _found.Name != v.Name ){
+                c.Delete(kb.Cleared().Store(Keys.Character_Name).Store(_found.Name).Store(v.Id).Build());
+                c.Put(kb.Cleared().Store(Keys.Character_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
+            }
+            if( _found.Age != v.Age || _found.Weight != v.Weight ){
+                c.Delete(kb.Cleared().Store(Keys.Character_AgeWeight).Store(_found.Age).Store(_found.Weight).Store(v.Id).Build());
+                c.Put(kb.Cleared().Store(Keys.Character_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build(), new ByteSpan());
+            }
+            _found.Update(v);
+        }
+        else
+        {
+            // New record.
+            _cache.Add(v.Id, new _Cache(v));
+            c.Put(kb.Cleared().Store(Keys.Character_Id).Store(v.Id).Build(), v.Serialize());
+            c.Put(kb.Cleared().Store(Keys.Character_Name).Store(v.Name).Store(v.Id).Build(), new ByteSpan());
+            c.Put(kb.Cleared().Store(Keys.Character_AgeWeight).Store(v.Age).Store(v.Weight).Store(v.Id).Build(), new ByteSpan());
+        }
     }
 
     public IEnumerable<Character> SearchByName(Range<string> Name)
@@ -69,7 +140,7 @@ public partial class CharacterRepository
         byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0, 9);
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
             var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });
@@ -83,7 +154,7 @@ public partial class CharacterRepository
         byte[] buf = new byte[4];
         return found.Select(kv =>
         {
-            kv.Key.WriteTo(buf, 0, 9);
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
             var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
             return Find(id);
         });

@@ -70,12 +70,17 @@ module Pandora::CodeGen
           ".Store(#{prefix}#{f.name})"
         end
       end
-      pp [is_primary_key, r.join]
       if prefix && !is_primary_key
         r << ".Store(v.Id)"
       end
       r << '.Build()'
       r.flatten.join
+    end
+
+    def make_diff_cond(a,b)
+      fields.map do |f|
+        "#{a}.#{f.name} != #{b}.#{f.name}"
+      end.join(' || ')
     end
 
   end

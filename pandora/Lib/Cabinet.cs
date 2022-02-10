@@ -269,6 +269,10 @@ namespace ToydeaCabinet
 			Record found;
 			if (data_.TryGetValue(key, out found))
 			{
+				if( found.IsDeleted)
+                {
+					return false;
+                }
 				//Logger.Log("Update {0}", key);
 				found.Data = new ByteSpan();
 				found.IsDeleted = true;

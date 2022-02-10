@@ -61,9 +61,11 @@ namespace ToydeaCabinet
 			c_.Put("hoge", "1");
 			c_.Put("fuga", "2");
 
-			c_.Delete("hoge");
+			Assert.IsTrue(c_.Delete("hoge"));
 			Assert.IsTrue(c_.Get("hoge").IsEmpty);
 			Assert.IsFalse(c_.Exist("hoge"));
+
+			Assert.IsFalse(c_.Delete("hoge"));
 		}
 
 		[Test]

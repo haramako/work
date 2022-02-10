@@ -106,6 +106,14 @@ module Pandora::CodeGen
       ast.keys << key
       indices.each { |idx| idx.analyze(ast, self) }
     end
+
+    def key_type
+      @key.fields[0].type
+    end
+    
+    def key_name
+      @key.fields[0].name
+    end
   end
   
   class Index < Struct.new(:idx, :key_names, :options)

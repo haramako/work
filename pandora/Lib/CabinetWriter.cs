@@ -225,6 +225,10 @@ namespace ToydeaCabinet
 			{
 				writeInt(span.Length + 1);
 				span.ValidateUnchanged();
+				if( span.Length <= 0)
+                {
+					return;
+                }
 				Buffer.BlockCopy(span.RawData, span.Start, buf_, pos_, span.Length);
 				if( refresh)
 				{
