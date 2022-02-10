@@ -1,0 +1,118 @@
+public partial class <%=t.name%>
+{
+    struct _Cache
+    {
+        public <%=t.cls.name%> _obj;
+        <%- t.cls.fields.each do |f| -%>
+        public <%= f.type%> <%= f.name %>;
+        <%- end -%>
+
+        public _Cache(<%=t.cls.name%> _v)
+        {
+            _obj = _v;
+           <%- t.cls.fields.each do |f| -%>
+           <%= f.name %> = _v.<%= f.name %>;
+           <%- end -%>
+        }
+
+        public void Update(<%=t.cls.name%> _v)
+        {
+            _obj = _v;
+           <%- t.cls.fields.each do |f| -%>
+           <%= f.name %> = _v.<%= f.name %>;
+           <%- end -%>
+        }
+    }
+
+    CabinetKeyBuilder kb = new CabinetKeyBuilder();
+    Cabinet c;
+    Dictionary<<%=t.key_type%>, _Cache> _cache = new Dictionary<<%=t.key_type%>, _Cache>();
+
+    public <%=t.name%>(Cabinet _c)
+    {
+        c = _c;
+    }
+
+    public <%=t.cls.name%> Find(<%=t.key.func_args(is_range: false)%>)
+    {
+        if(_cache.TryGetValue(<%=t.key_name%>, out _Cache _found))
+        {
+            return _found._obj;
+        }
+
+        var key = <%=t.key.make_get_key%>;
+        var data = c.Get(key);
+        if (data.IsEmpty)
+        {
+            return null;
+        }
+        else
+        {
+            <%=t.cls.name%> _new = <%=t.cls.name%>.Deserialize(data);
+            _cache.Add(<%=t.key_name%>, new _Cache(_new));
+            return _new;
+        }
+    }
+
+    public bool Delete(<%=t.cls.name%> v)
+    {
+        _cache.Remove(v.<%=t.key_name%>);
+
+        bool _deleted = c.Delete(<%=t.key.make_put_key('v.')%>);
+        if (_deleted)
+        {
+            <%- t.indices.each do |index| -%>
+            c.Delete(<%=index.key.make_put_key('v.')%>);
+            <%- end -%>
+        }
+        return _deleted;
+    }
+
+    public void Save(<%=t.cls.name%> v)
+    {
+        if (_cache.TryGetValue(v.<%=t.key_name%>, out _Cache _found))
+        {
+            if( _found._obj != v)
+            {
+                throw new InvalidOperationException("Can't save duplicated key.");
+            }
+
+            // Exsist record.
+            <%- t.indices.each do |index| -%>
+            if( <%=index.key.make_diff_cond('_found', 'v')%> ){
+                c.Delete(<%=index.key.make_put_key('_found.')%>);
+                c.Put(<%=index.key.make_put_key('v.')%>, new ByteSpan());
+            }
+            <%- end -%>
+            _found.Update(v);
+        }
+        else
+        {
+            // New record.
+            _cache.Add(v.<%=t.key_name%>, new _Cache(v));
+            c.Put(<%=t.key.make_put_key('v.')%>, v.Serialize());
+            <%- t.indices.each do |index| -%>
+            c.Put(<%=index.key.make_put_key('v.')%>, new ByteSpan());
+            <%- end -%>
+        }
+    }
+
+    <%- t.indices.each do |index| -%>
+    <%- (1..index.key.fields.size).each do |len| -%>
+    public IEnumerable<<%=t.cls.name%>> SearchBy<%=index.key.funcname%>(<%= index.key.func_args(len)%>)
+    {
+        var start = <%=index.key.make_get_key(len, 'Start')%>;
+        var end = <%=index.key.make_get_key(len, 'End')%>;
+        var found = c.GetRange(start, end);
+        byte[] buf = new byte[4];
+        return found.Select(kv =>
+        {
+            kv.Key.WriteTo(buf, 0, kv.Key.Length-4);
+            var id = MyBitConverter.Reverse(BitConverter.ToInt32(buf));
+            return Find(id);
+        });
+    }
+
+    <%- end -%>
+    <%- end -%>
+}

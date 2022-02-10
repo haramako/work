@@ -2,14 +2,27 @@ require 'erb'
 
 module Pandora::CodeGen::Generator
   class CSharpGenerator
+    attr_reader :ast
+    
     def initialize
-      @erb = ERB.new(IO.read('gen_cs.erb'), trim_mode: '-')
-      @erb.filename = 'gen_cs.erb'
-      @s = []
+      @erbs = {}
     end
 
     def generate(ast)
-      @erb.result(binding)
+      partial(:gen_cs, {ast: ast})
+    end
+
+    def partial(template,vars)
+      erb = @erbs[template]
+      unless erb
+        filename = template.to_s + '.erb'
+        erb = ERB.new(IO.read(filename), trim_mode: '-')
+        erb.filename = filename
+        @erbs[template] = erb
+      end
+      
+      vars[:gen] = self
+      erb.result_with_hash(vars)
     end
 
   end

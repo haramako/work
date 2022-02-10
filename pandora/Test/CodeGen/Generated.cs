@@ -164,6 +164,7 @@ public partial class CharacterRepository
     }
 
 }
+
 public partial class ItemRepository
 {
     struct _Cache
@@ -292,6 +293,7 @@ public partial class ItemRepository
     }
 
 }
+
 
 
 }
