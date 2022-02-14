@@ -1,25 +1,13 @@
-namespace ToydeaCabinet.CodeGenTest;
+namespace Pandora.ORMTest;
 
-object Character {
-  int Id;
-  string Name;
-  int Age;
-  int Weight;
+entity 1 Character {
+  string 1 Name;
+  int 2 Age;
+  int 3 Weight;
 }
 
-object Item {
-  int Id;
-  int OwnerId;
-  string Name;
+entity 2 Item {
+  int 1 OwnerId;
+  string 2 Name;
 }
 
-// Comment
-table 1 Character(Id) {
-  index 2 (Name); // [cached];
-  index 3 (Age, Weight); // [ranged, name("AgeAndWeight")];
-}
-
-table 4 Item(Id) {
-  index 5 (OwnerId);
-  index 6 (Name);
-}

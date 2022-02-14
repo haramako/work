@@ -36,8 +36,8 @@ namespace Pandora.ORM
         public abstract int GetSerializedSize();
         public abstract void WriteTo(CodedOutputStream s);
         public abstract void ReadFrom(CodedInputStream s);
-        public abstract Entity Clone();
-        public abstract Entity DeepClone();
+        //public abstract Entity Clone();
+        //public abstract Entity DeepClone();
 
         // internal
         public ObjectSpace _space;

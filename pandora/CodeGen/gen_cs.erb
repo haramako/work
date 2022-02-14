@@ -3,8 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using ToydeaCabinet;
-using ToydeaCabinet.Indexer;
+using Pandora;
+using Pandora.ORM;
+using pb = Google.Protobuf;
 
 <%- if ast.namespace %>
 namespace <%=ast.namespace%> {
@@ -17,6 +18,10 @@ public static class Keys
     <%- end -%>
 }
 
+<%- ast.entities.each do |_,e| -%>
+<%= gen.partial :gen_cs_entity, {e: e} %>
+<%- end -%>
+    
 <%- ast.tables.each do |t| -%>
 <%= gen.partial :gen_cs_table, {t: t} %>
 <%- end -%>

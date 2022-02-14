@@ -16,4 +16,4 @@ code = Generator::CSharpGenerator.new.generate(ast)
 
 puts code
 
-IO.write('../Test/CodeGen/Generated.cs', code);
+IO.write(ARGV[1], code);

@@ -7,3 +7,4 @@ html
 *.exe
 *.db
 *.csproj.user
+parse.output

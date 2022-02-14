@@ -1,0 +1,88 @@
+public partial class <%=e.name%> : Entity
+{
+    <%- e.fields.each do |f| -%>
+    const byte FieldTag_<%=f.pname%> = <%=f.idx*8%>;
+    const UInt64 DirtyMask_<%=f.pname%> = 1UL<<<%=f.idx%>;
+    const UInt64 DirtyBit_<%=f.pname%> = ~(1UL<<<%=f.idx%>);
+    <%- end -%>
+
+    UInt64 _dirty_flag; // Which fields has changed in frozen.
+
+    public override uint ClassId { get { return 1; } }
+
+    <%- e.fields.each do |f| -%>
+        <%=f.type%> <%=f.fname%>;
+        <%=f.type%> <%=f.old_name%>;
+        <%=f.type%> <%=f.frozen_name%>;
+        public <%=f.type%> <%=f.pname%>
+        {
+            get
+            {
+                return <%= f.fname %>;
+            }
+            set
+            {
+                if (<%=f.fname%> == value) return;
+                if (_space != null && _space.Frozen && (_dirty_flag & DirtyMask_<%=f.pname%>) != 0)
+                {
+                    _dirty_flag |= DirtyBit_<%=f.pname%>;
+                    <%=f.frozen_name%> = <%=f.fname%>;
+                }
+                _hasChanged = true;
+                <%=f.fname%> = value;
+            }
+        }
+
+    <%- end -%>
+
+    public override int GetSerializedSize()
+    {
+        int size = 0;
+        <%- e.fields.each do |f| -%>
+        if (<%=f.old_name%> != <%=f.fname%>)
+        {
+            size += 1 + pb::CodedOutputStream.Compute<%=f.type.funcname%>Size(<%=f.fname%>);
+        }
+        <%- end -%>
+        return size;
+    }
+
+    public override void WriteTo(pb::CodedOutputStream s)
+    {
+        <%- e.fields.each do |f| -%>
+        if( <%=f.old_name%> != <%=f.fname%>)
+        {
+            s.WriteRawTag(FieldTag_<%=f.pname%>);
+            s.Write<%=f.type.funcname%>(<%=f.fname%>);
+            <%=f.old_name%> = <%= f.fname %>;
+        }
+        <%- end -%>
+    }
+
+    public override void ReadFrom(pb::CodedInputStream s)
+    {
+        uint tag;
+        while( (tag = s.ReadTag()) != 0)
+        {
+            switch (tag)
+            {
+                <%- e.fields.each do |f| -%>
+                case FieldTag_<%=f.pname%>:
+                    <%=f.fname%> = s.Read<%=f.type.funcname%>();
+                    continue;
+                <%- end -%>
+                default:
+                    continue;
+            }
+        }
+    }
+
+    public override void BeginFreeze()
+    {
+        _dirty_flag = 0UL;
+    }
+    public override void EndFreeze()
+    {
+        _dirty_flag = 0UL;
+    }
+}

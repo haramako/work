@@ -1,6 +1,6 @@
 task :default do
-  sh 'racc parse.y'
-  sh 'ruby codegen.rb test.txt'
+  sh 'racc -v parse.y'
+  sh 'ruby codegen.rb test.txt ../Test/ORM/Generated.cs'
 end
 
 task :test => :build do

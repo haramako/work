@@ -24,8 +24,8 @@ module Pandora::CodeGen
     end
     
     def on_error(t, val, vstack)
-      # pp [t,val, vstack]
-      STDERR.puts "#{@filename}:#{@line}:#{@pos}: parse error on '#{val}'."
+      pp [t, val, vstack]
+      raise "#{@filename}:#{@line}:#{@pos}: parse error on '#{val}'."
     end
 
     def scan(regex)
@@ -49,7 +49,7 @@ module Pandora::CodeGen
         r = nil
       elsif t = scan(/\(|\)|{|}|;|\[|\]|,/)
         r = [t, t]
-      elsif t = scan(/index|table|key|namespace|for|object/)
+      elsif t = scan(/index|table|key|namespace|for|entity/)
         r = [t, t]
       elsif t = scan(/\d+/)
         r = [:NUMBER, t.to_i]
@@ -60,34 +60,34 @@ module Pandora::CodeGen
       else
         raise
       end
-      # p r
+      #p r
       r
     end
   end
 
   class AST < Struct.new(:namespace, :decls)
-    attr_reader :tables, :objects, :keys
+    attr_reader :tables, :entities, :keys
     
     def analyze
       @keys = []
       @tables = []
-      @objects = {}
+      @entities = {}
       decls.each do |decl|
         case decl
         when Table
           @tables << decl
-        when ObjectDecl
-          @objects[decl.name] = decl
+        when Entity
+          @entities[decl.name] = decl
         else
           raise
         end
       end
-      @objects.each { |_,obj| obj.analyze(self) }
+      @entities.each { |_,e| e.analyze(self) }
       @tables.each { |t| t.analyze(self) }
     end
   end
   
-  class ObjectDecl < Struct.new(:name, :fields)
+  class Entity < Struct.new(:idx, :name, :fields)
     attr_reader :fields_hash
     def analyze(ast)
       @fields_hash = {}
@@ -101,7 +101,7 @@ module Pandora::CodeGen
     attr_reader :cls, :key, :name
     def analyze(ast)
       @name = cls_name + 'Repository'
-      @cls = ast.objects[cls_name]
+      @cls = ast.entities[cls_name]
       @key = Key.new(true, idx, cls, key_names)
       ast.keys << key
       indices.each { |idx| idx.analyze(ast, self) }
@@ -124,7 +124,8 @@ module Pandora::CodeGen
     end
   end
 
-  Field = Struct.new(:type, :name)
+  class Field < Struct.new(:idx, :type, :name)
+  end
   
   class Key < Struct.new(:is_primary_key, :idx, :cls, :key_names)
     attr_reader :fields

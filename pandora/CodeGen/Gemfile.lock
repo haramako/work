@@ -2,12 +2,14 @@ GEM
   remote: https://rubygems.org/
   specs:
     racc (1.6.0)
+    rake (13.0.6)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   racc
+  rake
 
 BUNDLED WITH
-   2.2.15
+   2.3.3

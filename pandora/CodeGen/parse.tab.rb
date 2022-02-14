@@ -11,48 +11,48 @@ module Pandora
 ##### State transition tables begin ###
 
 racc_action_table = [
-     7,     7,    10,    11,     8,     8,     3,     4,    12,    14,
-    15,    16,    17,    18,    20,    22,    24,    27,    22,    29,
-    30,    33,    34,    35,    36,    37,    33,    39,    27,    20,
-    42 ]
+     7,     7,     3,     8,     8,    10,    11,     4,    12,    14,
+    15,    16,    17,    18,    20,    21,    22,    25,    27,    31,
+    32,    33,    27,    35,    36,    37,    31,    39,    25,    41,
+    20,    43,    44 ]
 
 racc_action_check = [
-     2,     6,     3,     3,     2,     6,     0,     1,     4,     7,
+     2,     6,     0,     2,     6,     3,     3,     1,     4,     7,
      8,     9,    14,    15,    17,    18,    19,    20,    21,    22,
-    23,    24,    25,    26,    29,    31,    32,    33,    35,    39,
-    41 ]
+    23,    24,    26,    27,    28,    29,    30,    31,    33,    35,
+    39,    41,    42 ]
 
 racc_action_pointer = [
-     4,     7,    -6,    -2,     8,   nil,    -5,     2,     6,     8,
-   nil,   nil,   nil,   nil,     8,     5,   nil,     2,    11,     8,
-    13,    14,    15,    11,    10,     9,     9,   nil,   nil,    21,
-   nil,    16,    15,    20,   nil,    24,   nil,   nil,   nil,    17,
-   nil,    27,   nil ]
+     0,     7,    -7,     1,     8,   nil,    -6,     3,     4,     8,
+   nil,   nil,   nil,   nil,     8,     9,   nil,     2,     7,     8,
+    13,    14,     8,     7,     7,   nil,    18,    17,    15,    16,
+    15,    21,   nil,    24,   nil,    25,   nil,   nil,   nil,    18,
+   nil,    28,    29,   nil,   nil ]
 
 racc_action_default = [
     -2,   -21,    -9,   -21,   -21,    -1,    -9,   -21,   -21,   -21,
-    -4,    -5,    43,   -10,   -21,   -21,    -3,   -21,    -6,   -21,
-   -17,    -6,   -21,   -21,   -13,   -21,   -18,   -20,    -7,   -21,
-   -12,   -21,   -13,   -21,   -16,   -17,    -8,   -11,   -14,   -21,
-   -19,   -21,   -15 ]
+    -4,    -5,    45,   -10,   -21,   -21,    -3,   -21,   -21,   -21,
+   -17,    -6,   -13,   -21,   -18,   -20,    -6,   -21,   -21,   -21,
+   -13,   -21,   -16,   -17,    -7,   -21,   -12,   -11,   -14,   -21,
+   -19,   -21,   -21,    -8,   -15 ]
 
 racc_goto_table = [
-    19,    25,    31,     5,     1,    23,     2,    13,    28,     9,
-    38,   nil,   nil,   nil,   nil,   nil,    40,   nil,   nil,   nil,
-   nil,   nil,    41 ]
+    19,    23,    29,    28,     1,     5,     2,     9,    34,    13,
+    38,   nil,   nil,   nil,    40,   nil,   nil,   nil,   nil,   nil,
+   nil,   nil,    42 ]
 
 racc_goto_check = [
-     8,    11,     9,     3,     1,     5,     2,     3,     5,     4,
-     9,   nil,   nil,   nil,   nil,   nil,    11,   nil,   nil,   nil,
+     8,    11,     9,     5,     1,     3,     2,     4,     5,     3,
+     9,   nil,   nil,   nil,    11,   nil,   nil,   nil,   nil,   nil,
    nil,   nil,     8 ]
 
 racc_goto_pointer = [
-   nil,     4,     6,     1,     6,   -13,   nil,   nil,   -17,   -22,
+   nil,     4,     6,     3,     4,   -18,   nil,   nil,   -17,   -20,
    nil,   -19,   nil ]
 
 racc_goto_default = [
-   nil,   nil,   nil,   nil,   nil,   nil,    21,     6,   nil,   nil,
-    32,   nil,    26 ]
+   nil,   nil,   nil,   nil,   nil,   nil,    26,     6,   nil,   nil,
+    30,   nil,    24 ]
 
 racc_reduce_table = [
   0, 0, :racc_error,
@@ -63,11 +63,11 @@ racc_reduce_table = [
   1, 19, :_reduce_none,
   0, 20, :_reduce_6,
   2, 20, :_reduce_7,
-  3, 21, :_reduce_8,
+  4, 21, :_reduce_8,
   0, 18, :_reduce_9,
   2, 18, :_reduce_10,
   7, 22, :_reduce_11,
-  5, 22, :_reduce_12,
+  6, 22, :_reduce_12,
   0, 24, :_reduce_13,
   2, 24, :_reduce_14,
   4, 25, :_reduce_15,
@@ -79,7 +79,7 @@ racc_reduce_table = [
 
 racc_reduce_n = 21
 
-racc_shift_n = 43
+racc_shift_n = 45
 
 racc_token_table = {
   false => 0,
@@ -88,11 +88,11 @@ racc_token_table = {
   ";" => 3,
   :IDENT => 4,
   :NAMESPACE => 5,
-  "table" => 6,
-  :NUMBER => 7,
+  :NUMBER => 6,
+  "table" => 7,
   "{" => 8,
   "}" => 9,
-  "object" => 10,
+  "entity" => 10,
   "index" => 11,
   "(" => 12,
   ")" => 13,
@@ -125,11 +125,11 @@ Racc_token_to_s_table = [
   "\";\"",
   "IDENT",
   "NAMESPACE",
-  "\"table\"",
   "NUMBER",
+  "\"table\"",
   "\"{\"",
   "\"}\"",
-  "\"object\"",
+  "\"entity\"",
   "\"index\"",
   "\"(\"",
   "\")\"",
@@ -190,7 +190,7 @@ module_eval(<<'.,.,', 'parse.y', 11)
 
 module_eval(<<'.,.,', 'parse.y', 13)
   def _reduce_8(val, _values, result)
-     result = Field.new(Type.new(val[0]), val[1])
+     result = Field.new(val[1], Type.new(val[0]), val[2])
     result
   end
 .,.,
@@ -218,7 +218,7 @@ module_eval(<<'.,.,', 'parse.y', 20)
 
 module_eval(<<'.,.,', 'parse.y', 21)
   def _reduce_12(val, _values, result)
-     result = ObjectDecl.new(val[1], val[3])
+     result = Entity.new(val[1], val[2], val[4])
     result
   end
 .,.,

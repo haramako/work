@@ -33,6 +33,24 @@ module Pandora::CodeGen
 
   class Table
   end
+
+  class Entity
+  end
+
+  class Field
+    def fname
+      "_#{name.downcase}"
+    end
+    def old_name
+      "_old#{name}"
+    end
+    def frozen_name
+      "_frozen#{name}"
+    end
+    def pname
+      name
+    end
+  end
   
   class Index
 
@@ -99,17 +117,18 @@ module Pandora::CodeGen
   end
 
   class Type
+    NAMES = {
+      int32: ['int', 'Int32'],
+      uint32: ['uint', 'Int32'],
+      string: ['string', 'String']
+    }
     def to_s
-      case @name
-      when :int32
-        'int'
-      when :uint32
-        'uint'
-      when :string
-        'string'
-      else
-        raise
-      end
+      NAMES[@name][0]
+    end
+
+    # Name in type part of function.
+    def funcname
+      NAMES[@name][1]
     end
 
     def range_type

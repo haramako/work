@@ -11,7 +11,7 @@ namespace_name: IDENT | NAMESPACE
 field_decls: { result = [] }
            | field_decl field_decls { result = list(val) }
 
-field_decl: IDENT IDENT ';' { result = Field.new(Type.new(val[0]), val[1]) }
+field_decl: IDENT NUMBER IDENT ';' { result = Field.new(val[1], Type.new(val[0]), val[2]) }
 
 # for table
 table_decls: { result = [] }
@@ -19,7 +19,7 @@ table_decls: { result = [] }
 
 table_decl: 'table' NUMBER IDENT key_list '{' index_decls '}'
                  { result = Table.new(val[1], val[2], val[3], val[5]) }
-          | 'object'  IDENT '{' field_decls '}' { result = ObjectDecl.new(val[1], val[3]) }
+          | 'entity' NUMBER IDENT '{' field_decls '}' { result = Entity.new(val[1], val[2], val[4]) }
 
 index_decls: { result = [] }
            | index_decl index_decls { result = list(val) }

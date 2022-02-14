@@ -8,19 +8,22 @@
 ```
 namespace ToydeaCabinet.CodeGenTest;
 
-entity Character {
-  string Name = 1;
-  int Age = 2;
-  int Weight = 3;
-  Item[] Items = 4;
-  Position Pos = 5;
+default visibility = public;
+
+public entity Character {
+  public readonly string Name = 1;
+  public int Age = 2;
+  public int Weight = 3;
+  internal Item[] Items = 4;
+  private Position Pos = 5;
 }
 
-entity Item {
+public object Item {
   string Name = 1;
 }
 
 value Position {
+  public:
   int X = 1;
   int Y = 2;
 }
