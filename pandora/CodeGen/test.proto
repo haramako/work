@@ -1,0 +1,15 @@
+syntax = "proto3";
+package ProtoTest;
+
+message Character {
+    int32 id = 1;
+    string name = 2;
+    int32 age = 3;
+    int32 weight = 4;
+    Pos pos = 5;
+}
+
+message Pos {
+    int32 x = 1;
+    int32 y = 2;
+}

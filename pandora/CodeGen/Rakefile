@@ -7,4 +7,7 @@ task :test => :build do
   sh 'dotnet run --project TestProj'
 end
 
-  
+desc 'Generate test .proto'
+task :proto do
+  sh 'protoc --csharp_out=. test.proto'
+end
