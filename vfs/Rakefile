@@ -1,0 +1,22 @@
+TARGETS = ['/mnt/c/Work/hos',
+           '/mnt/c/Work/os/mikanos',
+           '/mnt/c/Work/os/liumos-orig',
+           '/mnt/c/Work/os/OS67',
+           '/mnt/c/Work/os/xv6-public',
+           '/mnt/c/Work/os/nanos',
+           '/mnt/c/Work/os/poiboot',
+           '/mnt/c/Work/os/resea',
+           '/mnt/c/Work/os/uclibc-ng',
+          ]
+
+task :all do
+  TARGETS.each do |f|
+    sh 'ruby', 'vfs-summary.rb', f, verbose: false
+  end
+end
+
+task :summary do
+  TARGETS.each do |f|
+    sh 'ruby', 'vfs-summary.rb', '--summary', f, verbose: false
+  end
+end
