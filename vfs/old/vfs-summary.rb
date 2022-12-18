@@ -1,14 +1,16 @@
 # hoge
 
+$LOAD_PATH << __dir__ + "/../lib"
+
 require "optparse"
 
-require_relative "vfs"
+require "vfs"
 
 IGNORED = ["tmp", "vendor", "font.gen.c"]
 
 def view(path, summary)
   fs = VFS.open(path)
-  fs = VFS.filter(fs) do |f, _|
+  fs = fs.filter do |f, _|
     if IGNORED.include?(f.name) then VFS.skip else true end
   end
   VFS.aggregate(fs)
@@ -29,7 +31,7 @@ def view(path, summary)
   puts "-" * 40
   total_size = (fs.size || 0)
   puts total_size
-  VFS.walk(fs) do |f, ancesters|
+  fs.walk do |f, ancesters|
     # next unless f.directory?
     # next if !f.directory? && (f.stat[:code] || 0) < total_size * 0.05
     next if (f.size || 0) < total_size * $threshold
