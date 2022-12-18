@@ -1,0 +1,6 @@
+require_relative "vfs/vfs"
+require_relative "vfs/node"
+require_relative "vfs/node_ext"
+require_relative "vfs/command"
+require_relative "vfs/serializer"
+require_relative "vfs/filesystem"

@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require "vfs"
+
+VFS::Command.new(ARGV).run
