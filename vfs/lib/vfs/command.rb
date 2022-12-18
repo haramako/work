@@ -21,7 +21,9 @@ module VFS
       @diff_by = :md5
       @opt_d = false
       @force = false
+      @compute_hash = false
       @op = OptionParser.new(HELP)
+      @op.on("--hash", "compute hash") { @compute_hash = true }
       @op.on("-s", "--size", "diff by size") { @diff_by = :size }
       @op.on("-f", "--force", "force read directory") { @force = true }
       @op.on("-d", "directory only") { @opt_d = true }
@@ -61,7 +63,7 @@ module VFS
     def run_dump(args)
       vfs_path = FileSystem.vfs_path(args[0])
       FileUtils.rm_f(vfs_path) if @force
-      fs = VFS.read_dir(args[0], hash: true)
+      fs = VFS.read_dir(args[0], hash: @compute_hash)
       fs = VFS::Command.filter_ignored(fs)
       IO.binwrite vfs_path, VFS.dump(fs)
     end
@@ -110,7 +112,7 @@ module VFS
       end
     end
 
-    CLOC_EXTS = %w(.rb .c .cc .cpp .h)
+    CLOC_EXTS = %w(.rb .c .cc .cpp .h .cs)
 
     def cloc(fs)
       puts "start cloc"
