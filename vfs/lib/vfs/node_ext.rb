@@ -22,7 +22,7 @@ module VFS
     def to_list
       r = []
       walk do |n|
-        next if n.size == 0
+        next if n.directory?
         r << [n.fullpath, n]
       end
       r
@@ -31,7 +31,7 @@ module VFS
     def to_hash
       r = {}
       walk do |n|
-        next if n.size == 0
+        next if n.directory?
         r[n.fullpath] = n
       end
       r

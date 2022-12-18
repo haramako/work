@@ -56,7 +56,7 @@ module VFS
     def copy_from(node)
       @size = node.size
       @md5 = node.md5
-      @mtime = node.md5
+      @mtime = node.mtime
       @attr = node.attr
       @stat = node.stat
     end
