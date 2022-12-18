@@ -1,6 +1,6 @@
 module VFS
   class FileSystem
-    def read_dir(path, hash: true)
+    def read_dir(path, hash: true, log: true)
       Dir.chdir(path) do
         root = Node.new(nil, "")
         n = 0
@@ -18,7 +18,7 @@ module VFS
           if hash
             file.md5 = Digest::MD5.file(f).hexdigest
           end
-          STDERR.puts("reading #{n} files") if n % 1000 == 0
+          STDERR.puts("reading #{n} files") if log && n % 1000 == 0
           n += 1
         end
         root

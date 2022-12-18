@@ -115,7 +115,7 @@ module VFS
     CLOC_EXTS = %w(.rb .c .cc .cpp .h .cs)
 
     def cloc(fs)
-      puts "start cloc"
+      #puts "start cloc"
       require "open3"
       require "json"
 
@@ -126,7 +126,6 @@ module VFS
       end
 
       files.keys.each_slice(100) do |file_slice|
-        pp file_slice
         result, stat = Open3.capture2("gocloc", "--output-type", "json", "--by-file", *file_slice)
         # result, stat = Open3.capture2("gocloc", "--json", "--by-file", *file_slice)
         next if stat.to_i != 0
@@ -139,7 +138,7 @@ module VFS
           f.stat[:comment] = v[:comment]
         end
       end
-      puts "end cloc"
+      #puts "end cloc"
     end
   end
 end

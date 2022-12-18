@@ -15,9 +15,8 @@ module VFS
     Serializer.new.dump(node)
   end
 
-  # ディレクトリを指定して、Nodeを取得する
-  def read_dir(path, hash: true)
-    FileSystem.new.read_dir(path, hash: hash)
+  def read_dir(path, **opt)
+    FileSystem.new.read_dir(path, **opt)
   end
 
   def open(path)
@@ -47,7 +46,7 @@ module VFS
   def aggregate(fs)
     fs.walk(after: true) do |f|
       if f.directory?
-        f.size = 0
+        f.clear_aggregation
         f.children.values.each do |c|
           f.size += c.size
           c.stat.each do |k, v|

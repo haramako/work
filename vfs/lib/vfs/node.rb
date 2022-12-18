@@ -50,7 +50,12 @@ module VFS
     end
 
     def [](path)
-      VFS.resolve_path(self, path)
+      resolve_path(path)
+    end
+
+    def clear_aggregation
+      @size = 0
+      @stat = {}
     end
 
     def copy_from(node)
