@@ -3,8 +3,8 @@ GEM
   specs:
     ffi (1.13.1)
     ffi (1.13.1-x64-mingw32)
-    google-protobuf (3.12.2)
-    google-protobuf (3.12.2-x64-mingw32)
+    google-protobuf (3.19.6)
+    google-protobuf (3.19.6-x64-mingw32)
     hashie (5.0.0)
     listen (3.2.1)
       rb-fsevent (~> 0.10, >= 0.10.3)
