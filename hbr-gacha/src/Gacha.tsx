@@ -1,8 +1,8 @@
 import { useRecoilState, useRecoilValue } from 'recoil'
-import { GachaParam, GachaStat, rootState, TableDesc } from './stat'
+import { defaultGachaParam, GachaParam, GachaStat, rootState, TableDesc } from './stat'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
-import { create200renCampaign, GachaCampaign, GachaDraw } from './GachaSimulator'
 import { sum } from './util'
+import { makePickup200, makeSelect, makeStepup } from './Campaigns'
 
 export function GachaStatView({ stat, onChange }: { stat: GachaStat, onChange: (newValue: GachaStat) => void }) {
     return (
@@ -15,82 +15,15 @@ export function GachaStatView({ stat, onChange }: { stat: GachaStat, onChange: (
     )
 }
 
-function makePickup200(gp: GachaParam) {
-    const kinds = [
-        { name: 'SS', prob: gp.ssProb / 100, value: gp.ssValue, duplicatedValue: gp.ssDuplicatedValue },
-        { name: 'Pickup', prob: gp.pickupProb / 100, value: gp.pickupValue, duplicatedValue: gp.pickupDuplicatedValue },
-    ]
-    const kindsTicket = [
-        { name: 'SS', prob: 1.0, value: gp.ssValue, duplicatedValue: gp.ssDuplicatedValue },
-    ]
-    const totalProb = sum(kinds, k => k.prob)
-    const kindsWithNonSS = [...kinds, { name: 'NonSS', prob: 1.0 - totalProb, value: 0, duplicatedValue: 0 }]
-    const kindsTenjo = kinds.filter(k => k.name == "Pickup")
-    const kindsPiece = [{ name: 'Piece', prob: 1.0, value: gp.pieceValue, duplicatedValue: gp.pieceValue }]
-
-    const draw = new GachaDraw(3000, 10, kindsWithNonSS)
-    const _20ren = new GachaDraw(0, 1, kindsPiece)
-    const _50ren = new GachaDraw(0, 1, kindsTicket)
-    const _100ren = new GachaDraw(0, 2, kindsPiece)
-    const _200ren = new GachaDraw(0, 1, kindsTenjo)
-    const campaign = create200renCampaign(draw, _20ren, _50ren, _100ren, [_50ren, _200ren])
-    const owns = new Map<string, number>([['SS', gp.ssOwnRate / 100]])
-    const result = campaign.drawWhile(20, owns)
-    const result10 = campaign.drawWhile(1, owns)
-    const result50 = campaign.drawWhile(5, owns)
-    const resultAfterPickup = campaign.drawWhile(20, new Map<string, number>([['SS', gp.ssOwnRate / 100], ['Pickup', 0.5]]))
-
-    return {
-        campaign,
-        result,
-        result10,
-        result50,
-        resultAfterPickup,
-    }
-}
-
-function makeSelect(gp: GachaParam) {
-    // セレクトガチャ
-    const kindsSelect = [
-        { name: 'Select', prob: gp.selectProb / 100, value: gp.selectValue, duplicatedValue: gp.selectDuplicatedValue },
-    ]
-    const kindsSelectWithNonSS = [...kindsSelect, { name: 'NonSS', prob: 1 - gp.selectProb / 100, value: 0, duplicatedValue: 0 }]
-    const drawSelect = new GachaDraw(3000, 9, kindsSelectWithNonSS)
-    const drawSelect10 = new GachaDraw(0, 1, kindsSelect)
-    const campaignSelect = new GachaCampaign([[drawSelect, drawSelect10]])
-    const resultSelect = campaignSelect.drawWhile(1, new Map<string, number>([['SS', gp.ssOwnRate / 100], ['Select', gp.selectOwnRate / 100]]))
-
-    return { campaignSelect, resultSelect }
-}
-
-function makeStepup(gp: GachaParam) {
-    // ステップアップ
-    const kinds = [
-        { name: 'SS', prob: gp.ssProb / 100, value: gp.ssValue, duplicatedValue: gp.ssDuplicatedValue },
-        { name: 'Pickup', prob: gp.pickupProb / 100, value: gp.pickupValue, duplicatedValue: gp.pickupDuplicatedValue },
-    ]
-    const totalProb = sum(kinds, k => k.prob)
-    const kindsWithNonSS = [...kinds, { name: 'NonSS', prob: 1.0 - totalProb, value: 0, duplicatedValue: 0 }]
-    const kindsStepupKakutei = [
-        { name: 'SS', prob: 0.9, value: gp.ssValue, duplicatedValue: gp.ssDuplicatedValue },
-        { name: 'Pickup', prob: 0.1, value: gp.pickupValue, duplicatedValue: gp.pickupDuplicatedValue },
-    ]
-
-    const drawStepupKakutei = new GachaDraw(0, 1, kindsStepupKakutei)
-    const drawStep1 = new GachaDraw(100, 1, kindsWithNonSS)
-    const drawStep2 = new GachaDraw(1500, 10, kindsWithNonSS)
-    const drawStep3 = new GachaDraw(2000, 10, kindsWithNonSS)
-    const drawStep4 = new GachaDraw(3000, 9, kindsWithNonSS)
-    const campaignStepup = new GachaCampaign([[drawStep1], [drawStep2], [drawStep3], [drawStep4, drawStepupKakutei]])
-    const resultStepup = campaignStepup.drawWhile(4, new Map<string, number>([['SS', gp.ssOwnRate / 100], ['Pickup', 0]]))
-
-    return { campaignStepup, resultStepup }
-}
-
 function GachaChart() {
     const stat = useRecoilValue(rootState)
     const gp = stat.gachaParam
-    const { result, result50, resultAfterPickup } = makePickup200(gp)
+    const campaign = makePickup200(gp, false)
+    const owns = new Map<string, number>([['SS', gp.ssOwnRate / 100]])
+    const result200 = campaign.drawWhile(20, owns)
+    const result50 = campaign.drawWhile(5, owns)
+    const resultAfterPickup = campaign.drawWhile(20, new Map<string, number>([...owns, ['Pickup', 1.0]]))
+    const resultAfterPickup2 = campaign.drawWhile(20, new Map<string, number>([...owns, ['Pickup', 1.0], ['Pickup2', 1.0]]))
 
     function restValue(result: number[][], i: number) {
         if (i >= result.length) {
@@ -99,12 +32,13 @@ function GachaChart() {
             return sum(result.slice(i, result.length), n => n[1]) / (result.length - i)
         }
     }
-    const data = result.map((r, i) => ({
+    const data = result200.map((r, i) => ({
         cost: ((i + 1) * 10),
         value: r[1],
-        draw200: restValue(result, i),
+        draw200: restValue(result200, i),
         draw50: restValue(result50, i),
         draw200AfterPickup: restValue(resultAfterPickup, i),
+        draw200AfterPickup2: restValue(resultAfterPickup2, i),
     }))
 
     return <>
@@ -117,7 +51,8 @@ function GachaChart() {
             <Line type="monotone" dataKey='value' stroke="#8884d8" name='その回の価値' strokeDasharray="4 4" />
             <Line type="monotone" dataKey='draw200' stroke="#ff0000" name='200連' />
             <Line type="monotone" dataKey='draw50' stroke="#ffff00" name='50連' />
-            <Line type="monotone" dataKey='draw200AfterPickup' stroke="#00ff00" name='200連(PU取得後)' />
+            <Line type="monotone" dataKey='draw200AfterPickup' stroke="#00ff00" name='200連(PU1取得後)' />
+            <Line type="monotone" dataKey='draw200AfterPickup2' stroke="#00ffff" name='200連(PU2取得後)' />
         </LineChart>
     </>
 }
@@ -125,10 +60,22 @@ function GachaChart() {
 function GachaBar() {
     const [stat, setStat] = useRecoilState(rootState)
     const gp = stat.gachaParam
-    const { campaign, result, result10, result50 } = makePickup200(gp)
 
-    const { campaignSelect, resultSelect } = makeSelect(gp)
-    const { campaignStepup, resultStepup } = makeStepup(gp)
+    const campaign = makePickup200(gp, false)
+    const campaignPickupOne = makePickup200(gp, true)
+    const campaignSelect = makeSelect(gp)
+    const campaignStepup = makeStepup(gp, false)
+    const campaignStepupOne = makeStepup(gp, true)
+
+    const owns = new Map<string, number>([['SS', gp.ssOwnRate / 100], ['Zokusei', gp.zokuseiOwnRate / 100], ['Select', gp.selectOwnRate / 100]])
+    const result = campaign.drawWhile(20, owns)
+    const result10 = campaign.drawWhile(1, owns)
+    const result50 = campaign.drawWhile(5, owns)
+    const resultPickupOne = campaignPickupOne.drawWhile(20, owns)
+    //const resultAfterPickup = campaign.drawWhile(20, new Map<string, number>([...owns, ['Pickup', 0.5]]))
+    const resultSelect = campaignSelect.drawWhile(1, owns)
+    const resultStepup = campaignStepup.drawWhile(4, owns)
+    const resultStepupOne = campaignStepupOne.drawWhile(4, owns)
 
     function totalValu(result: number[][]) {
         return parseFloat((sum(result, n => n[1]) / sum(result, n => n[0]) * 3000).toFixed(2))
@@ -154,15 +101,27 @@ function GachaBar() {
             limit: 1,
         },
         {
-            name: '★セレチケ10連',
+            name: 'PU(1SS)',
+            value: totalValu(resultPickupOne),
+            campaign: campaignPickupOne,
+            limit: 20,
+        },
+        {
+            name: '★セレチケ10',
             value: totalValu(resultSelect),
             campaign: campaignSelect,
             limit: 1,
         },
         {
-            name: '★ステップ31連',
+            name: '★ステップ',
             value: totalValu(resultStepup),
             campaign: campaignStepup,
+            limit: 4,
+        },
+        {
+            name: '★属性ステップ',
+            value: totalValu(resultStepupOne),
+            campaign: campaignStepupOne,
             limit: 4,
         },
     ]
@@ -183,9 +142,9 @@ function GachaBar() {
     }
 
     return <>
-        <BarChart width={600} height={300} data={data} onClick={e => e.activeLabel && onClickChart(e.activeLabel)}>
+        <BarChart width={800} height={300} data={data} onClick={e => e.activeLabel && onClickChart(e.activeLabel)}>
             <XAxis dataKey="name" />
-            <YAxis />
+            <YAxis domain={[0, 300]} />
             <Legend />
             <Tooltip />
             <Bar dataKey="value" fill="#8884d8" name='3000クォーツあたりの価値' />
@@ -198,14 +157,17 @@ const PickupNames = ['PU200連', 'PU50連', 'PU10連']
 const KindNames: { [_: string]: string } = {
     'SS': 'SS（対象以外)',
     'Pickup': 'ピックアップ',
+    'Pickup2': 'ピックアップ(2)',
     'Select': 'セレクト',
+    'Zokusei': '属性ピックアップ',
     'NonSS': 'SS以外',
     'Piece': '万能SSピース'
 }
 
 function GachaTable({ desc }: { desc: TableDesc }) {
     return (<>
-        <h3>{desc.label}</h3>
+        <h2>ガチャ詳細</h2>
+        <p>対象： {desc.label}</p>
         <p>コスト: {desc.totalCost}</p>
         <table className="tbl">
             <thead>
@@ -242,8 +204,53 @@ export function GachaList() {
         setStat({ ...stat, gachaParam: { ...stat.gachaParam, [name]: parseFloat(value) } })
     }
 
+    const newbeeParam: Partial<GachaParam> = {
+        ssOwnRate: 10,
+        selectOwnRate: 10,
+        zokuseiOwnRate: 10,
+    }
+
+    const veteranParam: Partial<GachaParam> = {
+        ssOwnRate: 70,
+        selectOwnRate: 70,
+        zokuseiOwnRate: 70,
+    }
+
+    const godParam: Partial<GachaParam> = {
+        ssOwnRate: 95,
+        selectOwnRate: 90,
+        zokuseiOwnRate: 90,
+    }
+
+    function onClickPreset(n: number) {
+        let gachaParam: GachaParam
+        switch (n) {
+            case 0:
+                gachaParam = { ...defaultGachaParam, ...newbeeParam }
+                break;
+            default:
+            case 1:
+                gachaParam = { ...defaultGachaParam }
+                break;
+            case 2:
+                gachaParam = { ...defaultGachaParam, ...veteranParam }
+                break;
+            case 3:
+                gachaParam = { ...defaultGachaParam, ...godParam }
+                break;
+        }
+        setStat({ ...stat, gachaParam: gachaParam })
+    }
+
     return (
         <>
+            <div>
+                プリセット:
+                <button className="btn-inline" onClick={() => onClickPreset(0)}>初心者</button>
+                <button className="btn-inline" onClick={() => onClickPreset(1)}>中級者</button>
+                <button className="btn-inline" onClick={() => onClickPreset(2)}>上級者</button>
+                <button className="btn-inline" onClick={() => onClickPreset(3)}>超上級者</button>
+            </div>
             <GachaBar />
             {/*
             stat.gacha.map(s => <GachaStatView key={s.key} stat={s} onChange={onChangeStat(s.key)} />)
@@ -273,11 +280,24 @@ export function GachaList() {
                         <td><input className="inp" type="number" step="10" min="0" value={gp.pickupDuplicatedValue} onChange={e => onChange('pickupDuplicatedValue', e.target.value)} /></td>
                     </tr>
                     <tr>
+                        <td>ピックアップ(2つめ)</td>
+                        {/*<td>確率</td><td><input type="number" step="1" min="0" max="100" value={gp.pickupProb} onChange={e => onChange('pickupProb', e.target.value)} /></td>*/}
+                        <td><input className="inp" type="number" step="10" min="0" value={gp.pickup2Value} onChange={e => onChange('pickup2Value', e.target.value)} /></td>
+                        <td><input className="inp" type="number" step="10" min="0" value={gp.pickup2DuplicatedValue} onChange={e => onChange('pickup2DuplicatedValue', e.target.value)} /></td>
+                    </tr>
+                    <tr>
                         <td>セレクト</td>
                         {/*<td>確率</td><td><input type="number" step="1" min="0" max="100" value={gp.pickupProb} onChange={e => onChange('pickupProb', e.target.value)} /></td>*/}
                         <td><input className="inp" type="number" step="10" min="0" value={gp.selectValue} onChange={e => onChange('selectValue', e.target.value)} /></td>
                         <td><input className="inp" type="number" step="10" min="0" value={gp.selectDuplicatedValue} onChange={e => onChange('selectDuplicatedValue', e.target.value)} /></td>
                         <td>　所持率</td><td><input className="inp" type="number" step="10" min="0" max="100" value={gp.selectOwnRate} onChange={e => onChange('selectOwnRate', e.target.value)} />%</td>
+                    </tr>
+                    <tr>
+                        <td>属性PU</td>
+                        {/*<td>確率</td><td><input type="number" step="1" min="0" max="100" value={gp.pickupProb} onChange={e => onChange('pickupProb', e.target.value)} /></td>*/}
+                        <td><input className="inp" type="number" step="10" min="0" value={gp.zokuseiValue} onChange={e => onChange('zokuseiValue', e.target.value)} /></td>
+                        <td><input className="inp" type="number" step="10" min="0" value={gp.zokuseiDuplicatedValue} onChange={e => onChange('zokuseiDuplicatedValue', e.target.value)} /></td>
+                        <td>　所持率</td><td><input className="inp" type="number" step="10" min="0" max="100" value={gp.zokuseiOwnRate} onChange={e => onChange('zokuseiOwnRate', e.target.value)} />%</td>
                     </tr>
                 </tbody>
             </table>

@@ -18,13 +18,18 @@ export type GachaParam = {
     pickupProb: number, // ピックアップの確率
     pickupValue: number, // ピックアップの価値
     pickupDuplicatedValue: number, // ピックアップの価値（かぶり）
+    pickup2Value: number, // ピックアップの価値
+    pickup2DuplicatedValue: number, // ピックアップの価値（かぶり）
     selectProb: number,
     selectValue: number, // セレクトの価値
     selectDuplicatedValue: number, // セレクトの価値（かぶり）
     selectOwnRate: number, // セレクトの所持率
+    zokuseiValue: number, // セレクトの価値
+    zokuseiDuplicatedValue: number, // セレクトの価値（かぶり）
+    zokuseiOwnRate: number, // セレクトの所持率
 }
 
-const defaultGachaParam: GachaParam = {
+export const defaultGachaParam: GachaParam = {
     pieceValue: 5,
     ssOwnRate: 30,
     ssMaxRate: 0,
@@ -34,10 +39,15 @@ const defaultGachaParam: GachaParam = {
     pickupProb: 1.5,
     pickupValue: 300,
     pickupDuplicatedValue: 50,
+    pickup2Value: 200,
+    pickup2DuplicatedValue: 30,
     selectProb: 3,
     selectValue: 200,
     selectDuplicatedValue: 30,
     selectOwnRate: 50,
+    zokuseiValue: 200,
+    zokuseiDuplicatedValue: 30,
+    zokuseiOwnRate: 50,
 }
 
 const defaultGachaState: GachaStat[] = [

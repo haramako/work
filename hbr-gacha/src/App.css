@@ -79,3 +79,7 @@ input {
   text-align: right;
   font-size: 2em;
 }
+
+.btn-inline {
+  display: inline;
+}

@@ -25,11 +25,13 @@ export class GachaDraw {
     cost: number
     num: number
     kinds: CardKind[]
+    selectable: boolean
 
-    constructor(_cost: number, _num: number, _kinds: CardKind[]) {
+    constructor(_cost: number, _num: number, _kinds: CardKind[], _selectable: boolean = false) {
         this.cost = _cost
-        this.num = _num,
-            this.kinds = _kinds
+        this.num = _num
+        this.kinds = _kinds
+        this.selectable = _selectable
     }
 
     draw(): CardKind {
@@ -37,14 +39,30 @@ export class GachaDraw {
     }
 
     expectedValue(duplication: Map<string, number>): number {
-        let value = 0
-        let prob = 0
-        for (const k of this.kinds) {
-            const dupRate = duplication.get(k.name) ?? 0
-            value += (1 - dupRate) * k.prob * k.value + dupRate * k.prob * k.duplicatedValue
-            prob += k.prob
+        if (this.selectable) {
+            // 選択の場合
+            let maxValue = 0
+            let maxDuplicatedValue = 0
+            for (const k of this.kinds) {
+                const dupRate = duplication.get(k.name) ?? 0
+                if (dupRate < 1.0) {
+                    maxValue = Math.max(maxValue, k.value)
+                }
+                maxDuplicatedValue = Math.max(maxDuplicatedValue, k.duplicatedValue)
+            }
+            //console.log([this.kinds, duplication, maxValue, maxDuplicatedValue])
+            return Math.max(maxValue, maxDuplicatedValue)
+        } else {
+            // ガチャの場合
+            let value = 0
+            let prob = 0
+            for (const k of this.kinds) {
+                const dupRate = duplication.get(k.name) ?? 0
+                value += (1 - dupRate) * k.prob * k.value + dupRate * k.prob * k.duplicatedValue
+                prob += k.prob
+            }
+            return value / prob * this.num
         }
-        return value / prob * this.num
     }
 
     toJSON() {
@@ -52,15 +70,27 @@ export class GachaDraw {
     }
 
     expectedTable() {
-        const totalProb = sum(this.kinds, k => k.prob)
-        const result: { [key: string]: number } = {}
-        for (const k of this.kinds) {
-            if (result[k.name] == undefined) {
-                result[k.name] = 0
+        if (this.selectable) {
+            // 選択の場合
+            let maxKind: CardKind = { name: '(Unknown', prob: 0, value: 0, duplicatedValue: 0 }
+            for (const k of this.kinds) {
+                if (k.value > maxKind.value) {
+                    maxKind = k
+                }
             }
-            result[k.name] += k.prob / totalProb * this.num
+            return { [maxKind.name]: 1.0 }
+        } else {
+            // ガチャの場合
+            const totalProb = sum(this.kinds, k => k.prob)
+            const result: { [key: string]: number } = {}
+            for (const k of this.kinds) {
+                if (result[k.name] == undefined) {
+                    result[k.name] = 0
+                }
+                result[k.name] += k.prob / totalProb * this.num
+            }
+            return result
         }
-        return result
     }
 }
 
@@ -111,18 +141,3 @@ export class GachaCampaign {
     }
 }
 
-export function create200renCampaign(normal: GachaDraw, _20ren: GachaDraw | undefined, _50ren: GachaDraw | undefined, _100ren: GachaDraw | undefined, _tenjo: GachaDraw[]): GachaCampaign {
-    const repeat = (n: number, item: GachaDraw[]) => Array(n).fill(0).map(() => item)
-    const exist = (item: GachaDraw | undefined) => (item == undefined ? [] : [item])
-    const draws = [
-        ...repeat(1, [normal]),
-        [normal, ...exist(_20ren)],
-        ...repeat(2, [normal]),
-        [normal, ...exist(_50ren)],
-        ...repeat(4, [normal]),
-        [normal, ...exist(_100ren)],
-        ...repeat(9, [normal]),
-        [normal, ..._tenjo]
-    ]
-    return new GachaCampaign(draws)
-}
