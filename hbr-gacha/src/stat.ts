@@ -1,4 +1,5 @@
 import { atom, DefaultValue, selectorFamily } from 'recoil'
+import { parseSearch } from './util'
 
 export type GachaStat = {
     key: number,
@@ -79,13 +80,15 @@ export type RootStat = {
     selectedTable?: TableDesc
 }
 
+const searchParams = parseSearch(window?.location ?? "") // locationの値から、初期値をsetする
+
 export const rootState = atom<RootStat>({
     key: 'rootState',
     default: {
-        gachaParam: defaultGachaParam,
+        gachaParam: { ...defaultGachaParam, ...searchParams },
         gacha: defaultGachaState,
         selectedTable: undefined
-    }
+    },
 })
 
 export const gachaState = selectorFamily({

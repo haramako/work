@@ -1,8 +1,9 @@
 import { useRecoilState, useRecoilValue } from 'recoil'
 import { defaultGachaParam, GachaParam, GachaStat, rootState, TableDesc } from './stat'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
-import { sum } from './util'
+import { sum, unparseSearch } from './util'
 import { makePickup200, makeSelect, makeStepup } from './Campaigns'
+import { useEffect } from 'react'
 
 export function GachaStatView({ stat, onChange }: { stat: GachaStat, onChange: (newValue: GachaStat) => void }) {
     return (
@@ -48,12 +49,21 @@ function GachaChart() {
             <Tooltip />
             <Legend />
             <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-            <Line type="monotone" dataKey='value' stroke="#8884d8" name='その回の価値' strokeDasharray="4 4" />
-            <Line type="monotone" dataKey='draw200' stroke="#ff0000" name='200連' />
+            <Line type="monotone" dataKey='value' stroke="#8884d8" name='その10連の価値' strokeDasharray="4 4" />
             <Line type="monotone" dataKey='draw50' stroke="#ffff00" name='50連' />
+            <Line type="monotone" dataKey='draw200' stroke="#ff0000" name='200連' />
             <Line type="monotone" dataKey='draw200AfterPickup' stroke="#00ff00" name='200連(PU1取得後)' />
             <Line type="monotone" dataKey='draw200AfterPickup2' stroke="#00ffff" name='200連(PU2取得後)' />
         </LineChart>
+        <div>
+            ※このグラフは、200連もしくは50連を「最後まで引く前提」の期待値の変化を表しています。<br />
+            あくまで「最後まで引く前提」なので、途中でやめる場合にはこれより低い期待値になりますし、引き始めるかどうかは「一番左の10連の時の値」が重要になります。<br />
+            <br />
+            このグラフからは、ピックアップを引いたときに続行すべきかどうかを読み取ります。<br />
+            例えば、ピックアップの１枚目を引いたら、その時点で赤の線から緑の線に期待値が変わります。<br />
+            ２枚目なら、緑の線から水色の線に代わります。<br />
+            現在のガチャ連数の一つ下の線（赤→緑→水色）の期待値が一定以上であれば、続行したほうがよいという目安になります。
+        </div>
     </>
 }
 
@@ -107,16 +117,16 @@ function GachaBar() {
             limit: 20,
         },
         {
+            name: '★PUステップ',
+            value: totalValu(resultStepup),
+            campaign: campaignStepup,
+            limit: 4,
+        },
+        {
             name: '★セレチケ10',
             value: totalValu(resultSelect),
             campaign: campaignSelect,
             limit: 1,
-        },
-        {
-            name: '★ステップ',
-            value: totalValu(resultStepup),
-            campaign: campaignStepup,
-            limit: 4,
         },
         {
             name: '★属性ステップ',
@@ -147,12 +157,26 @@ function GachaBar() {
             <YAxis domain={[0, 300]} />
             <Legend />
             <Tooltip />
-            <Bar dataKey="value" fill="#8884d8" name='3000クォーツあたりの価値' />
+            <Bar dataKey="value" fill="#da4" name='3000クォーツあたりの価値' />
         </BarChart>
     </>
 }
 
 const PickupNames = ['PU200連', 'PU50連', 'PU10連']
+
+const PickupGachaDesc = "ピックアップの出現率は0.75%ずつで合計で1.5%。その他のSSが1.5%。価値パラメーターは、ピックアップ、ピックアップ（２つめ）の値が使われます。ピックアップは、新スタイルを想定しているので所持済みのものはない想定になります。"
+const PickupOneGachaDesc = "ピックアップの出現率は1.0%。その他のSSが2.0%。価値パラメーターは、ピックアップの値が使われます。"
+const ZokuseiGachaDesc = "属性PUの出現率は合計1.5%。その他のSSが1.5%。価値パラメーターは、属性PUの値が使われます。属性PUの所持率の確率でかぶりとなります。"
+
+const GachaDescs: { [_: string]: string } = {
+    'PU200連': "２つのSSスタイルのピックアップを200連で引いたとき。天井は選択式。" + PickupGachaDesc,
+    'PU50連': "２つのSSスタイルのピックアップを50連まで引いたとき。" + PickupGachaDesc,
+    'PU10連': "２つのSSスタイルのピックアップを10連だけ引いたとき。" + PickupGachaDesc,
+    'PU(1SS)': "１つのSSスタイルのピックアップを200連で引いたとき。天井は選択式。" + PickupOneGachaDesc,
+    '★PUステップ': "２つのSSスタイルがピックアップされた、有料ステップガチャをステップ４まで31連で引いたとき。最後の一回は、ピックアップの出現率は5%ずつで,その他のSSが90%。それ以外は、ピックアップ200連と同様です。",
+    '★セレチケ10': "選択できる有料のセレクトチケットを10連で引いたとき。SSはセレクトのみが排出され、出現率は3%で、10連目のみ100%。価値パラメーターは、セレクトの値が使われます。セレクトの所持率の確率でかぶりとなります。",
+    '★属性ステップ': "複数のSSスタイルがピックアップされた、有料ステップガチャをステップ４まで31連で引いたとき。" + ZokuseiGachaDesc,
+}
 
 const KindNames: { [_: string]: string } = {
     'SS': 'SS（対象以外)',
@@ -169,6 +193,7 @@ function GachaTable({ desc }: { desc: TableDesc }) {
         <h2>ガチャ詳細</h2>
         <p>対象： {desc.label}</p>
         <p>コスト: {desc.totalCost}</p>
+        <p>説明: {GachaDescs[desc.label]}</p>
         <table className="tbl">
             <thead>
                 <tr><th className="w80">種類</th><th className="w40">平均取得数</th></tr>
@@ -184,8 +209,16 @@ function GachaTable({ desc }: { desc: TableDesc }) {
 }
 
 export function GachaList() {
+
     const [stat, setStat] = useRecoilState(rootState)
     const gp = stat.gachaParam
+
+    // locationに現在の設定を反映する
+    /*
+    useEffect(() => {
+        history.replaceState({}, "", "/?" + unparseSearch(gp))
+    }, [gp])
+    */
 
     /*
     function onClickAddButton() {
@@ -239,11 +272,26 @@ export function GachaList() {
                 gachaParam = { ...defaultGachaParam, ...godParam }
                 break;
         }
+
         setStat({ ...stat, gachaParam: gachaParam })
+    }
+
+    function onClickCopyURL() {
+        const loc = window.location
+        navigator.clipboard.writeText(loc.protocol + "://" + loc.host + loc.pathname + "/?" + unparseSearch(gp))
+        alert("URLをクリップボードにコピーしました")
     }
 
     return (
         <>
+            <h2>ガチャ期待値</h2>
+            <GachaBar />
+            {/*
+            stat.gacha.map(s => <GachaStatView key={s.key} stat={s} onChange={onChangeStat(s.key)} />)
+            <button onClick={onClickAddButton}>追加</button>
+            */}
+            <hr />
+            <h2>設定</h2>
             <div>
                 プリセット:
                 <button className="btn-inline" onClick={() => onClickPreset(0)}>初心者</button>
@@ -251,12 +299,6 @@ export function GachaList() {
                 <button className="btn-inline" onClick={() => onClickPreset(2)}>上級者</button>
                 <button className="btn-inline" onClick={() => onClickPreset(3)}>超上級者</button>
             </div>
-            <GachaBar />
-            {/*
-            stat.gacha.map(s => <GachaStatView key={s.key} stat={s} onChange={onChangeStat(s.key)} />)
-            <button onClick={onClickAddButton}>追加</button>
-            */}
-            <hr />
             <table>
                 <thead>
                     <tr><th></th><th>価値</th><th>価値（かぶり）</th></tr>
@@ -271,7 +313,7 @@ export function GachaList() {
                         <td><input className="inp" type="number" step="10" min="0" value={gp.ssValue} onChange={e => onChange('ssValue', e.target.value)} /></td>
                         <td><input className="inp" type="number" step="10" min="0" value={gp.ssDuplicatedValue} onChange={e => onChange('ssDuplicatedValue', e.target.value)} /></td>
                         <td>　所持率</td><td><input className="inp" type="number" step="10" min="0" max="100" value={gp.ssOwnRate} onChange={e => onChange('ssOwnRate', e.target.value)} />%</td>
-                        <td>　完凸率</td><td><input className="inp" type="number" step="10" min="0" max="100" value={gp.ssMaxRate} onChange={e => onChange('ssMaxRate', e.target.value)} />%</td>
+                        {/*<td>　完凸率</td><td><input className="inp" type="number" step="10" min="0" max="100" value={gp.ssMaxRate} onChange={e => onChange('ssMaxRate', e.target.value)} />%</td> */}
                     </tr>
                     <tr>
                         <td>ピックアップ</td>
@@ -301,6 +343,7 @@ export function GachaList() {
                     </tr>
                 </tbody>
             </table>
+            <div><button onClick={onClickCopyURL}>共有用のURLをコピー</button></div>
             <hr />
             {stat.selectedTable && <GachaTable desc={stat.selectedTable} />}
         </>
