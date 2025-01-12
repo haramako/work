@@ -1,0 +1,6 @@
+./temp
+./var
+./test
+*.bin
+*.db
+*.exe

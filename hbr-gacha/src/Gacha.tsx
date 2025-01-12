@@ -1,9 +1,8 @@
 import { useRecoilState, useRecoilValue } from 'recoil'
 import { defaultGachaParam, GachaParam, GachaStat, rootState, TableDesc } from './stat'
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
-import { sum, unparseSearch } from './util'
+import { copyToClipboard, sum, unparseSearch } from './util'
 import { makePickup200, makeSelect, makeStepup } from './Campaigns'
-import { useEffect } from 'react'
 
 export function GachaStatView({ stat, onChange }: { stat: GachaStat, onChange: (newValue: GachaStat) => void }) {
     return (
@@ -123,7 +122,7 @@ function GachaBar() {
             limit: 4,
         },
         {
-            name: '★セレチケ10',
+            name: '★セレチケ',
             value: totalValu(resultSelect),
             campaign: campaignSelect,
             limit: 1,
@@ -152,9 +151,10 @@ function GachaBar() {
     }
 
     return <>
-        <BarChart width={800} height={300} data={data} onClick={e => e.activeLabel && onClickChart(e.activeLabel)}>
+        <BarChart width={720} height={300} data={data} onClick={e => e.activeLabel && onClickChart(e.activeLabel)}>
             <XAxis dataKey="name" />
             <YAxis domain={[0, 300]} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <Legend />
             <Tooltip />
             <Bar dataKey="value" fill="#da4" name='3000クォーツあたりの価値' />
@@ -174,7 +174,7 @@ const GachaDescs: { [_: string]: string } = {
     'PU10連': "２つのSSスタイルのピックアップを10連だけ引いたとき。" + PickupGachaDesc,
     'PU(1SS)': "１つのSSスタイルのピックアップを200連で引いたとき。天井は選択式。" + PickupOneGachaDesc,
     '★PUステップ': "２つのSSスタイルがピックアップされた、有料ステップガチャをステップ４まで31連で引いたとき。最後の一回は、ピックアップの出現率は5%ずつで,その他のSSが90%。それ以外は、ピックアップ200連と同様です。",
-    '★セレチケ10': "選択できる有料のセレクトチケットを10連で引いたとき。SSはセレクトのみが排出され、出現率は3%で、10連目のみ100%。価値パラメーターは、セレクトの値が使われます。セレクトの所持率の確率でかぶりとなります。",
+    '★セレチケ': "選択できる有料のセレクトチケットを10連で引いたとき。SSはセレクトのみが排出され、出現率は3%で、10連目のみ100%。価値パラメーターは、セレクトの値が使われます。セレクトの所持率の確率でかぶりとなります。",
     '★属性ステップ': "複数のSSスタイルがピックアップされた、有料ステップガチャをステップ４まで31連で引いたとき。" + ZokuseiGachaDesc,
 }
 
@@ -278,7 +278,7 @@ export function GachaList() {
 
     function onClickCopyURL() {
         const loc = window.location
-        navigator.clipboard.writeText(loc.protocol + "://" + loc.host + loc.pathname + "/?" + unparseSearch(gp))
+        copyToClipboard(loc.protocol + "://" + loc.host + loc.pathname + "?" + unparseSearch(gp))
         alert("URLをクリップボードにコピーしました")
     }
 
@@ -299,6 +299,7 @@ export function GachaList() {
                 <button className="btn-inline" onClick={() => onClickPreset(2)}>上級者</button>
                 <button className="btn-inline" onClick={() => onClickPreset(3)}>超上級者</button>
             </div>
+            <br />
             <table>
                 <thead>
                     <tr><th></th><th>価値</th><th>価値（かぶり）</th></tr>
@@ -343,9 +344,11 @@ export function GachaList() {
                     </tr>
                 </tbody>
             </table>
+            <br />
             <div><button onClick={onClickCopyURL}>共有用のURLをコピー</button></div>
             <hr />
             {stat.selectedTable && <GachaTable desc={stat.selectedTable} />}
+            <div style={{ marginBottom: "80px" }} />
         </>
     )
 }
