@@ -1,6 +1,3 @@
-import { render } from './minireact.js'
-
-export let hoge = (<hoge fuga="1"> 1</hoge >)
 
 export function List({ children }) {
     return (
@@ -20,7 +17,7 @@ function onclick() {
     console.log('clicked')
 }
 
-function App() {
+export function App() {
     return <div>
         <h11>App</h11>
         <List >
@@ -29,5 +26,3 @@ function App() {
         </List>
     </div >
 }
-
-render(<App />, document.querySelector('#app'))
