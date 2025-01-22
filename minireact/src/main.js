@@ -1,0 +1,6 @@
+import './style.css'
+import javascriptLogo from './javascript.svg'
+import viteLogo from '/vite.svg'
+import { setupCounter } from './counter.js'
+import { render } from './minireact.js'
+import { } from './app.jsx'

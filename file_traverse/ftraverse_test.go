@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-var cachedRoot *Entry
+var cachedRoot *Tree
 
 const testRoot = "C:/Work/work"
 
-func getRoot() *Entry {
+func getRoot() *Tree {
 	if cachedRoot != nil {
 		return cachedRoot
 	}
@@ -68,7 +68,8 @@ func TestGetEntry(t *testing.T) {
 }
 
 func TestEntry(t *testing.T) {
-	root := getRoot()
+	tree := getRoot()
+	root := tree.Root
 	t.Logf("totalCount %v size %v", root.TotalCount(), root.TotalSize())
 	if root.TotalCount() < 1000 {
 		t.Error("total count must > 1000")
@@ -81,7 +82,7 @@ func TestEntry(t *testing.T) {
 func TestWalk(t *testing.T) {
 	root := getRoot()
 	count := 0
-	err := root.Walk(func(path []string, e *Entry) error {
+	err := root.Root.Walk(func(path []string, e *Entry) error {
 		count++
 		t.Logf("%v %v", path, e.Filename)
 		if count > 10 {

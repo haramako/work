@@ -16,6 +16,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+type Tree struct {
+	Root    *Entry
+	BaesDir string
+}
+
 type Entry struct {
 	Parent     *Entry
 	Filename   string
@@ -37,8 +42,9 @@ func (e *Entry) AddDummyChild(name string, size int64) *Entry {
 	return newEntry
 }
 
-func Traverse(root string) (*Entry, error) {
+func Traverse(root string) (*Tree, error) {
 	root = filepath.Clean(root)
+	tree := &Tree{}
 	rootEntry := &Entry{Filename: root, Children: map[string]*Entry{}}
 	count := 0
 	walkErr := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -63,7 +69,8 @@ func Traverse(root string) (*Entry, error) {
 	if walkErr != nil {
 		return nil, walkErr
 	}
-	return rootEntry, nil
+	tree.Root = rootEntry
+	return tree, nil
 }
 
 func SplitPath(path string) []string {
