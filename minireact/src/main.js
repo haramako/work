@@ -1,5 +1,4 @@
 //import './style.css'
-import { render } from './minireact.js'
-import { App } from './app.jsx'
+import { renderApp } from './app'
 
-render({ type: App }, document.querySelector('#app'))
+renderApp()
