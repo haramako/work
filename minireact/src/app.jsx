@@ -1,4 +1,4 @@
-import { render } from './minireact'
+import { Didact } from './minireact'
 
 export function List({ children, name }) {
     return (
@@ -10,29 +10,20 @@ export function List({ children, name }) {
 }
 
 export function Btn({ onclick, children }) {
-    return <button onclick={onclick}>{children}</button>
+    return <button onclick={onclick}>{...children}</button>
 
-}
-
-var count = 1;
-
-function onclick() {
-    count += 1;
-    console.log('clicked')
-    renderApp();
 }
 
 export function App() {
+    const [count, setCount] = Didact.useState(2)
+
     return <div>
         <h1>App</h1>
         <div>{count}</div>
-        <List name="Button List">
-            <Btn onclick={onclick}>hoge</Btn>
-            <Btn onclick={onclick}>fuga</Btn>
-        </List>
+        <Btn onclick={() => setCount((c) => c + 1)}>hoge</Btn>
     </div >
 }
 
 export function renderApp() {
-    render(<App count={count} />, document.querySelector('#app'))
+    Didact.render(<App />, document.querySelector('#app'))
 }
