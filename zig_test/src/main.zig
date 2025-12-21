@@ -16,25 +16,18 @@ pub fn main() !void {
     var dir = try fs.openDirAbsolute("c:/Work/de4/de4", .{ .iterate = true });
     defer dir.close();
 
+    var walker = try dir.walk(allocator);
+    defer walker.deinit();
+
     var result: WalkInfo = .{};
-    try walk(allocator, &result, dir);
-
-    std.debug.print("{} {}\n", .{ result.count, result.size / (1024 * 1024) });
-}
-
-fn walk(alloc: std.mem.Allocator, result: *WalkInfo, dir: fs.Dir) !void {
-    //const stdout = std.io.getStdOut().writer();
-    var iter = dir.iterate();
-    while (try iter.next()) |file| {
-        //try stdout.print("{s}\n", .{file.name});
+    while (try walker.next()) |entry| {
         result.count += 1;
-        if (file.kind == .directory) {
-            var subDir = try dir.openDir(file.name, .{ .iterate = true });
-            defer subDir.close();
-            try walk(alloc, result, subDir);
-        } else {
-            const stat = try dir.statFile(file.name);
+        //std.debug.print("{s}\n", .{entry.path});
+        if (entry.kind != .directory) {
+            const stat = try dir.statFile(entry.path);
             result.size += stat.size;
         }
     }
+
+    std.debug.print("{} {}\n", .{ result.count, result.size / (1024 * 1024) });
 }
