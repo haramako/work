@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 const fmt = std.fmt;
 const expect = std.testing.expect;
@@ -8,17 +9,17 @@ const WalkInfo = struct {
     size: u64 = 0,
 };
 
+const Io = @This();
 pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
     const allocator = std.heap.page_allocator;
 
-    var dir = try fs.openDirAbsolute("c:/Work/de4", .{ .iterate = true });
+    var dir = try fs.openDirAbsolute("c:/Work/de4/de4", .{ .iterate = true });
     defer dir.close();
 
     var result: WalkInfo = .{};
     try walk(allocator, &result, dir);
 
-    try stdout.print("{} {}\n", .{ result.count, result.size / 1024 / 1024 });
+    std.debug.print("{} {}\n", .{ result.count, result.size / (1024 * 1024) });
 }
 
 fn walk(alloc: std.mem.Allocator, result: *WalkInfo, dir: fs.Dir) !void {
